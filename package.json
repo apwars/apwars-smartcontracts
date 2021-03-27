@@ -1,0 +1,27 @@
+{
+  "name": "@apwars/smartcontracts",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "dependencies": {
+    "@openzeppelin/contracts": "^3.4.1",
+    "dotenv": "^8.2.0",
+    "truffle-flattener": "^1.5.0",
+    "truffle-hdwallet-provider": "^1.0.17"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "truffle test --show-events"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/apwars/apwars-smartcontracts.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/apwars/apwars-smartcontracts/issues"
+  },
+  "homepage": "https://github.com/apwars/apwars-smartcontracts#readme"
+}
