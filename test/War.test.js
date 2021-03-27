@@ -120,7 +120,7 @@ contract('War', accounts => {
 
     const externalRandomSourceHash = await instance.hashExternalRandomSource(externalRandomSource);
 
-    await instance.addWar('War#1', externalRandomSourceHash);
+    await instance.createWar('War#1', externalRandomSourceHash);
     
     instance.defineTokenTeam(0, teamAArcher.address, 1);
     instance.defineTokenTeam(0, teamAWarrior.address, 1);
@@ -156,31 +156,12 @@ contract('War', accounts => {
     await depositAndCheck([4, 5, 6], teamBNoble);
   });
 
-  it('should compute random numbers', async () => {
-    const instance = await War.deployed();
-
-    const r1 = await instance.random(0, externalRandomSource, 1, 10000);
-    const r2 = await instance.random(0, externalRandomSource, 2, 10000);
-    const r3 = await instance.random(0, externalRandomSource, 3, 10000);
-    const r4 = await instance.random(0, externalRandomSource, 4, 10000);
-    const r5 = await instance.random(0, externalRandomSource, 5, 10000);
-
-    console.log({
-      r1: r1.toString(),
-      r2: r2.toString(),
-      r3: r3.toString(),
-      r4: r4.toString(),
-      r5: r5.toString()
-    });
-
-  });
-
   it('should finish war', async () => {
     const instance = await War.deployed();
 
-    await instance.finishWar(0, externalRandomSource);
+    await instance.finishFirstRound(0, externalRandomSource);
 
-    const war = await instance.getCurrentWarInfo();
+    const war = await instance.wars(0);
     const attackPowerTeamA = await instance.getAttackPower(0, 1);
     const attackPowerTeamB = await instance.getAttackPower(0, 2);
     const defensePowerTeamA = await instance.getDefensePower(0, 1);

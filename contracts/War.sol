@@ -7,6 +7,8 @@ import "./IUnitERC20.sol";
 contract War {
     using SafeMath for uint256;
 
+    enum WarStage {FIRST_ROUND, SECOND_ROUND, FINISHED}
+
     uint256 private ONE = 10**18;
     uint256 private ONE_HUNDRED_PERCENT = 10**3;
     uint256 private TEAM_A = 1;
@@ -14,12 +16,15 @@ contract War {
 
     mapping(address => bool) private allowedTeamATokens;
     mapping(address => bool) private allowedTeamBTokens;
-    mapping(uint256 => address[]) allowedTeamTokenAddresses;
+    mapping(uint256 => address[]) private allowedTeamTokenAddresses;
 
-    mapping(uint256 => mapping(address => mapping(address => uint256))) depositsByPlayer;
-    mapping(uint256 => mapping(address => uint256)) teams;
-    mapping(uint256 => mapping(uint256 => uint256)) attackPower;
-    mapping(uint256 => mapping(uint256 => uint256)) defensePower;
+    mapping(uint256 => mapping(address => mapping(address => uint256)))
+        private depositsByPlayer;
+    mapping(uint256 => mapping(address => uint256)) private teams;
+    mapping(uint256 => mapping(uint256 => uint256)) private attackPower;
+    mapping(uint256 => mapping(uint256 => uint256)) private defensePower;
+    mapping(uint256 => WarStage) public warStage;
+    mapping(uint256 => WarRandomParameters) public warRandomParameters;
 
     struct WarInfo {
         string name;
@@ -37,8 +42,16 @@ contract War {
         bytes32 externalRandomSourceHash;
     }
 
-    WarInfo[] private wars;
-    uint256 private currentWarId;
+    struct WarRandomParameters {
+        uint256 randomTeamSource;
+        uint256 attackerCasualty;
+        uint256 defenseCasualty;
+        uint256 luck;
+        uint256 randomBadLuckSource;
+    }
+
+    WarInfo[] public wars;
+    uint256 public currentWarId;
 
     event NewDeposit(
         address indexed player,
@@ -93,7 +106,7 @@ contract War {
         uint256 losses
     );
 
-    event WarFinished(
+    event FirstRoundFinished(
         uint256 indexed warId,
         address sender,
         bytes32 externalRandomSource,
@@ -108,39 +121,6 @@ contract War {
         uint256 burned,
         uint256 net
     );
-
-    function getCurrentWarInfo()
-        public
-        view
-        returns (
-            string memory name,
-            uint256 finalAttackPower,
-            uint256 finalDefensePower,
-            uint256 percAttackerLosses,
-            uint256 percDefenderLosses,
-            uint256 attackerTeam,
-            uint256 defenderTeam,
-            uint256 winner,
-            uint256 luck,
-            bool isBadLuck,
-            uint256 attackerCasualty,
-            uint256 defenseCasualty,
-            bytes32 externalRandomSourceHash
-        )
-    {
-        name = wars[currentWarId].name;
-        finalAttackPower = wars[currentWarId].finalAttackPower;
-        finalDefensePower = wars[currentWarId].finalDefensePower;
-        percAttackerLosses = wars[currentWarId].percAttackerLosses;
-        percDefenderLosses = wars[currentWarId].percDefenderLosses;
-        attackerTeam = wars[currentWarId].attackerTeam;
-        winner = wars[currentWarId].winner;
-        luck = wars[currentWarId].luck;
-        isBadLuck = wars[currentWarId].isBadLuck;
-        attackerCasualty = wars[currentWarId].attackerCasualty;
-        defenseCasualty = wars[currentWarId].defenseCasualty;
-        externalRandomSourceHash = wars[currentWarId].externalRandomSourceHash;
-    }
 
     function getAttackPower(uint256 warId, uint256 team)
         public
@@ -167,7 +147,7 @@ contract War {
         allowedTeamTokenAddresses[team].push(address(unit));
     }
 
-    function addWar(string calldata name, bytes32 externalRandomSourceHash)
+    function createWar(string calldata name, bytes32 externalRandomSourceHash)
         public
     {
         WarInfo memory war =
@@ -186,23 +166,39 @@ contract War {
                 0,
                 externalRandomSourceHash
             );
-        war.name = name;
-
         wars.push(war);
         currentWarId = wars.length - 1;
+
+        warStage[currentWarId] = WarStage.FIRST_ROUND;
     }
 
-    function deposit(IUnitERC20 unit, uint256 amount) public {
-        address tokenAddress = address(unit);
-
-        unit.transferFrom(msg.sender, address(this), amount);
-        depositsByPlayer[currentWarId][tokenAddress][msg.sender] += amount;
+    function deposit(IUnitERC20 _unit, uint256 _amount) public {
+        WarInfo storage war = wars[currentWarId];
+        address tokenAddress = address(_unit);
 
         //identifying if the token is part from the TEAM_A or TEAM_B;
         uint256 team = teams[currentWarId][tokenAddress];
+        WarStage stage = warStage[currentWarId];
 
-        uint256 troopAttackPower = unit.getAttackPower().mul(amount);
-        uint256 troopDefensePower = unit.getAttackPower().mul(amount);
+        require(stage != WarStage.FINISHED, "War:WAR_IS_FINISHED");
+
+        //when a war is finished users can send troops to fight in the second round and increase
+        //the participation in the prize, but it is available only to winners
+        if (stage == WarStage.SECOND_ROUND && team != war.winner) {
+            revert("War:ONLY_WINNERS");
+        }
+
+        //transfering the amount to this contranct and increase the user deposit amount
+        _unit.transferFrom(msg.sender, address(this), _amount);
+        depositsByPlayer[currentWarId][tokenAddress][
+            msg.sender
+        ] = depositsByPlayer[currentWarId][tokenAddress][msg.sender].add(
+            _amount
+        );
+
+        //getting the total power (attack and defense)
+        uint256 troopAttackPower = _unit.getAttackPower().mul(_amount);
+        uint256 troopDefensePower = _unit.getAttackPower().mul(_amount);
 
         //updating attack and defense powers
         attackPower[currentWarId][team] = attackPower[currentWarId][team].add(
@@ -214,9 +210,9 @@ contract War {
 
         emit NewDeposit(
             msg.sender,
-            address(unit),
+            tokenAddress,
             team,
-            amount,
+            _amount,
             troopAttackPower,
             troopDefensePower,
             attackPower[currentWarId][team],
@@ -228,44 +224,36 @@ contract War {
         public
     {
         WarInfo storage war = wars[_id];
+        uint256 salt = 0;
 
-        uint256 randomTeam = random(_id, _externalRandomSource, 0, 10000);
-        bool isTeamA = randomTeam > 5000;
+        uint256 randomTeamSource =
+            random(_id, _externalRandomSource, salt, 10000);
+        bool isTeamA = randomTeamSource > 5000;
 
         war.attackerTeam = isTeamA ? TEAM_A : TEAM_B;
         war.defenderTeam = !isTeamA ? TEAM_A : TEAM_B;
 
-        war.attackerCasualty = random(
-            _id,
-            _externalRandomSource,
-            randomTeam,
-            100
-        );
-        war.defenseCasualty = random(
-            _id,
-            _externalRandomSource,
-            randomTeam + war.attackerCasualty,
-            100
-        );
-        war.luck = random(
-            _id,
-            _externalRandomSource,
-            randomTeam + war.attackerCasualty + war.defenseCasualty,
-            100
-        );
+        salt = salt.add(randomTeamSource);
 
-        uint256 randomBadLuck =
-            random(
-                _id,
-                _externalRandomSource,
-                randomTeam +
-                    war.attackerCasualty +
-                    war.defenseCasualty +
-                    war.luck,
-                10000
-            );
+        war.attackerCasualty = random(_id, _externalRandomSource, salt, 100);
+        salt = salt.add(war.attackerCasualty);
+        war.defenseCasualty = random(_id, _externalRandomSource, salt, 100);
+        salt = salt.add(war.defenseCasualty);
+        war.luck = random(_id, _externalRandomSource, salt, 100);
+        salt = salt.add(war.luck);
 
-        war.isBadLuck = randomBadLuck > 5000;
+        uint256 randomBadLuckSource =
+            random(_id, _externalRandomSource, salt, 10000);
+
+        war.isBadLuck = randomBadLuckSource > 5000;
+
+        warRandomParameters[_id] = WarRandomParameters(
+            randomTeamSource,
+            war.attackerCasualty,
+            war.defenseCasualty,
+            war.luck,
+            randomBadLuckSource
+        );
 
         emit RandomParameters(
             war.attackerTeam,
@@ -487,7 +475,9 @@ contract War {
         );
     }
 
-    function finishWar(uint256 _id, bytes32 _externalRandomSource) public {
+    function finishFirstRound(uint256 _id, bytes32 _externalRandomSource)
+        public
+    {
         WarInfo storage war = wars[_id];
 
         _calculateTroopImprovement(_id);
@@ -496,7 +486,14 @@ contract War {
         _calculareMoraleImpact(_id);
         _calculateLosses(_id);
 
-        emit WarFinished(_id, msg.sender, _externalRandomSource, war.winner);
+        warStage[_id] = WarStage.SECOND_ROUND;
+
+        emit FirstRoundFinished(
+            _id,
+            msg.sender,
+            _externalRandomSource,
+            war.winner
+        );
     }
 
     function getPlayerDeposit(
