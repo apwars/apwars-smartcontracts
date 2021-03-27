@@ -2,6 +2,7 @@ const War = artifacts.require('War');
 const UnitERC20Token = artifacts.require('UnitERC20Token');
 
 contract('War', accounts => {
+  const externalRandomSource = '0x009f7d857c47a36ffce885e3978b815ae7b7b5b6f52fff6dae164a3845ad7eff';
   const UNIT_DEFAULT_SUPPLY = 10000000;
   const MULT = 10 ** 18;
 
@@ -40,7 +41,7 @@ contract('War', accounts => {
         teamBCavalry,
         teamBNoble
       ].map(token => token.mint(accounts[0], web3.utils.toWei((UNIT_DEFAULT_SUPPLY).toString())))
-    )
+    );
   });
 
   it('should distribute teams', async () => {
@@ -117,7 +118,10 @@ contract('War', accounts => {
   it('should deposit units in the war contract', async () => {
     const instance = await War.deployed();
 
-    await instance.addWar("War#1");
+    const externalRandomSourceHash = await instance.hashExternalRandomSource(externalRandomSource);
+
+    await instance.addWar('War#1', externalRandomSourceHash);
+    
     instance.defineTokenTeam(0, teamAArcher.address, 1);
     instance.defineTokenTeam(0, teamAWarrior.address, 1);
     instance.defineTokenTeam(0, teamACavalry.address, 1);
@@ -152,10 +156,29 @@ contract('War', accounts => {
     await depositAndCheck([4, 5, 6], teamBNoble);
   });
 
+  it('should compute random numbers', async () => {
+    const instance = await War.deployed();
+
+    const r1 = await instance.random(0, externalRandomSource, 1, 10000);
+    const r2 = await instance.random(0, externalRandomSource, 2, 10000);
+    const r3 = await instance.random(0, externalRandomSource, 3, 10000);
+    const r4 = await instance.random(0, externalRandomSource, 4, 10000);
+    const r5 = await instance.random(0, externalRandomSource, 5, 10000);
+
+    console.log({
+      r1: r1.toString(),
+      r2: r2.toString(),
+      r3: r3.toString(),
+      r4: r4.toString(),
+      r5: r5.toString()
+    });
+
+  });
+
   it('should finish war', async () => {
     const instance = await War.deployed();
 
-    await instance.finishWar(0);
+    await instance.finishWar(0, externalRandomSource);
 
     const war = await instance.getCurrentWarInfo();
     const attackPowerTeamA = await instance.getAttackPower(0, 1);

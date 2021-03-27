@@ -34,6 +34,7 @@ contract War {
         bool isBadLuck;
         uint256 attackerCasualty;
         uint256 defenseCasualty;
+        bytes32 externalRandomSourceHash;
     }
 
     WarInfo[] private wars;
@@ -73,6 +74,15 @@ contract War {
         uint256 newDefensePower
     );
 
+    event RandomParameters(
+        uint256 attackerTeam,
+        uint256 defenderTeam,
+        uint256 attackerCasualty,
+        uint256 defenseCasualty,
+        uint256 luck,
+        bool isBadLuck
+    );
+
     event TeamLosses(
         uint256 indexed warId,
         uint256 indexed team,
@@ -81,6 +91,13 @@ contract War {
         uint256 power,
         uint256 otherTeamPower,
         uint256 losses
+    );
+
+    event WarFinished(
+        uint256 indexed warId,
+        address sender,
+        bytes32 externalRandomSource,
+        uint256 winner
     );
 
     event Withdraw(
@@ -107,7 +124,8 @@ contract War {
             uint256 luck,
             bool isBadLuck,
             uint256 attackerCasualty,
-            uint256 defenseCasualty
+            uint256 defenseCasualty,
+            bytes32 externalRandomSourceHash
         )
     {
         name = wars[currentWarId].name;
@@ -121,6 +139,7 @@ contract War {
         isBadLuck = wars[currentWarId].isBadLuck;
         attackerCasualty = wars[currentWarId].attackerCasualty;
         defenseCasualty = wars[currentWarId].defenseCasualty;
+        externalRandomSourceHash = wars[currentWarId].externalRandomSourceHash;
     }
 
     function getAttackPower(uint256 warId, uint256 team)
@@ -148,8 +167,25 @@ contract War {
         allowedTeamTokenAddresses[team].push(address(unit));
     }
 
-    function addWar(string calldata name) public {
-        WarInfo memory war = WarInfo(name, 0, 0, 0, 0, 0, 0, 0, 0, false, 0, 0);
+    function addWar(string calldata name, bytes32 externalRandomSourceHash)
+        public
+    {
+        WarInfo memory war =
+            WarInfo(
+                name,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                false,
+                0,
+                0,
+                externalRandomSourceHash
+            );
         war.name = name;
 
         wars.push(war);
@@ -188,14 +224,57 @@ contract War {
         );
     }
 
-    function _defineRandomParameters(uint256 id) public {
-        WarInfo storage war = wars[id];
-        war.attackerTeam = TEAM_A;
-        war.defenderTeam = TEAM_B;
-        war.attackerCasualty = 20;
-        war.defenseCasualty = 80;
-        war.luck = 20;
-        war.isBadLuck = true;
+    function _defineRandomParameters(uint256 _id, bytes32 _externalRandomSource)
+        public
+    {
+        WarInfo storage war = wars[_id];
+
+        uint256 randomTeam = random(_id, _externalRandomSource, 0, 10000);
+        bool isTeamA = randomTeam > 5000;
+
+        war.attackerTeam = isTeamA ? TEAM_A : TEAM_B;
+        war.defenderTeam = !isTeamA ? TEAM_A : TEAM_B;
+
+        war.attackerCasualty = random(
+            _id,
+            _externalRandomSource,
+            randomTeam,
+            100
+        );
+        war.defenseCasualty = random(
+            _id,
+            _externalRandomSource,
+            randomTeam + war.attackerCasualty,
+            100
+        );
+        war.luck = random(
+            _id,
+            _externalRandomSource,
+            randomTeam + war.attackerCasualty + war.defenseCasualty,
+            100
+        );
+
+        uint256 randomBadLuck =
+            random(
+                _id,
+                _externalRandomSource,
+                randomTeam +
+                    war.attackerCasualty +
+                    war.defenseCasualty +
+                    war.luck,
+                10000
+            );
+
+        war.isBadLuck = randomBadLuck > 5000;
+
+        emit RandomParameters(
+            war.attackerTeam,
+            war.defenderTeam,
+            war.attackerCasualty,
+            war.defenseCasualty,
+            war.luck,
+            war.isBadLuck
+        );
     }
 
     function _calculateTroopImprovement(uint256 warId) public {
@@ -408,14 +487,16 @@ contract War {
         );
     }
 
-    function finishWar(uint256 id) public {
-        WarInfo storage war = wars[id];
+    function finishWar(uint256 _id, bytes32 _externalRandomSource) public {
+        WarInfo storage war = wars[_id];
 
-        _calculateTroopImprovement(id);
-        _defineRandomParameters(id);
-        _calculateLuckImpact(id);
-        _calculareMoraleImpact(id);
-        _calculateLosses(id);
+        _calculateTroopImprovement(_id);
+        _defineRandomParameters(_id, _externalRandomSource);
+        _calculateLuckImpact(_id);
+        _calculareMoraleImpact(_id);
+        _calculateLosses(_id);
+
+        emit WarFinished(_id, msg.sender, _externalRandomSource, war.winner);
     }
 
     function getPlayerDeposit(
@@ -454,5 +535,50 @@ contract War {
             toBurnAmount,
             net
         );
+    }
+
+    function hashExternalRandomSource(bytes32 externalRandomSource)
+        public
+        pure
+        returns (bytes32)
+    {
+        return keccak256(abi.encode(externalRandomSource));
+    }
+
+    function random(
+        uint256 warId,
+        bytes32 _externalRandomSource,
+        uint256 salt,
+        uint256 _maxNumber
+    ) public view returns (uint256) {
+        WarInfo storage war = wars[warId];
+
+        bytes32 hash = hashExternalRandomSource(_externalRandomSource);
+
+        require(
+            hash == war.externalRandomSourceHash,
+            "War:INVALID_EXTERNAL_RANDOM_SOURCE"
+        );
+
+        bytes32 _blockhash = blockhash(block.number - 1);
+        uint256 gasLeft = gasleft();
+
+        bytes32 _structHash =
+            keccak256(
+                abi.encode(
+                    _blockhash,
+                    gasLeft,
+                    wars.length,
+                    salt,
+                    _externalRandomSource
+                )
+            );
+        uint256 _randomNumber = uint256(_structHash);
+
+        assembly {
+            _randomNumber := add(mod(_randomNumber, _maxNumber), 1)
+        }
+
+        return _randomNumber;
     }
 }
