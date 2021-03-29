@@ -4,15 +4,28 @@ pragma solidity >=0.6.0;
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./IUnitERC20.sol";
 
+/**
+ * @title The war simulator for APWars Finance.
+ * @author Vulug
+ * @notice A player will use this contract to send troops by depositing unit tokens and getting them back home by
+ *         withdrawing the remaining amounts. The war simulator will randomly select the attacker and defender team,
+ *         so the player doesn't know if the system will use each unit's attack or defense power. The war is divided
+ *         into two rounds: the first is completed by computing the battle between the teams. After the first stage,
+ *         the winner will fight against the Dragon to collect the gold from the Dragon's pocket. At this point, the
+ *         player will not lose any troops. A random value will define how much gold the army will get from the Dragon.
+ *         The Dragon will burn all remaining gold that troop can't bring home.
+ * @dev See the docs to understand how the battle system works. It is not so hard, but be guided by examples is a better way.
+ */
 contract War {
     using SafeMath for uint256;
 
     enum WarStage {FIRST_ROUND, SECOND_ROUND, FINISHED}
 
-    uint256 private ONE = 10**18;
-    uint256 private ONE_HUNDRED_PERCENT = 10**3;
-    uint256 private TEAM_A = 1;
-    uint256 private TEAM_B = 2;
+    uint256 private constant ONE = 10**18;
+    uint256 private constant ONE_HUNDRED_PERCENT = 10**3;
+    uint256 private constant TEN_PERCENT = 10;
+    uint256 private constant TEAM_A = 1;
+    uint256 private constant TEAM_B = 2;
 
     mapping(address => bool) private allowedTeamATokens;
     mapping(address => bool) private allowedTeamBTokens;
@@ -23,8 +36,6 @@ contract War {
     mapping(uint256 => mapping(address => uint256)) private teams;
     mapping(uint256 => mapping(uint256 => uint256)) private attackPower;
     mapping(uint256 => mapping(uint256 => uint256)) private defensePower;
-    mapping(uint256 => WarStage) public warStage;
-    mapping(uint256 => WarRandomParameters) public warRandomParameters;
 
     /**
      * @notice War information.
@@ -80,6 +91,12 @@ contract War {
 
     /// @notice The current war id.
     uint256 public currentWarId;
+
+    /// @notice It stores the current stage per war.
+    mapping(uint256 => WarStage) public warStage;
+
+    /// @notice It stores the random parameters generated for a war.
+    mapping(uint256 => WarRandomParameters) public warRandomParameters;
 
     /**
      * @notice Fired when a user sends troops (token units) to war.
@@ -308,13 +325,7 @@ contract War {
         uint256 team = teams[currentWarId][tokenAddress];
         WarStage stage = warStage[currentWarId];
 
-        require(stage != WarStage.FINISHED, "War:WAR_IS_FINISHED");
-
-        //when a war is finished users can send troops to fight in the second round and increase
-        //the participation in the prize, but it is available only to winners
-        if (stage == WarStage.SECOND_ROUND && team != war.winner) {
-            revert("War:ONLY_WINNERS");
-        }
+        require(stage == WarStage.FIRST_ROUND, "War:DEPOSIT_IS_BLOCKED");
 
         //transfering the amount to this contranct and increase the user deposit amount
         _unit.transferFrom(msg.sender, address(this), _amount);
@@ -350,6 +361,11 @@ contract War {
 
     /**
      * @notice It calculates the random parameters from the revealed externam random source.
+     * @param _warId War id.
+     * @param _externalRandomSource The revealed origin external random source registered on the war creation.
+     */
+    /**
+     * @notice It calculates the random parameters from the revealed externam random source.
      * @dev See the docs to understand how it works. It is not so hard, but be guided by examples is a better way.
      * @param _warId War id.
      * @param _externalRandomSource The revealed origin external random source registered on the war creation.
@@ -362,25 +378,40 @@ contract War {
         uint256 salt = 0;
 
         uint256 randomTeamSource =
-            random(_warId, _externalRandomSource, salt, 10000);
-        bool isTeamA = randomTeamSource > 5000;
+            random(_warId, _externalRandomSource, salt, ONE_HUNDRED_PERCENT);
+        bool isTeamA = randomTeamSource > ONE_HUNDRED_PERCENT / 2;
 
         war.attackerTeam = isTeamA ? TEAM_A : TEAM_B;
         war.defenderTeam = !isTeamA ? TEAM_A : TEAM_B;
 
         salt = salt.add(randomTeamSource);
 
-        war.attackerCasualty = random(_warId, _externalRandomSource, salt, 100);
+        war.attackerCasualty = random(
+            _warId,
+            _externalRandomSource,
+            salt,
+            ONE_HUNDRED_PERCENT
+        );
         salt = salt.add(war.attackerCasualty);
-        war.defenderCasualty = random(_warId, _externalRandomSource, salt, 100);
+        war.defenderCasualty = random(
+            _warId,
+            _externalRandomSource,
+            salt,
+            ONE_HUNDRED_PERCENT
+        );
         salt = salt.add(war.defenderCasualty);
-        war.luck = random(_warId, _externalRandomSource, salt, 100);
+        war.luck = random(
+            _warId,
+            _externalRandomSource,
+            salt,
+            ONE_HUNDRED_PERCENT / 5
+        );
         salt = salt.add(war.luck);
 
         uint256 randomBadLuckSource =
-            random(_warId, _externalRandomSource, salt, 10000);
+            random(_warId, _externalRandomSource, salt, ONE_HUNDRED_PERCENT);
 
-        war.isBadLuck = randomBadLuckSource > 5000;
+        war.isBadLuck = randomBadLuckSource > ONE_HUNDRED_PERCENT / 2;
 
         warRandomParameters[_warId] = WarRandomParameters(
             randomTeamSource,
@@ -404,7 +435,6 @@ contract War {
     //TODO: refactor the code to reduce the amount of duplicated code.
     /**
      * @notice It calculates the troop improvement by analysing if a specified unit has a troop impact factor, which is a percentual by unit.
-     * @dev See the docs to understand how it works. It is not so hard, but be guided by examples is a better way.
      * @param _warId War id.
      */
     function _calculateTroopImprovement(uint256 _warId) internal {
@@ -482,8 +512,7 @@ contract War {
 
     /**
      * @notice It calculates the luck of a team. The luck of a team is the same amount of badluck to another.
-     * This function uses the pre-calculated random luck percentual.
-     * @dev See the docs to understand how it works. It is not so hard, but be guided by examples is a better way.
+     *         This function uses the pre-calculated random luck percentual.
      * @param _warId War id.
      */
     function _calculateLuckImpact(uint256 _warId) internal {
@@ -492,8 +521,10 @@ contract War {
         uint256 initialAttackPower = attackPower[_warId][war.attackerTeam];
         uint256 initialDefensePower = defensePower[_warId][war.defenderTeam];
 
-        uint256 attackerPowerByLuck = initialAttackPower.mul(war.luck).div(100);
-        uint256 defensePowerByLuck = initialDefensePower.mul(war.luck).div(100);
+        uint256 attackerPowerByLuck =
+            initialAttackPower.mul(war.luck).div(ONE_HUNDRED_PERCENT);
+        uint256 defensePowerByLuck =
+            initialDefensePower.mul(war.luck).div(ONE_HUNDRED_PERCENT);
 
         // the luck is in the attacker point of view
         if (war.isBadLuck) {
@@ -519,7 +550,6 @@ contract War {
 
     /**
      * @notice It calculates the morale from both sides.
-     * @dev See the docs to understand how it works. It is not so hard, but be guided by examples is a better way.
      * @param _warId War id.
      */
     function _calculareMoraleImpact(uint256 _warId) internal {
@@ -541,12 +571,12 @@ contract War {
             initialAttackPower
                 .mul(attackerMoraleImpactPerc)
                 .div(ONE_HUNDRED_PERCENT)
-                .div(10);
+                .div(TEN_PERCENT);
         uint256 defenseMoraleImpact =
             initialDefensePower
                 .mul(defenseMoraleImpactPerc)
                 .div(ONE_HUNDRED_PERCENT)
-                .div(10);
+                .div(TEN_PERCENT);
 
         // if the morale impact is greater than 100% it indicates that the team
         // has more power than other, so we will try to create a balance.
@@ -581,7 +611,6 @@ contract War {
 
     /**
      * @notice It calculates the losses from the both sides. This function uses the pre-calculated random losses percentual.
-     * @dev See the docs to understand how it works. It is not so hard, but be guided by examples is a better way.
      * @param _warId War id.
      */
     function _calculateLosses(uint256 _warId) internal {
