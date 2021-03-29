@@ -664,10 +664,10 @@ contract War {
     }
 
     /**
-     * @notice Returns the deposit amount of a specified token
+     * @notice It returns the deposited amount of a specified unit token.
      * @param _warId War id.
-     * @param _tokenAddress The specified token address to check the user's amount.
-     * @param _player The address of a player to check the deposited amount.
+     * @param _tokenAddress The specified unit token address to check the user's amount.
+     * @param _player The player' address to check the deposited amount.
      * @return The deposited amount.
      */
     function getPlayerDeposit(
@@ -682,7 +682,7 @@ contract War {
     //       Check the war state
     //       Subtract the deposited amount or control the requested amount
     /**
-     * @notice Withdraw the remaining amount of a unit token after the war. This function get the troop back to home.
+     * @notice It withdraws the remaining amount of a unit token after the war. This function get the troop back to home.
      * @param _warId War id.
      * @param _unit Unit token address.
      */
@@ -717,7 +717,7 @@ contract War {
     }
 
     /**
-     * @notice This function returns the hash of a bytes32 parameters. Used to help users to configure a new war.
+     * @notice It returns the hash of a bytes32 parameters. Used to help users to configure a new war.
      * @param externalRandomSource A bytes32 external source to generate random numbers. This value will be combined with
      * others random data from the current state of the blockchain.
      */
@@ -730,9 +730,10 @@ contract War {
     }
 
     /**
-     * @notice Generate pseudo random numbers based on a external random source defined when the war was created.
-     * @dev The externalRandomSource parameter is the original value. The hash of this value must be set when 
-            the war is created. To help this process you can user the hashExternalRandomSource function.
+     * @notice It generates a pseudo random numbers based on a external random source defined when the war was created.
+     * @dev The externalRandomSource parameter is the original value. The hash of this value must be set when
+     *      the war is created. To help this process you can user the hashExternalRandomSource function. It is a public
+     *      function to help aditors verify the generated random numbers at the end of a war stage.
      * @param _warId War id.
      * @param _externalRandomSource The original external random source.
      * @param _salt A salt to generate random numbers using the same external random source.
