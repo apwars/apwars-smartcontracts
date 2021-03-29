@@ -26,6 +26,22 @@ contract War {
     mapping(uint256 => WarStage) public warStage;
     mapping(uint256 => WarRandomParameters) public warRandomParameters;
 
+    /**
+     * @notice War information.
+     * @param name The war name.
+     * @param finalAttackPower The final attack power.
+     * @param finalDefensePower The final defense power.
+     * @param percAttackerLosses The percentage of losses from the attacker team.
+     * @param percDefenderLosses The percentage of losses from the defender team.
+     * @param attackerTeam The attacker team number.
+     * @param defenderTeam The defender team number.
+     * @param winner The winner team number.
+     * @param luck The attacker luck.
+     * @param isBadLuck Sepecifies if it is a bad luck (negative luck).
+     * @param attackerCasualty The attacker casualty.
+     * @param defenderCasualty The defender casualty.
+     * @param externalRandomSourceHash The external random source hash.
+     */
     struct WarInfo {
         string name;
         uint256 finalAttackPower;
@@ -38,21 +54,43 @@ contract War {
         uint256 luck;
         bool isBadLuck;
         uint256 attackerCasualty;
-        uint256 defenseCasualty;
+        uint256 defenderCasualty;
         bytes32 externalRandomSourceHash;
     }
 
+    /**
+     * @notice The war random parameters configuration.
+     * @param randomTeamSource The random number used to define the attacker and defender.
+     * @param attackerCasualty The attacker casualty pecentage.
+     * @param defenderCasualty The defender casualty pecentage.
+     * @param luck The luck pecentage.
+     * @param randomBadLuckSource The number used to defined if it is a bad luck (negative luck).
+     */
     struct WarRandomParameters {
         uint256 randomTeamSource;
         uint256 attackerCasualty;
-        uint256 defenseCasualty;
+        uint256 defenderCasualty;
         uint256 luck;
         uint256 randomBadLuckSource;
     }
 
+    /// @notice The wars information.
+    /// @dev See the WarInfo struct.
     WarInfo[] public wars;
+
+    /// @notice The current war id.
     uint256 public currentWarId;
 
+    /**
+     * @notice Fired when a user sends troops (token units) to war.
+     * @param player The user address.
+     * @param token The unit token address.
+     * @param team The unit team.
+     * @param amount The deposited amount.
+     * @param attackPower The unit attack power.
+     * @param newTeamAttackPower The team attack power after deposit.
+     * @param newTeamDefensePower The team defense power after deposit.
+     */
     event NewDeposit(
         address indexed player,
         address indexed token,
@@ -64,38 +102,82 @@ contract War {
         uint256 newTeamDefensePower
     );
 
+    /**
+     * @notice Fired when the contract calculates the a new power for the teams.
+     * @param warId War id.
+     * @param initialAttackPower The initial attacker power.
+     * @param initialDefensePower The initial defense power.
+     * @param attackerPowerIncrement The calculated attack increment.
+     * @param defenderPowerIncrement The calculated defense increment.
+     * @param isAttackerIncrementNegative Specifies if the increment is negative.
+     * @param isDefenderIncrementNegative Specifies if the increment is negative.
+     * @param newAttackPower The attack power after changes.
+     * @param newDefensePower The defense power after changes.
+     */
     event PowerChanged(
         uint256 indexed warId,
-        uint256 initialAttackerPower,
-        uint256 initialDefenderPower,
+        uint256 initialAttackPower,
+        uint256 initialDefensePower,
         uint256 attackerPowerIncrement,
         uint256 defenderPowerIncrement,
         bool isAttackerIncrementNegative,
         bool isDefenderIncrementNegative,
-        uint256 newAttackerPower,
+        uint256 newAttackPower,
         uint256 newDefensePower
     );
 
+    /**
+     * @notice Fired when the contract calculates the team improvement.
+     * @param warId War id.
+     * @param team The improved team number.
+     * @param initialAttackPower The initial attacker power.
+     * @param initialDefensePower The initial defense power.
+     * @param improvementAttackPower The calculated attack improvement.
+     * @param improvementDefensePower The calculated defense improvement.
+     * @param newAttackPower The attack power after improvement.
+     * @param newDefensePower The defense power after improvement.
+     */
     event TroopImprovement(
         uint256 indexed warId,
         uint256 indexed team,
-        uint256 initialAttackerPower,
-        uint256 initialDefenderPower,
-        uint256 improvementAttackerPower,
+        uint256 initialAttackPower,
+        uint256 initialDefensePower,
+        uint256 improvementAttackPower,
         uint256 improvementDefensePower,
-        uint256 newAttackerPower,
+        uint256 newAttackPower,
         uint256 newDefensePower
     );
 
+    /**
+     * @notice Fired when the contract calculates the random parameters.
+     * @param warId War id.
+     * @param attackerTeam The attacker team number.
+     * @param defenderTeam The defender team number.
+     * @param attackerCasualty The percentage of attacker casualty.
+     * @param defenderCasualty The percentage of defender casualty.
+     * @param luck The percentage of attacker luck.
+     * @param isBadLuck Specifies if is a bad luck (negative luck).
+     */
     event RandomParameters(
+        uint256 indexed warId,
         uint256 attackerTeam,
         uint256 defenderTeam,
         uint256 attackerCasualty,
-        uint256 defenseCasualty,
+        uint256 defenderCasualty,
         uint256 luck,
         bool isBadLuck
     );
 
+    /**
+     * @notice Fired when the contract calculates the team losses.
+     * @param warId War id.
+     * @param team The team number.
+     * @param isAttacker Specifies if the team is the attacker.
+     * @param initialPower Specifies the team's initial power.
+     * @param power Specifies the team's final power.
+     * @param otherTeamPower Specifies the other team's final power.
+     * @param losses Specifies the losses percentage.
+     */
     event TeamLosses(
         uint256 indexed warId,
         uint256 indexed team,
@@ -106,6 +188,13 @@ contract War {
         uint256 losses
     );
 
+    /**
+     * @notice Fired when the contract owner finishes the war.
+     * @param warId War id.
+     * @param sender Transaction sender.
+     * @param externalRandomSource The revealed external random source.
+     * @param winner The winner team.
+     */
     event FirstRoundFinished(
         uint256 indexed warId,
         address sender,
@@ -113,6 +202,15 @@ contract War {
         uint256 winner
     );
 
+    /**
+     * @notice Fired when an user request to withdraw the amount after a war.
+     * @param warId War id.
+     * @param player The player address.
+     * @param tokenAddress The unit token address.
+     * @param deposit The deposited amount.
+     * @param burned The amount burned due to war losses.
+     * @param net The net amount sent to user.
+     */
     event Withdraw(
         uint256 indexed warId,
         address indexed player,
@@ -122,22 +220,35 @@ contract War {
         uint256 net
     );
 
-    function getAttackPower(uint256 warId, uint256 team)
+    /**
+     * @notice It returns the total attack power to a specified team.
+     * @param _warId War id.
+     * @param _team The team.
+     * @return The computed total attack power.
+     */
+    function getAttackPower(uint256 _warId, uint256 _team)
         public
         view
         returns (uint256)
     {
-        return attackPower[warId][team];
+        return attackPower[_warId][_team];
     }
 
-    function getDefensePower(uint256 warId, uint256 team)
+    /**
+     * @notice It returns the total defense power to a specified team.
+     * @param _warId War id.
+     * @param _team The team.
+     * @return The computed total defense power.
+     */
+    function getDefensePower(uint256 _warId, uint256 _team)
         public
         view
         returns (uint256)
     {
-        return defensePower[warId][team];
+        return defensePower[_warId][_team];
     }
 
+    //TODO: restrict to only owner
     function defineTokenTeam(
         uint256 warId,
         IUnitERC20 unit,
@@ -147,12 +258,20 @@ contract War {
         allowedTeamTokenAddresses[team].push(address(unit));
     }
 
-    function createWar(string calldata name, bytes32 externalRandomSourceHash)
+    //TODO: restrict to only owner
+    /**
+     * @notice It creates a new war and stores the hash of the external random source. It is a important value that will
+     * be used to compute random numbers. When the contract owner finishes a war only the original value will be accepted
+     * as the random source, it is useful to keep a fair game.
+     * @param _name The war name.
+     * @param _externalRandomSourceHash The has of the external random source.
+     */
+    function createWar(string calldata _name, bytes32 _externalRandomSourceHash)
         public
     {
         WarInfo memory war =
             WarInfo(
-                name,
+                _name,
                 0,
                 0,
                 0,
@@ -164,7 +283,7 @@ contract War {
                 false,
                 0,
                 0,
-                externalRandomSourceHash
+                _externalRandomSourceHash
             );
         wars.push(war);
         currentWarId = wars.length - 1;
@@ -172,6 +291,15 @@ contract War {
         warStage[currentWarId] = WarStage.FIRST_ROUND;
     }
 
+    /**
+     * @notice The way to send troops to war is depositing unit tokens, each unit token has attack and defense power and by
+     * depositing the user is inscreasing the team power. Both sides do not for if they will attack or defense, so the rigth way
+     * to fish this war is send the maximum amount of troops! The method uses the currentWarId storage variable.
+     * This method needs to receive the approval from the unit token contract to transfer the specified amount.
+     * If the war is in the second round only winners can send more troops to collect more gold.
+     * @param _unit Unit token address.
+     * @param _amount How many troops the user is sending to war.
+     */
     function deposit(IUnitERC20 _unit, uint256 _amount) public {
         WarInfo storage war = wars[currentWarId];
         address tokenAddress = address(_unit);
@@ -220,14 +348,21 @@ contract War {
         );
     }
 
-    function _defineRandomParameters(uint256 _id, bytes32 _externalRandomSource)
-        public
-    {
-        WarInfo storage war = wars[_id];
+    /**
+     * @notice It calculates the random parameters from the revealed externam random source.
+     * @dev See the docs to understand how it works. It is not so hard, but be guided by examples is a better way.
+     * @param _warId War id.
+     * @param _externalRandomSource The revealed origin external random source registered on the war creation.
+     */
+    function _defineRandomParameters(
+        uint256 _warId,
+        bytes32 _externalRandomSource
+    ) internal {
+        WarInfo storage war = wars[_warId];
         uint256 salt = 0;
 
         uint256 randomTeamSource =
-            random(_id, _externalRandomSource, salt, 10000);
+            random(_warId, _externalRandomSource, salt, 10000);
         bool isTeamA = randomTeamSource > 5000;
 
         war.attackerTeam = isTeamA ? TEAM_A : TEAM_B;
@@ -235,131 +370,143 @@ contract War {
 
         salt = salt.add(randomTeamSource);
 
-        war.attackerCasualty = random(_id, _externalRandomSource, salt, 100);
+        war.attackerCasualty = random(_warId, _externalRandomSource, salt, 100);
         salt = salt.add(war.attackerCasualty);
-        war.defenseCasualty = random(_id, _externalRandomSource, salt, 100);
-        salt = salt.add(war.defenseCasualty);
-        war.luck = random(_id, _externalRandomSource, salt, 100);
+        war.defenderCasualty = random(_warId, _externalRandomSource, salt, 100);
+        salt = salt.add(war.defenderCasualty);
+        war.luck = random(_warId, _externalRandomSource, salt, 100);
         salt = salt.add(war.luck);
 
         uint256 randomBadLuckSource =
-            random(_id, _externalRandomSource, salt, 10000);
+            random(_warId, _externalRandomSource, salt, 10000);
 
         war.isBadLuck = randomBadLuckSource > 5000;
 
-        warRandomParameters[_id] = WarRandomParameters(
+        warRandomParameters[_warId] = WarRandomParameters(
             randomTeamSource,
             war.attackerCasualty,
-            war.defenseCasualty,
+            war.defenderCasualty,
             war.luck,
             randomBadLuckSource
         );
 
         emit RandomParameters(
+            _warId,
             war.attackerTeam,
             war.defenderTeam,
             war.attackerCasualty,
-            war.defenseCasualty,
+            war.defenderCasualty,
             war.luck,
             war.isBadLuck
         );
     }
 
-    function _calculateTroopImprovement(uint256 warId) public {
+    //TODO: refactor the code to reduce the amount of duplicated code.
+    /**
+     * @notice It calculates the troop improvement by analysing if a specified unit has a troop impact factor, which is a percentual by unit.
+     * @dev See the docs to understand how it works. It is not so hard, but be guided by examples is a better way.
+     * @param _warId War id.
+     */
+    function _calculateTroopImprovement(uint256 _warId) internal {
         uint256 attackImprovement = 0;
         uint256 defenseImprovement = 0;
 
-        uint256 initialAttackePower = attackPower[warId][TEAM_A];
-        uint256 initialDefensePower = defensePower[warId][TEAM_A];
+        uint256 initialAttackePower = attackPower[_warId][TEAM_A];
+        uint256 initialDefensePower = defensePower[_warId][TEAM_A];
 
         for (uint256 i = 0; i < allowedTeamTokenAddresses[TEAM_A].length; i++) {
             IUnitERC20 unit = IUnitERC20(allowedTeamTokenAddresses[1][i]);
 
             if (unit.getTroopImproveFactor() > 0) {
-                attackImprovement = attackPower[warId][TEAM_A]
+                attackImprovement = attackPower[_warId][TEAM_A]
                     .mul(unit.getTroopImproveFactor())
                     .div(ONE_HUNDRED_PERCENT)
                     .mul(unit.balanceOf(address(this)).div(ONE));
 
-                attackPower[warId][TEAM_A] = attackImprovement;
+                attackPower[_warId][TEAM_A] = attackImprovement;
 
-                defenseImprovement = defensePower[warId][TEAM_A]
+                defenseImprovement = defensePower[_warId][TEAM_A]
                     .mul(unit.getTroopImproveFactor())
                     .div(ONE_HUNDRED_PERCENT)
                     .mul(unit.balanceOf(address(this)).div(ONE));
 
-                defensePower[warId][TEAM_A] = defenseImprovement;
+                defensePower[_warId][TEAM_A] = defenseImprovement;
             }
         }
 
         emit TroopImprovement(
-            warId,
+            _warId,
             TEAM_A,
             initialAttackePower,
             initialDefensePower,
             attackImprovement,
             defenseImprovement,
-            attackPower[warId][TEAM_A],
-            defensePower[warId][TEAM_A]
+            attackPower[_warId][TEAM_A],
+            defensePower[_warId][TEAM_A]
         );
 
-        initialAttackePower = attackPower[warId][TEAM_B];
-        initialDefensePower = defensePower[warId][TEAM_B];
+        initialAttackePower = attackPower[_warId][TEAM_B];
+        initialDefensePower = defensePower[_warId][TEAM_B];
 
         for (uint256 i = 0; i < allowedTeamTokenAddresses[TEAM_B].length; i++) {
             IUnitERC20 unit = IUnitERC20(allowedTeamTokenAddresses[1][i]);
 
             if (unit.getTroopImproveFactor() > 0) {
-                attackImprovement = attackPower[warId][TEAM_B]
+                attackImprovement = attackPower[_warId][TEAM_B]
                     .mul(unit.getTroopImproveFactor())
                     .div(ONE_HUNDRED_PERCENT)
                     .mul(unit.balanceOf(address(this)).div(ONE));
 
-                attackPower[warId][TEAM_B] = attackImprovement;
+                attackPower[_warId][TEAM_B] = attackImprovement;
 
-                defenseImprovement = defensePower[warId][TEAM_B]
+                defenseImprovement = defensePower[_warId][TEAM_B]
                     .mul(unit.getTroopImproveFactor())
                     .div(ONE_HUNDRED_PERCENT)
                     .mul(unit.balanceOf(address(this)).div(ONE));
 
-                defensePower[warId][TEAM_B] = defenseImprovement;
+                defensePower[_warId][TEAM_B] = defenseImprovement;
             }
         }
 
         emit TroopImprovement(
-            warId,
+            _warId,
             TEAM_B,
             initialAttackePower,
             initialDefensePower,
             attackImprovement,
             defenseImprovement,
-            attackPower[warId][TEAM_B],
-            defensePower[warId][TEAM_B]
+            attackPower[_warId][TEAM_B],
+            defensePower[_warId][TEAM_B]
         );
     }
 
-    function _calculateLuckImpact(uint256 id) public {
-        WarInfo storage war = wars[id];
+    /**
+     * @notice It calculates the luck of a team. The luck of a team is the same amount of badluck to another.
+     * This function uses the pre-calculated random luck percentual.
+     * @dev See the docs to understand how it works. It is not so hard, but be guided by examples is a better way.
+     * @param _warId War id.
+     */
+    function _calculateLuckImpact(uint256 _warId) internal {
+        WarInfo storage war = wars[_warId];
 
-        uint256 initialAttackerPower = attackPower[id][war.attackerTeam];
-        uint256 initialDefensePower = defensePower[id][war.defenderTeam];
+        uint256 initialAttackPower = attackPower[_warId][war.attackerTeam];
+        uint256 initialDefensePower = defensePower[_warId][war.defenderTeam];
 
-        uint256 attackerPowerByLuck =
-            initialAttackerPower.mul(war.luck).div(100);
+        uint256 attackerPowerByLuck = initialAttackPower.mul(war.luck).div(100);
         uint256 defensePowerByLuck = initialDefensePower.mul(war.luck).div(100);
 
         // the luck is in the attacker point of view
         if (war.isBadLuck) {
-            war.finalAttackPower = initialAttackerPower - attackerPowerByLuck;
+            war.finalAttackPower = initialAttackPower - attackerPowerByLuck;
             war.finalDefensePower = initialDefensePower + defensePowerByLuck;
         } else {
-            war.finalAttackPower = initialAttackerPower + attackerPowerByLuck;
+            war.finalAttackPower = initialAttackPower + attackerPowerByLuck;
             war.finalDefensePower = initialDefensePower - defensePowerByLuck;
         }
 
         emit PowerChanged(
-            id,
-            initialAttackerPower,
+            _warId,
+            initialAttackPower,
             initialDefensePower,
             attackerPowerByLuck,
             defensePowerByLuck,
@@ -370,23 +517,28 @@ contract War {
         );
     }
 
-    function _calculareMoraleImpact(uint256 id) public {
-        WarInfo storage war = wars[id];
+    /**
+     * @notice It calculates the morale from both sides.
+     * @dev See the docs to understand how it works. It is not so hard, but be guided by examples is a better way.
+     * @param _warId War id.
+     */
+    function _calculareMoraleImpact(uint256 _warId) internal {
+        WarInfo storage war = wars[_warId];
 
-        uint256 initialAttackerPower = war.finalAttackPower;
+        uint256 initialAttackPower = war.finalAttackPower;
         uint256 initialDefensePower = war.finalDefensePower;
 
         uint256 attackerMoraleImpactPerc =
-            initialAttackerPower.mul(ONE_HUNDRED_PERCENT).div(
+            initialAttackPower.mul(ONE_HUNDRED_PERCENT).div(
                 initialDefensePower
             );
         uint256 defenseMoraleImpactPerc =
             initialDefensePower.mul(ONE_HUNDRED_PERCENT).div(
-                initialAttackerPower
+                initialAttackPower
             );
 
         uint256 attackerMoraleImpact =
-            initialAttackerPower
+            initialAttackPower
                 .mul(attackerMoraleImpactPerc)
                 .div(ONE_HUNDRED_PERCENT)
                 .div(10);
@@ -396,6 +548,8 @@ contract War {
                 .div(ONE_HUNDRED_PERCENT)
                 .div(10);
 
+        // if the morale impact is greater than 100% it indicates that the team
+        // has more power than other, so we will try to create a balance.
         if (attackerMoraleImpactPerc > ONE_HUNDRED_PERCENT) {
             war.finalAttackPower = war.finalAttackPower.sub(
                 attackerMoraleImpact
@@ -413,8 +567,8 @@ contract War {
         }
 
         emit PowerChanged(
-            id,
-            initialAttackerPower,
+            _warId,
+            initialAttackPower,
             initialDefensePower,
             attackerMoraleImpactPerc,
             defenseMoraleImpactPerc,
@@ -425,11 +579,16 @@ contract War {
         );
     }
 
-    function _calculateLosses(uint256 id) public {
-        WarInfo storage war = wars[id];
+    /**
+     * @notice It calculates the losses from the both sides. This function uses the pre-calculated random losses percentual.
+     * @dev See the docs to understand how it works. It is not so hard, but be guided by examples is a better way.
+     * @param _warId War id.
+     */
+    function _calculateLosses(uint256 _warId) internal {
+        WarInfo storage war = wars[_warId];
 
-        uint256 initialAttackerPower = attackPower[id][war.attackerTeam];
-        uint256 initialDefensePower = defensePower[id][war.defenderTeam];
+        uint256 initialAttackPower = attackPower[_warId][war.attackerTeam];
+        uint256 initialDefensePower = defensePower[_warId][war.defenderTeam];
 
         if (war.finalAttackPower > war.finalDefensePower) {
             war.winner = war.attackerTeam;
@@ -455,17 +614,17 @@ contract War {
         );
 
         emit TeamLosses(
-            id,
+            _warId,
             war.attackerTeam,
             true,
-            initialAttackerPower,
+            initialAttackPower,
             war.finalAttackPower,
             totalPower,
             war.percAttackerLosses
         );
 
         emit TeamLosses(
-            id,
+            _warId,
             war.defenderTeam,
             false,
             initialDefensePower,
@@ -475,42 +634,65 @@ contract War {
         );
     }
 
-    function finishFirstRound(uint256 _id, bytes32 _externalRandomSource)
+    //TODO: restrict to only owner
+    /**
+     * @notice It finishes the first round of a war. All the random parameters will be computed by revealing the original
+     * external random source. This function is a templated method pattern which calls other helper functions. At the end of
+     * the execution the war is changed to second round and the survivors can figth to get the gold from the dragon.
+     * @param _warId War id.
+     * @param _externalRandomSource The revealed origin external random source registered on the war creation.
+     */
+    function finishFirstRound(uint256 _warId, bytes32 _externalRandomSource)
         public
     {
-        WarInfo storage war = wars[_id];
+        WarInfo storage war = wars[_warId];
 
-        _calculateTroopImprovement(_id);
-        _defineRandomParameters(_id, _externalRandomSource);
-        _calculateLuckImpact(_id);
-        _calculareMoraleImpact(_id);
-        _calculateLosses(_id);
+        _calculateTroopImprovement(_warId);
+        _defineRandomParameters(_warId, _externalRandomSource);
+        _calculateLuckImpact(_warId);
+        _calculareMoraleImpact(_warId);
+        _calculateLosses(_warId);
 
-        warStage[_id] = WarStage.SECOND_ROUND;
+        warStage[_warId] = WarStage.SECOND_ROUND;
 
         emit FirstRoundFinished(
-            _id,
+            _warId,
             msg.sender,
             _externalRandomSource,
             war.winner
         );
     }
 
+    /**
+     * @notice Returns the deposit amount of a specified token
+     * @param _warId War id.
+     * @param _tokenAddress The specified token address to check the user's amount.
+     * @param _player The address of a player to check the deposited amount.
+     * @return The deposited amount.
+     */
     function getPlayerDeposit(
-        uint256 warId,
-        address tokenAddress,
-        address player
+        uint256 _warId,
+        address _tokenAddress,
+        address _player
     ) public view returns (uint256) {
-        return depositsByPlayer[warId][tokenAddress][player];
+        return depositsByPlayer[_warId][_tokenAddress][_player];
     }
 
-    function withdraw(uint256 warId, IUnitERC20 unit) public {
-        WarInfo storage war = wars[warId];
+    // TODO: Add non-reentracy
+    //       Check the war state
+    //       Subtract the deposited amount or control the requested amount
+    /**
+     * @notice Withdraw the remaining amount of a unit token after the war. This function get the troop back to home.
+     * @param _warId War id.
+     * @param _unit Unit token address.
+     */
+    function withdraw(uint256 _warId, IUnitERC20 _unit) public {
+        WarInfo storage war = wars[_warId];
 
-        address tokenAddress = address(unit);
+        address tokenAddress = address(_unit);
         uint256 team = allowedTeamATokens[tokenAddress] ? TEAM_A : TEAM_B;
         uint256 depositAmount =
-            depositsByPlayer[warId][tokenAddress][msg.sender];
+            depositsByPlayer[_warId][tokenAddress][msg.sender];
 
         uint256 toBurnPerc =
             team == war.attackerTeam
@@ -521,11 +703,11 @@ contract War {
             depositAmount.mul(toBurnPerc).div(ONE_HUNDRED_PERCENT);
         uint256 net = depositAmount - toBurnAmount;
 
-        unit.burn(toBurnAmount);
-        unit.transfer(msg.sender, net);
+        _unit.burn(toBurnAmount);
+        _unit.transfer(msg.sender, net);
 
         emit Withdraw(
-            warId,
+            _warId,
             msg.sender,
             tokenAddress,
             depositAmount,
@@ -534,6 +716,11 @@ contract War {
         );
     }
 
+    /**
+     * @notice This function returns the hash of a bytes32 parameters. Used to help users to configure a new war.
+     * @param externalRandomSource A bytes32 external source to generate random numbers. This value will be combined with
+     * others random data from the current state of the blockchain.
+     */
     function hashExternalRandomSource(bytes32 externalRandomSource)
         public
         pure
@@ -542,13 +729,23 @@ contract War {
         return keccak256(abi.encode(externalRandomSource));
     }
 
+    /**
+     * @notice Generate pseudo random numbers based on a external random source defined when the war was created.
+     * @dev The externalRandomSource parameter is the original value. The hash of this value must be set when 
+            the war is created. To help this process you can user the hashExternalRandomSource function.
+     * @param _warId War id.
+     * @param _externalRandomSource The original external random source.
+     * @param _salt A salt to generate random numbers using the same external random source.
+     * @param _maxNumber The max number to be generated, used to create a range of random number.
+     * @return Then computed pseudo random number.
+     */
     function random(
-        uint256 warId,
+        uint256 _warId,
         bytes32 _externalRandomSource,
-        uint256 salt,
+        uint256 _salt,
         uint256 _maxNumber
     ) public view returns (uint256) {
-        WarInfo storage war = wars[warId];
+        WarInfo storage war = wars[_warId];
 
         bytes32 hash = hashExternalRandomSource(_externalRandomSource);
 
@@ -566,7 +763,7 @@ contract War {
                     _blockhash,
                     gasLeft,
                     wars.length,
-                    salt,
+                    _salt,
                     _externalRandomSource
                 )
             );
