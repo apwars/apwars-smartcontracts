@@ -981,6 +981,10 @@ contract War is Ownable, ReentrancyGuard {
         );
     }
 
+    /**
+     * @notice It returns the total prize locked when the war was finished.
+     * @param _warId War id.
+     */
     function getTotalPrize(uint256 _warId) public view returns (uint256) {
         return totalPrize[_warId];
     }
