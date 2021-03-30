@@ -15,8 +15,8 @@ import "./IUnitERC20.sol";
  *         withdrawing the remaining amounts. The war simulator will randomly select the attacker and defender team,
  *         so the player doesn't know if the system will use each unit's attack or defense power. The war is divided
  *         into two rounds: the first is completed by computing the battle between the teams. After the first stage,
- *         the winner will fight against the Dragon to collect the gold from the Dragon's pocket. At this point, the
- *         player will not lose any troops. A random value will define how much gold the army will get from the Dragon.
+ *         the winner will fight against the Dragon to collect the gold from the Dragon's pocket. At this point. A random
+ *         value will define how much gold the army will get from the Dragon and how many troops will die fighting against the Dragon.
  *         The Dragon will burn all remaining gold that troop can't bring home.
  * @dev See the docs to understand how the battle system works. It is not so hard, but be guided by examples is a better way.
  */
