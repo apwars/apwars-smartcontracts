@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-import "./libs/IBEP20.sol";
+import "./IAPWarsBaseToken.sol";
 import "./IUnitERC20.sol";
 
 /**
@@ -23,7 +23,7 @@ import "./IUnitERC20.sol";
 contract War is Ownable, ReentrancyGuard {
     using SafeMath for uint256;
 
-    enum WarStage {FIRST_ROUND, SECOND_ROUND, FINISHED}
+    enum WarStage {FIRST_ROUND, SECOND_ROUND, FINISHED, CLOSED}
 
     uint256 private constant ONE = 10**18;
     uint256 private constant ONE_HUNDRED_PERCENT = 10**3;
@@ -31,15 +31,19 @@ contract War is Ownable, ReentrancyGuard {
     uint256 private constant TEAM_A = 1;
     uint256 private constant TEAM_B = 2;
 
-    mapping(address => bool) private allowedTeamATokens;
-    mapping(address => bool) private allowedTeamBTokens;
     mapping(uint256 => address[]) private allowedTeamTokenAddresses;
 
     mapping(uint256 => mapping(address => mapping(address => uint256)))
         private depositsByPlayer;
     mapping(uint256 => mapping(address => uint256)) private teams;
     mapping(uint256 => mapping(uint256 => uint256)) private attackPower;
+    mapping(uint256 => mapping(uint256 => mapping(address => uint256)))
+        private attackPowerByAddress;
     mapping(uint256 => mapping(uint256 => uint256)) private defensePower;
+    mapping(uint256 => mapping(uint256 => mapping(address => uint256)))
+        private defensePowerByAddress;
+
+    uint256 private interval;
 
     /**
      * @notice War information.
@@ -74,19 +78,29 @@ contract War is Ownable, ReentrancyGuard {
     }
 
     /**
-     * @notice The war random parameters configuration.
+     * @notice The first round war random parameters configuration.
      * @param randomTeamSource The random number used to define the attacker and defender.
      * @param attackerCasualty The attacker casualty pecentage.
      * @param defenderCasualty The defender casualty pecentage.
      * @param luck The luck pecentage.
      * @param randomBadLuckSource The number used to defined if it is a bad luck (negative luck).
      */
-    struct WarRandomParameters {
+    struct WarFirstRoundRandomParameters {
         uint256 randomTeamSource;
         uint256 attackerCasualty;
         uint256 defenderCasualty;
         uint256 luck;
         uint256 randomBadLuckSource;
+    }
+
+    /**
+     * @notice The second round war random parameters configuration.
+     * @param unlockedPrize The percentual of the unlocked prize.
+     * @param casualty The casualty in the second round.
+     */
+    struct WarSecondRoundRandomParameters {
+        uint256 unlockedPrize;
+        uint256 casualty;
     }
 
     /// @notice The wars information.
@@ -99,11 +113,22 @@ contract War is Ownable, ReentrancyGuard {
     /// @notice It stores the current stage per war.
     mapping(uint256 => WarStage) public warStage;
 
-    /// @notice It stores the random parameters generated for a war.
-    mapping(uint256 => WarRandomParameters) public warRandomParameters;
+    /// @notice It stores the first round random parameters generated for a war.
+    mapping(uint256 => WarFirstRoundRandomParameters)
+        public warFirstRoundRandomParameters;
+
+    /// @notice It stores the second round random parameters generated for a war.
+    mapping(uint256 => WarSecondRoundRandomParameters)
+        public secondRoundRandomParameters;
 
     /// @notice It stores the token prize to a War.
-    mapping(uint256 => address) public warPrizes;
+    mapping(uint256 => address) public tokenPrize;
+
+    /// @notice It stores the timestamp when the second round is finished.
+    mapping(uint256 => uint256) public secoundRoundFinishTimestamp;
+
+    /// @notice It stores the total prize.
+    mapping(uint256 => uint256) public totalPrize;
 
     /**
      * @notice Fired when a user sends troops (token units) to war.
@@ -173,7 +198,7 @@ contract War is Ownable, ReentrancyGuard {
     );
 
     /**
-     * @notice Fired when the contract calculates the random parameters.
+     * @notice Fired when the contract calculates the first random parameters.
      * @param warId War id.
      * @param attackerTeam The attacker team number.
      * @param defenderTeam The defender team number.
@@ -182,7 +207,7 @@ contract War is Ownable, ReentrancyGuard {
      * @param luck The percentage of attacker luck.
      * @param isBadLuck Specifies if is a bad luck (negative luck).
      */
-    event RandomParameters(
+    event FirstRoundRandomParameters(
         uint256 indexed warId,
         uint256 attackerTeam,
         uint256 defenderTeam,
@@ -190,6 +215,18 @@ contract War is Ownable, ReentrancyGuard {
         uint256 defenderCasualty,
         uint256 luck,
         bool isBadLuck
+    );
+
+    /**
+     * @notice Fired when the contract calculates the second round random parameters.
+     * @param warId War id.
+     * @param unlockedPrize The percentual of the unlocked prize.
+     * @param casualty The casualty in the second round.
+     */
+    event SecondRoundRandomParameters(
+        uint256 indexed warId,
+        uint256 unlockedPrize,
+        uint256 casualty
     );
 
     /**
@@ -213,17 +250,19 @@ contract War is Ownable, ReentrancyGuard {
     );
 
     /**
-     * @notice Fired when the contract owner finishes the war.
+     * @notice Fired when the contract owner finishes a round.
      * @param warId War id.
      * @param sender Transaction sender.
      * @param externalRandomSource The revealed external random source.
      * @param winner The winner team.
      */
-    event FirstRoundFinished(
+    event RondFinished(
         uint256 indexed warId,
+        uint256 indexed round,
         address sender,
         bytes32 externalRandomSource,
-        uint256 winner
+        uint256 winner,
+        uint256 winnerLosses
     );
 
     /**
@@ -243,6 +282,45 @@ contract War is Ownable, ReentrancyGuard {
         uint256 burned,
         uint256 net
     );
+
+    /**
+     * @notice Fired when an user request to withdraw the prize after the second round of war.
+     * @param warId War id.
+     * @param player The player address.
+     * @param tokenAddress The token prize address.
+     * @param totalPower The team total power.
+     * @param userTotalPower The user total power (to calculate the user share in the prize).
+     * @param userShare The deposited amount.
+     * @param burned The amount burned due to war losses.
+     * @param net The net amount sent to user.
+     */
+    event PrizeWithdraw(
+        uint256 indexed warId,
+        address indexed player,
+        address indexed tokenAddress,
+        uint256 totalPower,
+        uint256 userTotalPower,
+        uint256 userShare,
+        uint256 burned,
+        uint256 net
+    );
+
+    /**
+     * @notice Fired when the owner closes the war.
+     * @param warId War id.
+     * @param sender The sender address.
+     */
+    event WarClosed(uint256 indexed warId, address indexed sender);
+
+    /**
+     * @notice It defines the interval to be used in the burn process when a war is finished. This function can be called once to avoid
+     *         unfair game.
+     * @param _interval The internal.
+     */
+    function defineInterval(uint256 _interval) public onlyOwner {
+        require(interval == 0, "War:INTERVAL_ALREADY_DECLARED");
+        interval = _interval;
+    }
 
     /**
      * @notice It returns the total attack power to a specified team.
@@ -294,11 +372,11 @@ contract War is Ownable, ReentrancyGuard {
      * @param _warId War id.
      * @param _tokenPrize Token prize address.
      */
-    function defineWarTokenPrize(uint256 _warId, IBEP20 _tokenPrize)
+    function defineTokenPrize(uint256 _warId, IAPWarsBaseToken _tokenPrize)
         public
         onlyOwner
     {
-        warPrizes[_warId][address(_tokenPrize)] = team;
+        tokenPrize[_warId] = address(_tokenPrize);
     }
 
     /**
@@ -366,8 +444,18 @@ contract War is Ownable, ReentrancyGuard {
         uint256 troopDefensePower = _unit.getDefensePower().mul(_amount);
 
         //updating attack and defense powers
+        attackPowerByAddress[currentWarId][team][
+            msg.sender
+        ] = attackPowerByAddress[currentWarId][team][msg.sender].add(
+            troopAttackPower
+        );
         attackPower[currentWarId][team] = attackPower[currentWarId][team].add(
             troopAttackPower
+        );
+        defensePowerByAddress[currentWarId][team][
+            msg.sender
+        ] = defensePowerByAddress[currentWarId][team][msg.sender].add(
+            troopDefensePower
         );
         defensePower[currentWarId][team] = defensePower[currentWarId][team].add(
             troopDefensePower
@@ -396,7 +484,7 @@ contract War is Ownable, ReentrancyGuard {
      * @param _warId War id.
      * @param _externalRandomSource The revealed origin external random source registered on the war creation.
      */
-    function _defineRandomParameters(
+    function _defineFirstRoundRandomParameters(
         uint256 _warId,
         bytes32 _externalRandomSource
     ) internal {
@@ -439,7 +527,7 @@ contract War is Ownable, ReentrancyGuard {
 
         war.isBadLuck = randomBadLuckSource > ONE_HUNDRED_PERCENT / 2;
 
-        warRandomParameters[_warId] = WarRandomParameters(
+        warFirstRoundRandomParameters[_warId] = WarFirstRoundRandomParameters(
             randomTeamSource,
             war.attackerCasualty,
             war.defenderCasualty,
@@ -447,7 +535,7 @@ contract War is Ownable, ReentrancyGuard {
             randomBadLuckSource
         );
 
-        emit RandomParameters(
+        emit FirstRoundRandomParameters(
             _warId,
             war.attackerTeam,
             war.defenderTeam,
@@ -505,7 +593,7 @@ contract War is Ownable, ReentrancyGuard {
         initialDefensePower = defensePower[_warId][TEAM_B];
 
         for (uint256 i = 0; i < allowedTeamTokenAddresses[TEAM_B].length; i++) {
-            IUnitERC20 unit = IUnitERC20(allowedTeamTokenAddresses[1][i]);
+            IUnitERC20 unit = IUnitERC20(allowedTeamTokenAddresses[TEAM_B][i]);
 
             if (unit.getTroopImproveFactor() > 0) {
                 attackImprovement = attackPower[_warId][TEAM_B]
@@ -703,7 +791,7 @@ contract War is Ownable, ReentrancyGuard {
         WarInfo storage war = wars[_warId];
 
         _calculateTroopImprovement(_warId);
-        _defineRandomParameters(_warId, _externalRandomSource);
+        _defineFirstRoundRandomParameters(_warId, _externalRandomSource);
         _calculateLuckImpact(_warId);
 
         // if there is no other side there is no morale impact
@@ -714,12 +802,116 @@ contract War is Ownable, ReentrancyGuard {
 
         warStage[_warId] = WarStage.SECOND_ROUND;
 
-        emit FirstRoundFinished(
+        emit RondFinished(
             _warId,
+            1,
             msg.sender,
             _externalRandomSource,
-            war.winner
+            war.winner,
+            war.winner == war.attackerTeam
+                ? war.percAttackerLosses
+                : war.percDefenderLosses
         );
+    }
+
+    /**
+     * @notice It finishes the first round of a war. All the random parameters will be computed by revealing the original
+     * external random source. This function is a templated method pattern which calls other helper functions. At the end of
+     * the execution the war is changed to second round and the survivors can figth to get the gold from the dragon.
+     * @param _warId War id.
+     * @param _externalRandomSource The revealed origin external random source registered on the war creation.
+     */
+    function finishSecondRound(uint256 _warId, bytes32 _externalRandomSource)
+        public
+        onlyOwner
+    {
+        WarInfo storage war = wars[_warId];
+        IAPWarsBaseToken token = IAPWarsBaseToken(tokenPrize[_warId]);
+
+        secondRoundRandomParameters[_warId].unlockedPrize = random(
+            _warId,
+            _externalRandomSource,
+            0,
+            ONE_HUNDRED_PERCENT
+        );
+        secondRoundRandomParameters[_warId].casualty = random(
+            _warId,
+            _externalRandomSource,
+            secondRoundRandomParameters[_warId].unlockedPrize,
+            ONE_HUNDRED_PERCENT
+        );
+
+        warStage[_warId] = WarStage.FINISHED;
+        secoundRoundFinishTimestamp[_warId] = block.timestamp;
+        totalPrize[_warId] = token.balanceOf(address(this));
+
+        //calculating the new losses after the second round
+        uint256 losses =
+            war.winner == war.attackerTeam
+                ? war.percAttackerLosses
+                : war.percDefenderLosses;
+        uint256 newLosses =
+            losses
+                .mul(secondRoundRandomParameters[_warId].casualty)
+                .div(ONE_HUNDRED_PERCENT)
+                .add(losses);
+
+        if (newLosses > ONE_HUNDRED_PERCENT) {
+            newLosses = ONE_HUNDRED_PERCENT;
+        }
+
+        if (war.winner == war.attackerTeam) {
+            war.percAttackerLosses = newLosses;
+        } else {
+            war.percDefenderLosses = newLosses;
+        }
+
+        emit SecondRoundRandomParameters(
+            _warId,
+            secondRoundRandomParameters[_warId].unlockedPrize,
+            secondRoundRandomParameters[_warId].casualty
+        );
+        emit RondFinished(
+            _warId,
+            2,
+            msg.sender,
+            _externalRandomSource,
+            war.winner,
+            newLosses
+        );
+    }
+
+    /**
+     * @notice It a help function to burn tokens by team.
+     * @dev This function is a helper function called by closeWar.
+     * @param _team Team number.
+     */
+    function _burnTokensByTeam(uint256 _team) internal {
+        for (uint256 i = 0; i < allowedTeamTokenAddresses[_team].length; i++) {
+            IUnitERC20 unit = IUnitERC20(allowedTeamTokenAddresses[_team][i]);
+
+            uint256 amount = unit.balanceOf(address(this));
+            if (amount > 0) {
+                unit.burn(amount);
+            }
+        }
+    }
+
+    /**
+     * @notice It closes the war. After the war is finished all the remaining token balances are burned.
+     * @param _warId War id.
+     */
+    function closeWar(uint256 _warId) public onlyOwner {
+        require(
+            secoundRoundFinishTimestamp[_warId] + interval <= block.timestamp,
+            "War:INVALID_TIMESTAMP"
+        );
+        warStage[_warId] = WarStage.CLOSED;
+
+        _burnTokensByTeam(TEAM_A);
+        _burnTokensByTeam(TEAM_B);
+
+        emit WarClosed(_warId, msg.sender);
     }
 
     /**
@@ -737,8 +929,7 @@ contract War is Ownable, ReentrancyGuard {
         return depositsByPlayer[_warId][_tokenAddress][_player];
     }
 
-    // TODO: Check the war state
-    //       Subtract the deposited amount or control the requested amount
+    // TODO: Subtract the deposited amount or control the requested amount
     /**
      * @notice It withdraws the remaining amount of a unit token after the war. This function get the troop back to home.
      * @param _warId War id.
@@ -746,9 +937,19 @@ contract War is Ownable, ReentrancyGuard {
      */
     function withdraw(uint256 _warId, IUnitERC20 _unit) public nonReentrant {
         WarInfo storage war = wars[_warId];
-
         address tokenAddress = address(_unit);
-        uint256 team = allowedTeamATokens[tokenAddress] ? TEAM_A : TEAM_B;
+
+        require(
+            teams[_warId][tokenAddress] == TEAM_A ||
+                teams[_warId][tokenAddress] == TEAM_B,
+            "War:INVALID_TOKEN_ADDRESS"
+        );
+        require(
+            warStage[_warId] == WarStage.FINISHED,
+            "War:INVALID_WAR_STAGE_TO_WITHDRAW"
+        );
+
+        uint256 team = teams[currentWarId][tokenAddress];
         uint256 depositAmount =
             depositsByPlayer[_warId][tokenAddress][msg.sender];
 
@@ -757,19 +958,88 @@ contract War is Ownable, ReentrancyGuard {
                 ? war.percAttackerLosses
                 : war.percDefenderLosses;
 
-        uint256 toBurnAmount =
+        uint256 amountToBurn =
             depositAmount.mul(toBurnPerc).div(ONE_HUNDRED_PERCENT);
-        uint256 net = depositAmount - toBurnAmount;
+        uint256 net = depositAmount - amountToBurn;
 
-        _unit.burn(toBurnAmount);
-        _unit.transfer(msg.sender, net);
+        _unit.burn(amountToBurn);
+
+        //avoinding rounding erros to the last user
+        if (_unit.balanceOf(address(this)) < net) {
+            _unit.transfer(msg.sender, _unit.balanceOf(address(this)));
+        } else {
+            _unit.transfer(msg.sender, net);
+        }
 
         emit Withdraw(
             _warId,
             msg.sender,
             tokenAddress,
             depositAmount,
-            toBurnAmount,
+            amountToBurn,
+            net
+        );
+    }
+
+    function getTotalPrize(uint256 _warId) public view returns (uint256) {
+        return totalPrize[_warId];
+    }
+
+    //TODO: Check if the user can run this method
+    /**
+     * @notice It withdraws the unlocked prize and burns the locked prize for each user.
+     *         The total prize is the token prize total balance when the war is finisehd.
+     *         The user share corresponds to the proportion of user total power and the the team
+     *         total power.
+     * @param _warId War id.
+     */
+    function withdrawPrize(uint256 _warId) public nonReentrant {
+        WarInfo storage war = wars[_warId];
+        address tokenAddress = tokenPrize[_warId];
+        IAPWarsBaseToken token = IAPWarsBaseToken(tokenAddress);
+
+        require(
+            warStage[_warId] == WarStage.FINISHED,
+            "War:INVALID_WAR_STAGE_TO_WITHDRAL_PRIZE"
+        );
+
+        bool isAttacker = war.attackerTeam == war.winner;
+        uint256 teamTotalPower =
+            isAttacker
+                ? attackPower[_warId][war.winner]
+                : defensePower[_warId][war.winner];
+        uint256 userTotalPower =
+            isAttacker
+                ? attackPowerByAddress[_warId][war.winner][msg.sender]
+                : defensePowerByAddress[_warId][war.winner][msg.sender];
+
+        uint256 userShare =
+            userTotalPower.mul(ONE_HUNDRED_PERCENT).div(teamTotalPower);
+        uint256 userPrize =
+            totalPrize[_warId].mul(userShare).div(ONE_HUNDRED_PERCENT);
+        uint256 amountToBurn =
+            userPrize
+                .mul(secondRoundRandomParameters[_warId].unlockedPrize)
+                .div(ONE_HUNDRED_PERCENT);
+        uint256 net = userPrize - amountToBurn;
+
+        token.burn(amountToBurn);
+
+        //avoinding rounding errors to the last user
+        if (token.balanceOf(address(this)) < net) {
+            token.transfer(msg.sender, token.balanceOf(address(this)));
+        } else {
+            token.transfer(msg.sender, net);
+        }
+
+        emit PrizeWithdraw(
+            _warId,
+            msg.sender,
+            tokenAddress,
+            teamTotalPower,
+            userTotalPower,
+            userShare,
+            amountToBurn,
             net
         );
     }

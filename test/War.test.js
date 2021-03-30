@@ -1,7 +1,7 @@
 const War = artifacts.require('War');
 const UnitERC20Token = artifacts.require('UnitERC20Token');
 
-contract('War', accounts => {
+contract.only('War', accounts => {
   const externalRandomSource = '0x009f7d857c47a36ffce885e3978b815ae7b7b5b6f52fff6dae164a3845ad7eff';
   const UNIT_DEFAULT_SUPPLY = 10000000;
   const MULT = 10 ** 18;
@@ -17,6 +17,8 @@ contract('War', accounts => {
 
   it('should create unit tokens and define teams', async () => {
     const instance = await War.deployed();
+
+    gold = await UnitERC20Token.new('Gold', 'A:GOLD', 0, 0, 0);
 
     teamAArcher = await UnitERC20Token.new('Team A Archer', 'A:ARCHER', 15, 50, 0);
     teamAWarrior = await UnitERC20Token.new('Team A Warrior', 'A:WARRIOR', 50, 15, 0);
@@ -121,6 +123,7 @@ contract('War', accounts => {
     const externalRandomSourceHash = await instance.hashExternalRandomSource(externalRandomSource);
 
     await instance.createWar('War#1', externalRandomSourceHash);
+    await instance.defineTokenPrize(0, gold.address);
     
     instance.defineTokenTeam(0, teamAArcher.address, 1);
     instance.defineTokenTeam(0, teamAWarrior.address, 1);
@@ -160,42 +163,7 @@ contract('War', accounts => {
     const instance = await War.deployed();
 
     await instance.finishFirstRound(0, externalRandomSource);
-
-    const war = await instance.wars(0);
-    const attackPowerTeamA = await instance.getAttackPower(0, 1);
-    const attackPowerTeamB = await instance.getAttackPower(0, 2);
-    const defensePowerTeamA = await instance.getDefensePower(0, 1);
-    const defensePowerTeamB = await instance.getDefensePower(0, 1);
-
-    console.log({
-      attackPowerTeamA: attackPowerTeamA.toString(),
-      attackPowerTeamB: attackPowerTeamB.toString(),
-      defensePowerTeamA: defensePowerTeamA.toString(),
-      defensePowerTeamB: defensePowerTeamB.toString(),
-    });
-
-    await instance.withdraw(0, teamAArcher.address, {from: accounts[1]});
-    
-    console.log('name', war.name);
-    console.log('attackerTeam', war.attackerTeam.toString());
-    console.log('defenderTeam', war.defenderTeam.toString());
-    console.log('winner', war.winner.toString());
-    console.log('luck', war.luck.toString());
-    console.log('isBadLuck', war.isBadLuck);
-    console.log('attackerCasualty', war.attackerCasualty.toString());
-    console.log('defenderCasualty', war.defenderCasualty.toString());
-    console.log('-------');
-    console.log('finalAttackPower', war.finalAttackPower.toString());
-    console.log('finalDefensePower', war.finalDefensePower.toString());
-    console.log('-------');
-    console.log('percAttackerLosses', war.percAttackerLosses.toString());
-    console.log('percDefenderLosses', war.percDefenderLosses.toString());
-  });
-
-  it('should finish war', async () => {
-    const instance = await War.deployed();
-
-    await instance.finishFirstRound(0, externalRandomSource);
+    await instance.finishSecondRound(0, externalRandomSource);
 
     const war = await instance.wars(0);
     const attackPowerTeamA = await instance.getAttackPower(0, 1);
@@ -230,7 +198,7 @@ contract('War', accounts => {
 });
 
 
-contract.only('A war with just one side (A)', accounts => {
+contract('A war with just one side (A)', accounts => {
   const externalRandomSource = '0x019f7d857c47a36ffce885e3978b815ae7b7b5b6f52fff6dae164a3845ad7eff';
   const UNIT_DEFAULT_SUPPLY = 10000000;
   const MULT = 10 ** 18;
@@ -382,7 +350,7 @@ contract.only('A war with just one side (A)', accounts => {
 });
 
 
-contract.only('A war with just one side (B)', accounts => {
+contract('A war with just one side (B)', accounts => {
   const externalRandomSource = '0x019f7d857c47a36ffce885e3978b815ae7b7b5b6f52fff6dae164a3845ad7eff';
   const UNIT_DEFAULT_SUPPLY = 10000000;
   const MULT = 10 ** 18;
@@ -399,16 +367,20 @@ contract.only('A war with just one side (B)', accounts => {
   it('should create unit tokens and define teams', async () => {
     const instance = await War.deployed();
 
+    gold = await UnitERC20Token.new('Gold', 'A:GOLD', 0, 0, 0);
+
     teamAArcher = await UnitERC20Token.new('Team A Archer', 'A:ARCHER', 15, 50, 0);
 
     teamBArcher = await UnitERC20Token.new('Team B Archer', 'A:ARCHER', 15, 50, 0);
 
     await Promise.all(
       [
+        gold,
         teamAArcher,
         teamBArcher
       ].map(token => token.mint(accounts[0], web3.utils.toWei((UNIT_DEFAULT_SUPPLY).toString())))
     );
+
   });
 
   it('should distribute teams', async () => {
@@ -439,6 +411,9 @@ contract.only('A war with just one side (B)', accounts => {
     const externalRandomSourceHash = await instance.hashExternalRandomSource(externalRandomSource);
 
     await instance.createWar('War#1', externalRandomSourceHash);
+    await instance.defineTokenPrize(0, gold.address);
+
+    await gold.transfer(instance.address, await gold.balanceOf(accounts[0]));
     
     instance.defineTokenTeam(0, teamAArcher.address, 1);
     instance.defineTokenTeam(0, teamBArcher.address, 2);
@@ -464,42 +439,7 @@ contract.only('A war with just one side (B)', accounts => {
     const instance = await War.deployed();
 
     await instance.finishFirstRound(0, externalRandomSource);
-
-    const war = await instance.wars(0);
-    const attackPowerTeamA = await instance.getAttackPower(0, 1);
-    const attackPowerTeamB = await instance.getAttackPower(0, 2);
-    const defensePowerTeamA = await instance.getDefensePower(0, 1);
-    const defensePowerTeamB = await instance.getDefensePower(0, 1);
-
-    console.log({
-      attackPowerTeamA: attackPowerTeamA.toString(),
-      attackPowerTeamB: attackPowerTeamB.toString(),
-      defensePowerTeamA: defensePowerTeamA.toString(),
-      defensePowerTeamB: defensePowerTeamB.toString(),
-    });
-
-    await instance.withdraw(0, teamAArcher.address, {from: accounts[1]});
-    
-    console.log('name', war.name);
-    console.log('attackerTeam', war.attackerTeam.toString());
-    console.log('defenderTeam', war.defenderTeam.toString());
-    console.log('winner', war.winner.toString());
-    console.log('luck', war.luck.toString());
-    console.log('isBadLuck', war.isBadLuck);
-    console.log('attackerCasualty', war.attackerCasualty.toString());
-    console.log('defenderCasualty', war.defenderCasualty.toString());
-    console.log('-------');
-    console.log('finalAttackPower', war.finalAttackPower.toString());
-    console.log('finalDefensePower', war.finalDefensePower.toString());
-    console.log('-------');
-    console.log('percAttackerLosses', war.percAttackerLosses.toString());
-    console.log('percDefenderLosses', war.percDefenderLosses.toString());
-  });
-
-  it('should finish war', async () => {
-    const instance = await War.deployed();
-
-    await instance.finishFirstRound(0, externalRandomSource);
+    await instance.finishSecondRound(0, externalRandomSource);
 
     const war = await instance.wars(0);
     const attackPowerTeamA = await instance.getAttackPower(0, 1);
@@ -530,5 +470,82 @@ contract.only('A war with just one side (B)', accounts => {
     console.log('-------');
     console.log('percAttackerLosses', war.percAttackerLosses.toString());
     console.log('percDefenderLosses', war.percDefenderLosses.toString());
+  });
+});
+
+contract.only('Simple War', accounts => {
+  const externalRandomSource = '0x019f7d857c47a36ffce885e3978b815ae7b7b5b6f52fff6dae164a3845ad7eff';
+  const UNIT_DEFAULT_SUPPLY = 10000000;
+  const MULT = 10 ** 18;
+
+  let gold = null;
+  let teamA = null;
+  let teamB = null;
+
+  it('should prepare war', async () => {
+    const instance = await War.deployed();
+
+    gold = await UnitERC20Token.new('Gold', 'A:GOLD', 0, 0, 0);
+    teamA = await UnitERC20Token.new('Team A Archer', 'A:ARCHER', 15, 50, 0);
+    teamB = await UnitERC20Token.new('Team B Archer', 'A:ARCHER', 15, 50, 0);
+
+    await Promise.all(
+      [
+        gold,
+        teamA,
+        teamB
+      ].map(token => token.mint(accounts[0], web3.utils.toWei((UNIT_DEFAULT_SUPPLY).toString())))
+    );
+
+    const totalSupply = web3.utils.toWei(UNIT_DEFAULT_SUPPLY.toString());
+    await gold.transfer(instance.address, totalSupply);
+
+    await teamA.transfer(accounts[1], totalSupply);
+    await teamA.approve(instance.address, totalSupply, { from: accounts[1] });
+    await teamB.transfer(accounts[2], totalSupply);
+    await teamB.approve(instance.address, totalSupply, { from: accounts[2] });
+
+    const externalRandomSourceHash = await instance.hashExternalRandomSource(externalRandomSource);
+    await instance.createWar('War#1', externalRandomSourceHash);
+    await instance.defineTokenPrize(0, gold.address);
+    
+    instance.defineTokenTeam(0, teamA.address, 1);
+    instance.defineTokenTeam(0, teamB.address, 2);
+
+    await instance.deposit(teamA.address, totalSupply, { from: accounts[1] });
+    await instance.deposit(teamB.address, totalSupply, { from: accounts[2] });
+
+    await instance.finishFirstRound(0, externalRandomSource);
+    await instance.finishSecondRound(0, externalRandomSource);
+
+    const war = await instance.wars(0);
+    const winnerAccount = accounts[war.winner];
+    
+    const totalPrize = await instance.getTotalPrize(0);
+    let goldContractBalance = await gold.balanceOf(instance.address);
+
+    expect(totalPrize.toString()).to.be.equal(goldContractBalance.toString(), 'Fail to check contract balance vs total prize');
+    
+    await instance.withdrawPrize(0, { from: winnerAccount });
+
+    goldContractBalance = await gold.balanceOf(instance.address);
+    expect(goldContractBalance.toString()).to.be.equal('0', 'Fail to check contract balance after withdraw');
+
+
+    await instance.withdraw(0, teamA.address, { from: accounts[1] });
+    
+    let teamABalance = await teamA.balanceOf(instance.address);
+    let teamBBalance = await teamB.balanceOf(instance.address);
+
+    expect(teamABalance.toString()).to.be.equal('0', 'Fail to check team A contract balance after user withdrawal');
+    expect(teamBBalance.toString()).to.be.equal(totalSupply, 'Fail to check team B contract balance after user withdrawal');
+
+    await instance.closeWar(0);
+
+    teamABalance = await teamA.balanceOf(instance.address);
+    teamBBalance = await teamB.balanceOf(instance.address);
+
+    expect(teamABalance.toString()).to.be.equal('0', 'Fail to check team a contract balance');
+    expect(teamBBalance.toString()).to.be.equal('0', 'Fail to check team bcontract balance');
   });
 });
