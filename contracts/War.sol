@@ -2,6 +2,10 @@
 pragma solidity >=0.6.0;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+
+import "./libs/IBEP20.sol";
 import "./IUnitERC20.sol";
 
 /**
@@ -16,7 +20,7 @@ import "./IUnitERC20.sol";
  *         The Dragon will burn all remaining gold that troop can't bring home.
  * @dev See the docs to understand how the battle system works. It is not so hard, but be guided by examples is a better way.
  */
-contract War {
+contract War is Ownable, ReentrancyGuard {
     using SafeMath for uint256;
 
     enum WarStage {FIRST_ROUND, SECOND_ROUND, FINISHED}
@@ -97,6 +101,9 @@ contract War {
 
     /// @notice It stores the random parameters generated for a war.
     mapping(uint256 => WarRandomParameters) public warRandomParameters;
+
+    /// @notice It stores the token prize to a War.
+    mapping(uint256 => address) public warPrizes;
 
     /**
      * @notice Fired when a user sends troops (token units) to war.
@@ -265,17 +272,35 @@ contract War {
         return defensePower[_warId][_team];
     }
 
-    //TODO: restrict to only owner
+    //TODO: restrict call twice to same parameters
+    /**
+     * @notice It defines the what tem a token address is linked.
+     * @param _warId War id.
+     * @param _unit Token unit address.
+     * @param _team The team number. If it is necessary remove a link the parameter must be zero.
+     */
     function defineTokenTeam(
-        uint256 warId,
-        IUnitERC20 unit,
-        uint256 team
-    ) public {
-        teams[warId][address(unit)] = team;
-        allowedTeamTokenAddresses[team].push(address(unit));
+        uint256 _warId,
+        IUnitERC20 _unit,
+        uint256 _team
+    ) public onlyOwner {
+        require(_team < 3, "War:INVALID_TEAM_NUMBER");
+        teams[_warId][address(_unit)] = _team;
+        allowedTeamTokenAddresses[_team].push(address(_unit));
     }
 
-    //TODO: restrict to only owner
+    /**
+     * @notice It defines the second round token prize.
+     * @param _warId War id.
+     * @param _tokenPrize Token prize address.
+     */
+    function defineWarTokenPrize(uint256 _warId, IBEP20 _tokenPrize)
+        public
+        onlyOwner
+    {
+        warPrizes[_warId][address(_tokenPrize)] = team;
+    }
+
     /**
      * @notice It creates a new war and stores the hash of the external random source. It is a important value that will
      * be used to compute random numbers. When the contract owner finishes a war only the original value will be accepted
@@ -285,6 +310,7 @@ contract War {
      */
     function createWar(string calldata _name, bytes32 _externalRandomSourceHash)
         public
+        onlyOwner
     {
         WarInfo memory war =
             WarInfo(
@@ -317,7 +343,7 @@ contract War {
      * @param _unit Unit token address.
      * @param _amount How many troops the user is sending to war.
      */
-    function deposit(IUnitERC20 _unit, uint256 _amount) public {
+    function deposit(IUnitERC20 _unit, uint256 _amount) public nonReentrant {
         WarInfo storage war = wars[currentWarId];
         address tokenAddress = address(_unit);
 
@@ -337,7 +363,7 @@ contract War {
 
         //getting the total power (attack and defense)
         uint256 troopAttackPower = _unit.getAttackPower().mul(_amount);
-        uint256 troopDefensePower = _unit.getAttackPower().mul(_amount);
+        uint256 troopDefensePower = _unit.getDefensePower().mul(_amount);
 
         //updating attack and defense powers
         attackPower[currentWarId][team] = attackPower[currentWarId][team].add(
@@ -552,7 +578,7 @@ contract War {
      * @notice It calculates the morale from both sides.
      * @param _warId War id.
      */
-    function _calculareMoraleImpact(uint256 _warId) internal {
+    function _calculateMoraleImpact(uint256 _warId) internal {
         WarInfo storage war = wars[_warId];
 
         uint256 initialAttackPower = war.finalAttackPower;
@@ -663,7 +689,6 @@ contract War {
         );
     }
 
-    //TODO: restrict to only owner
     /**
      * @notice It finishes the first round of a war. All the random parameters will be computed by revealing the original
      * external random source. This function is a templated method pattern which calls other helper functions. At the end of
@@ -673,13 +698,18 @@ contract War {
      */
     function finishFirstRound(uint256 _warId, bytes32 _externalRandomSource)
         public
+        onlyOwner
     {
         WarInfo storage war = wars[_warId];
 
         _calculateTroopImprovement(_warId);
         _defineRandomParameters(_warId, _externalRandomSource);
         _calculateLuckImpact(_warId);
-        _calculareMoraleImpact(_warId);
+
+        // if there is no other side there is no morale impact
+        if (war.finalAttackPower > 0 && war.finalDefensePower > 0) {
+            _calculateMoraleImpact(_warId);
+        }
         _calculateLosses(_warId);
 
         warStage[_warId] = WarStage.SECOND_ROUND;
@@ -707,15 +737,14 @@ contract War {
         return depositsByPlayer[_warId][_tokenAddress][_player];
     }
 
-    // TODO: Add non-reentracy
-    //       Check the war state
+    // TODO: Check the war state
     //       Subtract the deposited amount or control the requested amount
     /**
      * @notice It withdraws the remaining amount of a unit token after the war. This function get the troop back to home.
      * @param _warId War id.
      * @param _unit Unit token address.
      */
-    function withdraw(uint256 _warId, IUnitERC20 _unit) public {
+    function withdraw(uint256 _warId, IUnitERC20 _unit) public nonReentrant {
         WarInfo storage war = wars[_warId];
 
         address tokenAddress = address(_unit);

@@ -183,12 +183,352 @@ contract('War', accounts => {
     console.log('luck', war.luck.toString());
     console.log('isBadLuck', war.isBadLuck);
     console.log('attackerCasualty', war.attackerCasualty.toString());
-    console.log('defenseCasualty', war.defenseCasualty.toString());
+    console.log('defenderCasualty', war.defenderCasualty.toString());
     console.log('-------');
     console.log('finalAttackPower', war.finalAttackPower.toString());
     console.log('finalDefensePower', war.finalDefensePower.toString());
     console.log('-------');
-    console.log('percAtackerLosses', war.percAtackerLosses.toString());
-    console.log('perDefenderLosses', war.percDefenderLosses.toString());
+    console.log('percAttackerLosses', war.percAttackerLosses.toString());
+    console.log('percDefenderLosses', war.percDefenderLosses.toString());
+  });
+
+  it('should finish war', async () => {
+    const instance = await War.deployed();
+
+    await instance.finishFirstRound(0, externalRandomSource);
+
+    const war = await instance.wars(0);
+    const attackPowerTeamA = await instance.getAttackPower(0, 1);
+    const attackPowerTeamB = await instance.getAttackPower(0, 2);
+    const defensePowerTeamA = await instance.getDefensePower(0, 1);
+    const defensePowerTeamB = await instance.getDefensePower(0, 1);
+
+    console.log({
+      attackPowerTeamA: attackPowerTeamA.toString(),
+      attackPowerTeamB: attackPowerTeamB.toString(),
+      defensePowerTeamA: defensePowerTeamA.toString(),
+      defensePowerTeamB: defensePowerTeamB.toString(),
+    });
+
+    await instance.withdraw(0, teamAArcher.address, {from: accounts[1]});
+    
+    console.log('name', war.name);
+    console.log('attackerTeam', war.attackerTeam.toString());
+    console.log('defenderTeam', war.defenderTeam.toString());
+    console.log('winner', war.winner.toString());
+    console.log('luck', war.luck.toString());
+    console.log('isBadLuck', war.isBadLuck);
+    console.log('attackerCasualty', war.attackerCasualty.toString());
+    console.log('defenderCasualty', war.defenderCasualty.toString());
+    console.log('-------');
+    console.log('finalAttackPower', war.finalAttackPower.toString());
+    console.log('finalDefensePower', war.finalDefensePower.toString());
+    console.log('-------');
+    console.log('percAttackerLosses', war.percAttackerLosses.toString());
+    console.log('percDefenderLosses', war.percDefenderLosses.toString());
+  });
+});
+
+
+contract.only('A war with just one side (A)', accounts => {
+  const externalRandomSource = '0x019f7d857c47a36ffce885e3978b815ae7b7b5b6f52fff6dae164a3845ad7eff';
+  const UNIT_DEFAULT_SUPPLY = 10000000;
+  const MULT = 10 ** 18;
+
+  let teamAArcher = null;
+  let teamAWarrior = null;
+  let teamACavalry = null;
+  let teamANoble = null;
+  let teamBArcher = null;
+  let teamBWarior = null;
+  let teamBCavalry = null;
+  let teamBNoble = null;
+
+  it('should create unit tokens and define teams', async () => {
+    const instance = await War.deployed();
+
+    teamAArcher = await UnitERC20Token.new('Team A Archer', 'A:ARCHER', 15, 50, 0);
+
+    teamBArcher = await UnitERC20Token.new('Team B Archer', 'A:ARCHER', 15, 50, 0);
+
+    await Promise.all(
+      [
+        teamAArcher,
+        teamBArcher
+      ].map(token => token.mint(accounts[0], web3.utils.toWei((UNIT_DEFAULT_SUPPLY).toString())))
+    );
+  });
+
+  it('should distribute teams', async () => {
+    teamAArcher.transfer(accounts[1], web3.utils.toWei((UNIT_DEFAULT_SUPPLY * 0.3).toString(), 'ether'));
+    teamAArcher.transfer(accounts[2], web3.utils.toWei((UNIT_DEFAULT_SUPPLY * 0.2).toString(), 'ether'));
+    teamAArcher.transfer(accounts[3], web3.utils.toWei((UNIT_DEFAULT_SUPPLY * 0.5).toString(), 'ether'));
+
+    teamBArcher.transfer(accounts[4], web3.utils.toWei((UNIT_DEFAULT_SUPPLY * 0.3).toString(), 'ether'));
+    teamBArcher.transfer(accounts[5], web3.utils.toWei((UNIT_DEFAULT_SUPPLY * 0.2).toString(), 'ether'));
+    teamBArcher.transfer(accounts[6], web3.utils.toWei((UNIT_DEFAULT_SUPPLY * 0.5).toString(), 'ether'));
+});
+
+  it('should allow war contract to run transferFrom', async () => {
+    const instance = await War.deployed();
+
+    teamAArcher.approve(instance.address, await teamAArcher.balanceOf(accounts[1]), { from: accounts[1] });
+    teamAArcher.approve(instance.address, await teamAArcher.balanceOf(accounts[2]), { from: accounts[2] });
+    teamAArcher.approve(instance.address, await teamAArcher.balanceOf(accounts[3]), { from: accounts[3] });
+
+    teamBArcher.approve(instance.address, await teamBArcher.balanceOf(accounts[4]), { from: accounts[4] });
+    teamBArcher.approve(instance.address, await teamBArcher.balanceOf(accounts[5]), { from: accounts[5] });
+    teamBArcher.approve(instance.address, await teamBArcher.balanceOf(accounts[6]), { from: accounts[6] });
+  });
+
+  it('should deposit units in the war contract', async () => {
+    const instance = await War.deployed();
+
+    const externalRandomSourceHash = await instance.hashExternalRandomSource(externalRandomSource);
+
+    await instance.createWar('War#1', externalRandomSourceHash);
+    
+    instance.defineTokenTeam(0, teamAArcher.address, 1);
+    instance.defineTokenTeam(0, teamBArcher.address, 2);
+
+    const depositAndCheck = async (accList, unit) => {
+      for (i = 0; i < accList.length; i++) {
+        const acc = accList[i];
+        const account = accounts[acc];
+
+        const balanceOf = (await unit.balanceOf(account)).toString();
+        await instance.deposit(unit.address, balanceOf, { from:  account});
+
+        expect((await instance.getPlayerDeposit(0, unit.address, account)).toString()).to.be.equal(balanceOf, `#${i} fail to check ${account}`);
+        expect((await unit.balanceOf(account)).toString()).to.be.equal('0', `#${i} fail to check balanceOf ${account}`);
+      }
+    }
+
+    await depositAndCheck([1, 2, 3], teamAArcher);
+    //await depositAndCheck([4, 5, 6], teamBArcher);
+  });
+
+  it('should finish war', async () => {
+    const instance = await War.deployed();
+
+    await instance.finishFirstRound(0, externalRandomSource);
+
+    const war = await instance.wars(0);
+    const attackPowerTeamA = await instance.getAttackPower(0, 1);
+    const attackPowerTeamB = await instance.getAttackPower(0, 2);
+    const defensePowerTeamA = await instance.getDefensePower(0, 1);
+    const defensePowerTeamB = await instance.getDefensePower(0, 1);
+
+    console.log({
+      attackPowerTeamA: attackPowerTeamA.toString(),
+      attackPowerTeamB: attackPowerTeamB.toString(),
+      defensePowerTeamA: defensePowerTeamA.toString(),
+      defensePowerTeamB: defensePowerTeamB.toString(),
+    });
+
+    await instance.withdraw(0, teamAArcher.address, {from: accounts[1]});
+    
+    console.log('name', war.name);
+    console.log('attackerTeam', war.attackerTeam.toString());
+    console.log('defenderTeam', war.defenderTeam.toString());
+    console.log('winner', war.winner.toString());
+    console.log('luck', war.luck.toString());
+    console.log('isBadLuck', war.isBadLuck);
+    console.log('attackerCasualty', war.attackerCasualty.toString());
+    console.log('defenderCasualty', war.defenderCasualty.toString());
+    console.log('-------');
+    console.log('finalAttackPower', war.finalAttackPower.toString());
+    console.log('finalDefensePower', war.finalDefensePower.toString());
+    console.log('-------');
+    console.log('percAttackerLosses', war.percAttackerLosses.toString());
+    console.log('percDefenderLosses', war.percDefenderLosses.toString());
+  });
+
+  it('should finish war', async () => {
+    const instance = await War.deployed();
+
+    await instance.finishFirstRound(0, externalRandomSource);
+
+    const war = await instance.wars(0);
+    const attackPowerTeamA = await instance.getAttackPower(0, 1);
+    const attackPowerTeamB = await instance.getAttackPower(0, 2);
+    const defensePowerTeamA = await instance.getDefensePower(0, 1);
+    const defensePowerTeamB = await instance.getDefensePower(0, 1);
+
+    console.log({
+      attackPowerTeamA: attackPowerTeamA.toString(),
+      attackPowerTeamB: attackPowerTeamB.toString(),
+      defensePowerTeamA: defensePowerTeamA.toString(),
+      defensePowerTeamB: defensePowerTeamB.toString(),
+    });
+
+    await instance.withdraw(0, teamAArcher.address, {from: accounts[1]});
+    
+    console.log('name', war.name);
+    console.log('attackerTeam', war.attackerTeam.toString());
+    console.log('defenderTeam', war.defenderTeam.toString());
+    console.log('winner', war.winner.toString());
+    console.log('luck', war.luck.toString());
+    console.log('isBadLuck', war.isBadLuck);
+    console.log('attackerCasualty', war.attackerCasualty.toString());
+    console.log('defenderCasualty', war.defenderCasualty.toString());
+    console.log('-------');
+    console.log('finalAttackPower', war.finalAttackPower.toString());
+    console.log('finalDefensePower', war.finalDefensePower.toString());
+    console.log('-------');
+    console.log('percAttackerLosses', war.percAttackerLosses.toString());
+    console.log('percDefenderLosses', war.percDefenderLosses.toString());
+  });
+});
+
+
+contract.only('A war with just one side (B)', accounts => {
+  const externalRandomSource = '0x019f7d857c47a36ffce885e3978b815ae7b7b5b6f52fff6dae164a3845ad7eff';
+  const UNIT_DEFAULT_SUPPLY = 10000000;
+  const MULT = 10 ** 18;
+
+  let teamAArcher = null;
+  let teamAWarrior = null;
+  let teamACavalry = null;
+  let teamANoble = null;
+  let teamBArcher = null;
+  let teamBWarior = null;
+  let teamBCavalry = null;
+  let teamBNoble = null;
+
+  it('should create unit tokens and define teams', async () => {
+    const instance = await War.deployed();
+
+    teamAArcher = await UnitERC20Token.new('Team A Archer', 'A:ARCHER', 15, 50, 0);
+
+    teamBArcher = await UnitERC20Token.new('Team B Archer', 'A:ARCHER', 15, 50, 0);
+
+    await Promise.all(
+      [
+        teamAArcher,
+        teamBArcher
+      ].map(token => token.mint(accounts[0], web3.utils.toWei((UNIT_DEFAULT_SUPPLY).toString())))
+    );
+  });
+
+  it('should distribute teams', async () => {
+    teamAArcher.transfer(accounts[1], web3.utils.toWei((UNIT_DEFAULT_SUPPLY * 0.3).toString(), 'ether'));
+    teamAArcher.transfer(accounts[2], web3.utils.toWei((UNIT_DEFAULT_SUPPLY * 0.2).toString(), 'ether'));
+    teamAArcher.transfer(accounts[3], web3.utils.toWei((UNIT_DEFAULT_SUPPLY * 0.5).toString(), 'ether'));
+
+    teamBArcher.transfer(accounts[4], web3.utils.toWei((UNIT_DEFAULT_SUPPLY * 0.3).toString(), 'ether'));
+    teamBArcher.transfer(accounts[5], web3.utils.toWei((UNIT_DEFAULT_SUPPLY * 0.2).toString(), 'ether'));
+    teamBArcher.transfer(accounts[6], web3.utils.toWei((UNIT_DEFAULT_SUPPLY * 0.5).toString(), 'ether'));
+});
+
+  it('should allow war contract to run transferFrom', async () => {
+    const instance = await War.deployed();
+
+    teamAArcher.approve(instance.address, await teamAArcher.balanceOf(accounts[1]), { from: accounts[1] });
+    teamAArcher.approve(instance.address, await teamAArcher.balanceOf(accounts[2]), { from: accounts[2] });
+    teamAArcher.approve(instance.address, await teamAArcher.balanceOf(accounts[3]), { from: accounts[3] });
+
+    teamBArcher.approve(instance.address, await teamBArcher.balanceOf(accounts[4]), { from: accounts[4] });
+    teamBArcher.approve(instance.address, await teamBArcher.balanceOf(accounts[5]), { from: accounts[5] });
+    teamBArcher.approve(instance.address, await teamBArcher.balanceOf(accounts[6]), { from: accounts[6] });
+  });
+
+  it('should deposit units in the war contract', async () => {
+    const instance = await War.deployed();
+
+    const externalRandomSourceHash = await instance.hashExternalRandomSource(externalRandomSource);
+
+    await instance.createWar('War#1', externalRandomSourceHash);
+    
+    instance.defineTokenTeam(0, teamAArcher.address, 1);
+    instance.defineTokenTeam(0, teamBArcher.address, 2);
+
+    const depositAndCheck = async (accList, unit) => {
+      for (i = 0; i < accList.length; i++) {
+        const acc = accList[i];
+        const account = accounts[acc];
+
+        const balanceOf = (await unit.balanceOf(account)).toString();
+        await instance.deposit(unit.address, balanceOf, { from:  account});
+
+        expect((await instance.getPlayerDeposit(0, unit.address, account)).toString()).to.be.equal(balanceOf, `#${i} fail to check ${account}`);
+        expect((await unit.balanceOf(account)).toString()).to.be.equal('0', `#${i} fail to check balanceOf ${account}`);
+      }
+    }
+
+    //await depositAndCheck([1, 2, 3], teamAArcher);
+    await depositAndCheck([4, 5, 6], teamBArcher);
+  });
+
+  it('should finish war', async () => {
+    const instance = await War.deployed();
+
+    await instance.finishFirstRound(0, externalRandomSource);
+
+    const war = await instance.wars(0);
+    const attackPowerTeamA = await instance.getAttackPower(0, 1);
+    const attackPowerTeamB = await instance.getAttackPower(0, 2);
+    const defensePowerTeamA = await instance.getDefensePower(0, 1);
+    const defensePowerTeamB = await instance.getDefensePower(0, 1);
+
+    console.log({
+      attackPowerTeamA: attackPowerTeamA.toString(),
+      attackPowerTeamB: attackPowerTeamB.toString(),
+      defensePowerTeamA: defensePowerTeamA.toString(),
+      defensePowerTeamB: defensePowerTeamB.toString(),
+    });
+
+    await instance.withdraw(0, teamAArcher.address, {from: accounts[1]});
+    
+    console.log('name', war.name);
+    console.log('attackerTeam', war.attackerTeam.toString());
+    console.log('defenderTeam', war.defenderTeam.toString());
+    console.log('winner', war.winner.toString());
+    console.log('luck', war.luck.toString());
+    console.log('isBadLuck', war.isBadLuck);
+    console.log('attackerCasualty', war.attackerCasualty.toString());
+    console.log('defenderCasualty', war.defenderCasualty.toString());
+    console.log('-------');
+    console.log('finalAttackPower', war.finalAttackPower.toString());
+    console.log('finalDefensePower', war.finalDefensePower.toString());
+    console.log('-------');
+    console.log('percAttackerLosses', war.percAttackerLosses.toString());
+    console.log('percDefenderLosses', war.percDefenderLosses.toString());
+  });
+
+  it('should finish war', async () => {
+    const instance = await War.deployed();
+
+    await instance.finishFirstRound(0, externalRandomSource);
+
+    const war = await instance.wars(0);
+    const attackPowerTeamA = await instance.getAttackPower(0, 1);
+    const attackPowerTeamB = await instance.getAttackPower(0, 2);
+    const defensePowerTeamA = await instance.getDefensePower(0, 1);
+    const defensePowerTeamB = await instance.getDefensePower(0, 1);
+
+    console.log({
+      attackPowerTeamA: attackPowerTeamA.toString(),
+      attackPowerTeamB: attackPowerTeamB.toString(),
+      defensePowerTeamA: defensePowerTeamA.toString(),
+      defensePowerTeamB: defensePowerTeamB.toString(),
+    });
+
+    await instance.withdraw(0, teamAArcher.address, {from: accounts[4]});
+    
+    console.log('name', war.name);
+    console.log('attackerTeam', war.attackerTeam.toString());
+    console.log('defenderTeam', war.defenderTeam.toString());
+    console.log('winner', war.winner.toString());
+    console.log('luck', war.luck.toString());
+    console.log('isBadLuck', war.isBadLuck);
+    console.log('attackerCasualty', war.attackerCasualty.toString());
+    console.log('defenderCasualty', war.defenderCasualty.toString());
+    console.log('-------');
+    console.log('finalAttackPower', war.finalAttackPower.toString());
+    console.log('finalDefensePower', war.finalDefensePower.toString());
+    console.log('-------');
+    console.log('percAttackerLosses', war.percAttackerLosses.toString());
+    console.log('percDefenderLosses', war.percDefenderLosses.toString());
   });
 });
