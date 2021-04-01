@@ -10,7 +10,7 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "./IAPWarsBaseToken.sol";
 
 // APWarFarmManager is the master of a APWars token.
-contract APWarFarmManagerV2 is Ownable, ReentrancyGuard {
+contract APWarsFarmManagerV2 is Ownable, ReentrancyGuard {
     using SafeMath for uint256;
     using SafeBEP20 for IBEP20;
 

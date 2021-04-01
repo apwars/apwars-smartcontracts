@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-v3
 pragma solidity >=0.6.0;
 
-import "./IUnit.sol";
+import "./IAPWarsUnit.sol";
 import "./APWarsBaseToken.sol";
 
-contract UnitToken is IUnit, APWarsBaseToken {
+contract APWarsUnitToken is IAPWarsUnit, APWarsBaseToken {
     uint256 private attackPower;
     uint256 private defensePower;
     uint256 private troopImproveFactor;

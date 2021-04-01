@@ -1,5 +1,5 @@
-const War = artifacts.require('War');
-const UnitERC20Token = artifacts.require('UnitERC20Token');
+const War = artifacts.require('APWar');
+const UnitToken = artifacts.require('APWarsUnitToken');
 
 contract.only('War', accounts => {
   const externalRandomSource = '0x009f7d857c47a36ffce885e3978b815ae7b7b5b6f52fff6dae164a3845ad7eff';
@@ -18,17 +18,17 @@ contract.only('War', accounts => {
   it('should create unit tokens and define teams', async () => {
     const instance = await War.deployed();
 
-    gold = await UnitERC20Token.new('Gold', 'A:GOLD', 0, 0, 0);
+    gold = await UnitToken.new('Gold', 'A:GOLD', 0, 0, 0);
 
-    teamAArcher = await UnitERC20Token.new('Team A Archer', 'A:ARCHER', 15, 50, 0);
-    teamAWarrior = await UnitERC20Token.new('Team A Warrior', 'A:WARRIOR', 50, 15, 0);
-    teamACavalry = await UnitERC20Token.new('Team A Cavalry', 'A:CAVALRY', 130, 30, 0);
-    teamANoble = await UnitERC20Token.new('Team A Noble', 'A:NOBLE', 100, 50, 10);
+    teamAArcher = await UnitToken.new('Team A Archer', 'A:ARCHER', 15, 50, 0);
+    teamAWarrior = await UnitToken.new('Team A Warrior', 'A:WARRIOR', 50, 15, 0);
+    teamACavalry = await UnitToken.new('Team A Cavalry', 'A:CAVALRY', 130, 30, 0);
+    teamANoble = await UnitToken.new('Team A Noble', 'A:NOBLE', 100, 50, 10);
 
-    teamBArcher = await UnitERC20Token.new('Team B Archer', 'A:ARCHER', 15, 50, 0);
-    teamBWarior = await UnitERC20Token.new('Team B Warrior', 'A:WARRIOR', 50, 15, 0);
-    teamBCavalry = await UnitERC20Token.new('Team B Cavalry', 'A:CAVALRY', 130, 30, 0);
-    teamBNoble = await UnitERC20Token.new('Team B Noble', 'A:NOBLE', 100, 50, 10);
+    teamBArcher = await UnitToken.new('Team B Archer', 'A:ARCHER', 15, 50, 0);
+    teamBWarior = await UnitToken.new('Team B Warrior', 'A:WARRIOR', 50, 15, 0);
+    teamBCavalry = await UnitToken.new('Team B Cavalry', 'A:CAVALRY', 130, 30, 0);
+    teamBNoble = await UnitToken.new('Team B Noble', 'A:NOBLE', 100, 50, 10);
 
     //minting for test
 
@@ -215,9 +215,9 @@ contract('A war with just one side (A)', accounts => {
   it('should create unit tokens and define teams', async () => {
     const instance = await War.deployed();
 
-    teamAArcher = await UnitERC20Token.new('Team A Archer', 'A:ARCHER', 15, 50, 0);
+    teamAArcher = await UnitToken.new('Team A Archer', 'A:ARCHER', 15, 50, 0);
 
-    teamBArcher = await UnitERC20Token.new('Team B Archer', 'A:ARCHER', 15, 50, 0);
+    teamBArcher = await UnitToken.new('Team B Archer', 'A:ARCHER', 15, 50, 0);
 
     await Promise.all(
       [
@@ -367,11 +367,11 @@ contract('A war with just one side (B)', accounts => {
   it('should create unit tokens and define teams', async () => {
     const instance = await War.deployed();
 
-    gold = await UnitERC20Token.new('Gold', 'A:GOLD', 0, 0, 0);
+    gold = await UnitToken.new('Gold', 'A:GOLD', 0, 0, 0);
 
-    teamAArcher = await UnitERC20Token.new('Team A Archer', 'A:ARCHER', 15, 50, 0);
+    teamAArcher = await UnitToken.new('Team A Archer', 'A:ARCHER', 15, 50, 0);
 
-    teamBArcher = await UnitERC20Token.new('Team B Archer', 'A:ARCHER', 15, 50, 0);
+    teamBArcher = await UnitToken.new('Team B Archer', 'A:ARCHER', 15, 50, 0);
 
     await Promise.all(
       [
@@ -485,9 +485,9 @@ contract.only('Simple War', accounts => {
   it('should prepare war', async () => {
     const instance = await War.deployed();
 
-    gold = await UnitERC20Token.new('Gold', 'A:GOLD', 0, 0, 0);
-    teamA = await UnitERC20Token.new('Team A Archer', 'A:ARCHER', 15, 50, 0);
-    teamB = await UnitERC20Token.new('Team B Archer', 'A:ARCHER', 15, 50, 0);
+    gold = await UnitToken.new('Gold', 'A:GOLD', 0, 0, 0);
+    teamA = await UnitToken.new('Team A Archer', 'A:ARCHER', 15, 50, 0);
+    teamB = await UnitToken.new('Team B Archer', 'A:ARCHER', 15, 50, 0);
 
     await Promise.all(
       [

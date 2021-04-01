@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 import "./IAPWarsBaseToken.sol";
-import "./IUnitERC20.sol";
+import "./IAPWarsUnit.sol";
 
 /**
  * @title The war simulator for APWars Finance.
@@ -20,7 +20,7 @@ import "./IUnitERC20.sol";
  *         The Dragon will burn all remaining gold that troop can't bring home.
  * @dev See the docs to understand how the battle system works. It is not so hard, but be guided by examples is a better way.
  */
-contract War is Ownable, ReentrancyGuard {
+contract APWar is Ownable, ReentrancyGuard {
     using SafeMath for uint256;
 
     enum WarStage {FIRST_ROUND, SECOND_ROUND, FINISHED, CLOSED}
@@ -359,7 +359,7 @@ contract War is Ownable, ReentrancyGuard {
      */
     function defineTokenTeam(
         uint256 _warId,
-        IUnitERC20 _unit,
+        IAPWarsUnit _unit,
         uint256 _team
     ) public onlyOwner {
         require(_team < 3, "War:INVALID_TEAM_NUMBER");
@@ -421,7 +421,7 @@ contract War is Ownable, ReentrancyGuard {
      * @param _unit Unit token address.
      * @param _amount How many troops the user is sending to war.
      */
-    function deposit(IUnitERC20 _unit, uint256 _amount) public nonReentrant {
+    function deposit(IAPWarsUnit _unit, uint256 _amount) public nonReentrant {
         WarInfo storage war = wars[currentWarId];
         address tokenAddress = address(_unit);
 
@@ -559,7 +559,7 @@ contract War is Ownable, ReentrancyGuard {
         uint256 initialDefensePower = defensePower[_warId][TEAM_A];
 
         for (uint256 i = 0; i < allowedTeamTokenAddresses[TEAM_A].length; i++) {
-            IUnitERC20 unit = IUnitERC20(allowedTeamTokenAddresses[1][i]);
+            IAPWarsUnit unit = IAPWarsUnit(allowedTeamTokenAddresses[1][i]);
 
             if (unit.getTroopImproveFactor() > 0) {
                 attackImprovement = attackPower[_warId][TEAM_A]
@@ -593,7 +593,8 @@ contract War is Ownable, ReentrancyGuard {
         initialDefensePower = defensePower[_warId][TEAM_B];
 
         for (uint256 i = 0; i < allowedTeamTokenAddresses[TEAM_B].length; i++) {
-            IUnitERC20 unit = IUnitERC20(allowedTeamTokenAddresses[TEAM_B][i]);
+            IAPWarsUnit unit =
+                IAPWarsUnit(allowedTeamTokenAddresses[TEAM_B][i]);
 
             if (unit.getTroopImproveFactor() > 0) {
                 attackImprovement = attackPower[_warId][TEAM_B]
@@ -888,7 +889,7 @@ contract War is Ownable, ReentrancyGuard {
      */
     function _burnTokensByTeam(uint256 _team) internal {
         for (uint256 i = 0; i < allowedTeamTokenAddresses[_team].length; i++) {
-            IUnitERC20 unit = IUnitERC20(allowedTeamTokenAddresses[_team][i]);
+            IAPWarsUnit unit = IAPWarsUnit(allowedTeamTokenAddresses[_team][i]);
 
             uint256 amount = unit.balanceOf(address(this));
             if (amount > 0) {
@@ -935,7 +936,7 @@ contract War is Ownable, ReentrancyGuard {
      * @param _warId War id.
      * @param _unit Unit token address.
      */
-    function withdraw(uint256 _warId, IUnitERC20 _unit) public nonReentrant {
+    function withdraw(uint256 _warId, IAPWarsUnit _unit) public nonReentrant {
         WarInfo storage war = wars[_warId];
         address tokenAddress = address(_unit);
 

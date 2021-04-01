@@ -4,6 +4,12 @@ const HDWalletProvider = require('truffle-hdwallet-provider');
 const mnemonic = process.env.PRIVATE_KEY;
 const rpcUrl = process.env.RPC_URL;
 
+const mnemonic97 = process.env.PRIVATE_KEY_97;
+const rpcUrl97 = process.env.RPC_URL_97;
+
+const mnemonic56 = process.env.PRIVATE_KEY_56;
+const rpcUrl56 = process.env.RPC_URL_56;
+
 module.exports = {
   /**
    * Networks define how you connect to your ethereum client and let you set the
@@ -23,13 +29,33 @@ module.exports = {
     },
 
     ropsten: {
-        provider: () => new HDWalletProvider(mnemonic, rpcUrl),
-        network_id: 3,       // Ropsten's id
-        gas: 5500000,        // Ropsten has a lower block limit than mainnet
-        confirmations: 1,    // # of confs to wait between deployments. (default: 0)
-        timeoutBlocks: 200,  // # of blocks before a deployment times out  (minimum/default: 50)
-        skipDryRun: true     // Skip dry run before migrations? (default: false for public nets )
-      },
+      provider: () => new HDWalletProvider(mnemonic, rpcUrl),
+      network_id: 3,       // Ropsten's id
+      gas: 5500000,        // Ropsten has a lower block limit than mainnet
+      confirmations: 1,    // # of confs to wait between deployments. (default: 0)
+      timeoutBlocks: 200,  // # of blocks before a deployment times out  (minimum/default: 50)
+      skipDryRun: true     // Skip dry run before migrations? (default: false for public nets )
+    },
+
+    bsc: {
+      provider: () => new HDWalletProvider(mnemonic56, rpcUrl56),
+      gasPrice: '10000000000',
+      network_id: 56,       // Ropsten's id
+      gas: 5500000,        
+      confirmations: 1,    
+      timeoutBlocks: 200,  // # of blocks before a deployment times out  (minimum/default: 50)
+      skipDryRun: true     // Skip dry run before migrations? (default: false for public nets )
+    },
+
+    bsctestnet: {
+      provider: () => new HDWalletProvider(mnemonic97, rpcUrl97),
+      gasPrice: '20000000000',
+      network_id: 97,       
+      gas: 5500000,       
+      confirmations: 1,    // # of confs to wait between deployments. (default: 0)
+      timeoutBlocks: 2000,  // # of blocks before a deployment times out  (minimum/default: 50)
+      skipDryRun: true     // Skip dry run before migrations? (default: false for public nets ),
+    },
   },
 
   // Set default mocha options here, use special reporters etc.
