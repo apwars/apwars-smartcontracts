@@ -3,7 +3,7 @@ pragma solidity >=0.6.0;
 
 import "./IAPWarsBaseToken.sol";
 
-interface IUnitERC20 is IAPWarsBaseToken {
+interface IUnit is IAPWarsBaseToken {
     function getAttackPower() external returns (uint256);
 
     function getDefensePower() external returns (uint256);
