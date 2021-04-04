@@ -12,7 +12,7 @@ module.exports = async (deployer, network, accounts) => {
     defense: 15,
     troopImprovementFactor: 0,
     initialSupply: 10000,
-    tokensPerBlock: 1,
+    tokensPerBlock: 2,
   },
   {
     name: 'Archer',
@@ -21,7 +21,7 @@ module.exports = async (deployer, network, accounts) => {
     defense: 50,
     troopImprovementFactor: 0,
     initialSupply: 10000,
-    tokensPerBlock: 1,
+    tokensPerBlock: 2,
   },
   {
     name: 'Grunt',
@@ -30,7 +30,7 @@ module.exports = async (deployer, network, accounts) => {
     defense: 15,
     troopImprovementFactor: 0,
     initialSupply: 10000,
-    tokensPerBlock: 1,
+    tokensPerBlock: 2,
   },
   {
     name: 'Archer Grunt',
@@ -39,18 +39,18 @@ module.exports = async (deployer, network, accounts) => {
     defense: 50,
     troopImprovementFactor: 0,
     initialSupply: 10000,
-    tokensPerBlock: 1,
+    tokensPerBlock: 2,
     },
   ];
 
   const tier2 = [{
       name: 'A:Armored Warrior',
-      symbol: 'A:WIZARD',
+      symbol: 'A:ARMORED-WARRIOR',
       attack: 130,
       defense: 30,
       troopImprovementFactor: 0,
       initialSupply: 1000,
-      tokensPerBlock: 0.1,
+      tokensPerBlock: 1,
     },
     {
       name: 'A:Crossbowman',
@@ -59,7 +59,7 @@ module.exports = async (deployer, network, accounts) => {
       defense: 130,
       troopImprovementFactor: 0,
       initialSupply: 1000,
-      tokensPerBlock: 0.1,
+      tokensPerBlock: 1,
       },
       {
         name: 'A:Pike Orc',
@@ -68,7 +68,7 @@ module.exports = async (deployer, network, accounts) => {
       defense: 30,
       troopImprovementFactor: 0,
         initialSupply: 1000,
-        tokensPerBlock: 0.1,
+        tokensPerBlock: 1,
       },
       {
         name: 'A:Armored Grunt',
@@ -77,7 +77,7 @@ module.exports = async (deployer, network, accounts) => {
         defense: 130,
         troopImprovementFactor: 0,
         initialSupply: 1000,
-        tokensPerBlock: 0.1,
+        tokensPerBlock: 1,
       },
   ];
   
@@ -88,7 +88,7 @@ module.exports = async (deployer, network, accounts) => {
       defense: 150,
       troopImprovementFactor: 0,
       initialSupply: 100,
-      tokensPerBlock: 0.01,
+      tokensPerBlock: 0.5,
     },
     {
       name: 'A:Shaman',
@@ -97,7 +97,7 @@ module.exports = async (deployer, network, accounts) => {
       defense: 150,
       troopImprovementFactor: 0,
       initialSupply: 100,
-      tokensPerBlock: 0.01,
+      tokensPerBlock: 0.5,
     },
   ];
 
