@@ -1,8 +1,7 @@
 const War = artifacts.require('APWar');
 const UnitToken = artifacts.require('APWarsUnitToken');
 
-contract.only('War', accounts => {
-  const externalRandomSource = '0x009f7d857c47a36ffce885e3978b815ae7b7b5b6f52fff6dae164a3845ad7eff';
+contract('UnitFarmManager', accounts => {
   const UNIT_DEFAULT_SUPPLY = 10000000;
   const MULT = 10 ** 18;
 
@@ -473,7 +472,7 @@ contract('A war with just one side (B)', accounts => {
   });
 });
 
-contract.only('Simple War', accounts => {
+contract('Simple War', accounts => {
   const externalRandomSource = '0x019f7d857c47a36ffce885e3978b815ae7b7b5b6f52fff6dae164a3845ad7eff';
   const UNIT_DEFAULT_SUPPLY = 10000000;
   const MULT = 10 ** 18;
