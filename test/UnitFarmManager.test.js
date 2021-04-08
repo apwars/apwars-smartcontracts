@@ -3,7 +3,7 @@ const APWarsUnitFarmManager = artifacts.require('APWarsUnitFarmManager');
 const APWarsBurnManager = artifacts.require('APWarsBurnManager');
 const APWarsCollectibles = artifacts.require('APWarsCollectibles');
 
-contract.only('UnitFarmManager', accounts => {
+contract('UnitFarmManager', accounts => {
   const UNIT_DEFAULT_SUPPLY = 10000000;
   const MULT = 10 ** 18;
 

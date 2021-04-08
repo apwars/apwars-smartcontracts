@@ -46,11 +46,12 @@ contract APWarsCollectibles is
     }
 
     function hashClaim(
+        address _address,
         uint256 _id,
         uint256 _price,
         bool _mint
     ) public pure returns (bytes32) {
-        return keccak256(abi.encodePacked(_id, _price, _mint));
+        return keccak256(abi.encodePacked(_address, _id, _price, _mint));
     }
 
     /**
@@ -102,14 +103,14 @@ contract APWarsCollectibles is
         bytes memory _signature
     ) public {
         require(
-            !_mint || (_mint && balanceOf(address(this), _id) > 0),
+            _mint || (!_mint && balanceOf(address(this), _id) > 0),
             "APWarsCollectibles:NO_BALANCE"
         );
         require(
             !claims[_signature][msg.sender],
             "APWarsCollectibles:ALREADY_CLAIMED"
         );
-        bytes32 hash = hashClaim(_id, _price, _mint);
+        bytes32 hash = hashClaim(address(_token), _id, _price, _mint);
 
         address validator = recover(hash, _signature);
 
@@ -129,7 +130,7 @@ contract APWarsCollectibles is
         _token.burn(netAmount);
 
         if (_mint) {
-            mint(msg.sender, _id, 1, _signature);
+            super._mint(msg.sender, _id, 1, _signature);
         } else {
             safeTransferFrom(address(this), msg.sender, _id, 1, _signature);
         }
@@ -150,7 +151,10 @@ contract APWarsCollectibles is
         return devAddress;
     }
 
-    function setDevAddress(address _devAddress) public {
+    function setDevAddress(address _devAddress)
+        public
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
         devAddress = _devAddress;
     }
 
