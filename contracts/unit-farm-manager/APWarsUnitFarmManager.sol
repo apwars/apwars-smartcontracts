@@ -40,6 +40,7 @@ contract APWarsUnitFarmManager is
     struct PoolInfo {
         IAPWarsBaseToken token;
         IBEP20 lpToken; // Address of LP token contract.
+        uint256 balance;
         uint256 tokenPerBlock;
         uint256 allocPoint; // How many allocation points assigned to this pool. Tokens to distribute per block.
         uint256 lastRewardBlock; // Last block number that tokens distribution occurs.
@@ -82,13 +83,8 @@ contract APWarsUnitFarmManager is
     event SetDevAddress(address indexed user, address indexed newAddress);
     event UpdateEmissionRate(address indexed user, uint256 amountPerBlock);
 
-    constructor(
-        address _devaddr,
-        address _feeAddress,
-        uint256 _startBlock
-    ) public {
+    constructor(address _devaddr, uint256 _startBlock) public {
         devaddr = _devaddr;
-        feeAddress = _feeAddress;
         startBlock = _startBlock;
     }
 
@@ -96,9 +92,12 @@ contract APWarsUnitFarmManager is
         return poolInfo.length;
     }
 
-    mapping(IBEP20 => bool) public poolExistence;
-    modifier nonDuplicated(IBEP20 _lpToken) {
-        require(poolExistence[_lpToken] == false, "nonDuplicated: duplicated");
+    mapping(IAPWarsBaseToken => mapping(IBEP20 => bool)) public poolExistence;
+    modifier nonDuplicated(IAPWarsBaseToken _token, IBEP20 _lpToken) {
+        require(
+            poolExistence[_token][_lpToken] == false,
+            "nonDuplicated: duplicated"
+        );
         _;
     }
 
@@ -110,7 +109,7 @@ contract APWarsUnitFarmManager is
         IBEP20 _lpToken,
         IAPWarsBurnManager _burnManager,
         bool _withUpdate
-    ) public onlyRole(DEFAULT_ADMIN_ROLE) nonDuplicated(_lpToken) {
+    ) public onlyRole(DEFAULT_ADMIN_ROLE) nonDuplicated(_token, _lpToken) {
         if (_withUpdate) {
             massUpdatePools();
         }
@@ -119,11 +118,12 @@ contract APWarsUnitFarmManager is
         totalAllocPoint[address(_token)] = totalAllocPoint[address(_token)].add(
             _allocPoint
         );
-        poolExistence[_lpToken] = true;
+        poolExistence[_token][_lpToken] = true;
         poolInfo.push(
             PoolInfo({
                 token: _token,
                 tokenPerBlock: _tokenPerBlock,
+                balance: 0,
                 lpToken: _lpToken,
                 allocPoint: _allocPoint,
                 lastRewardBlock: lastRewardBlock,
@@ -171,7 +171,7 @@ contract APWarsUnitFarmManager is
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][_user];
         uint256 accTokenPerShare = pool.accTokenPerShare;
-        uint256 lpSupply = pool.lpToken.balanceOf(address(this));
+        uint256 lpSupply = pool.balance;
         if (block.number > pool.lastRewardBlock && lpSupply != 0) {
             uint256 multiplier =
                 getMultiplier(pool.lastRewardBlock, block.number);
@@ -200,7 +200,7 @@ contract APWarsUnitFarmManager is
         if (block.number <= pool.lastRewardBlock) {
             return;
         }
-        uint256 lpSupply = pool.lpToken.balanceOf(address(this));
+        uint256 lpSupply = pool.balance;
         if (lpSupply == 0 || pool.allocPoint == 0) {
             pool.lastRewardBlock = block.number;
             return;
@@ -233,20 +233,31 @@ contract APWarsUnitFarmManager is
             }
         }
         if (_amount > 0) {
+            uint256 newAmount = 0;
             pool.lpToken.safeTransferFrom(
                 address(msg.sender),
                 address(this),
                 _amount
             );
             uint16 burnRate =
-                pool.burnManager.getBurnRate(address(this), msg.sender, _pid);
+                pool.burnManager.getBurnRate(
+                    address(this),
+                    address(pool.lpToken),
+                    msg.sender,
+                    _pid
+                );
             if (burnRate > 0) {
                 uint256 burnAmount = _amount.mul(burnRate).div(10000);
-                pool.lpToken.safeTransfer(feeAddress, burnAmount);
-                user.amount = user.amount.add(_amount).sub(burnAmount);
+                pool.lpToken.safeTransfer(
+                    address(pool.burnManager),
+                    burnAmount
+                );
+                newAmount = _amount.sub(burnAmount);
+                user.amount = user.amount.add(newAmount);
 
                 pool.burnManager.manageAmount(
                     address(this),
+                    address(pool.lpToken),
                     msg.sender,
                     _pid,
                     user.amount,
@@ -262,8 +273,11 @@ contract APWarsUnitFarmManager is
                     burnRate
                 );
             } else {
+                newAmount = _amount;
                 user.amount = user.amount.add(_amount);
             }
+
+            pool.balance = pool.balance.add(newAmount);
         }
         user.rewardDebt = user.amount.mul(pool.accTokenPerShare).div(1e12);
         emit Deposit(msg.sender, _pid, _amount);
@@ -284,6 +298,7 @@ contract APWarsUnitFarmManager is
         }
         if (_amount > 0) {
             user.amount = user.amount.sub(_amount);
+            pool.balance = pool.balance.sub(_amount);
             pool.lpToken.safeTransfer(address(msg.sender), _amount);
         }
         user.rewardDebt = user.amount.mul(pool.accTokenPerShare).div(1e12);
@@ -305,6 +320,7 @@ contract APWarsUnitFarmManager is
         uint256 amount = user.amount;
         user.amount = 0;
         user.rewardDebt = 0;
+        pool.balance = pool.balance.sub(amount);
         pool.lpToken.safeTransfer(address(msg.sender), amount);
         emit EmergencyWithdraw(msg.sender, _pid, amount);
     }
@@ -315,7 +331,7 @@ contract APWarsUnitFarmManager is
         address _to,
         uint256 _amount
     ) internal {
-        uint256 tokenBal = poolInfo[_pid].token.balanceOf(address(this));
+        uint256 tokenBal = poolInfo[_pid].balance;
         bool transferSuccess = false;
         if (_amount > tokenBal) {
             transferSuccess = poolInfo[_pid].token.transfer(_to, tokenBal);
@@ -329,13 +345,5 @@ contract APWarsUnitFarmManager is
     function dev(address _devaddr) public onlyRole(DEFAULT_ADMIN_ROLE) {
         devaddr = _devaddr;
         emit SetDevAddress(msg.sender, _devaddr);
-    }
-
-    function setFeeAddress(address _feeAddress)
-        public
-        onlyRole(DEFAULT_ADMIN_ROLE)
-    {
-        feeAddress = _feeAddress;
-        emit SetFeeAddress(msg.sender, _feeAddress);
     }
 }

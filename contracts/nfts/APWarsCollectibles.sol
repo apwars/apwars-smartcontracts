@@ -2,6 +2,7 @@
 pragma solidity >=0.6.0;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts/token/ERC1155/ERC1155Receiver.sol";
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/token/ERC1155/ERC1155Burnable.sol";
 import "@openzeppelin/contracts/token/ERC1155/ERC1155Pausable.sol";
@@ -10,6 +11,7 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 import "../IAPWarsBaseToken.sol";
 
 contract APWarsCollectibles is
+    ERC1155Receiver,
     ERC1155,
     ERC1155Burnable,
     ERC1155Pausable,
@@ -21,6 +23,9 @@ contract APWarsCollectibles is
     uint256 DEV_FEE = 10;
     address private devAddress;
     mapping(bytes => mapping(address => bool)) claims;
+    mapping(uint256 => uint256) totalSupply;
+    mapping(uint256 => uint256) maxSupply;
+    mapping(uint256 => bool) isMinted;
 
     constructor(string memory uri) ERC1155(uri) {
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
@@ -36,22 +41,71 @@ contract APWarsCollectibles is
         _;
     }
 
+    function onERC1155Received(
+        address operator,
+        address from,
+        uint256 id,
+        uint256 value,
+        bytes calldata data
+    ) public override returns (bytes4) {
+        return
+            bytes4(
+                keccak256(
+                    "onERC1155Received(address,address,uint256,uint256,bytes)"
+                )
+            );
+    }
+
+    function onERC1155BatchReceived(
+        address operator,
+        address from,
+        uint256[] calldata ids,
+        uint256[] calldata values,
+        bytes calldata data
+    ) public override returns (bytes4) {
+        return
+            bytes4(
+                keccak256(
+                    "onERC1155BatchReceived(address,address,uint256[],uint256[],bytes)"
+                )
+            );
+    }
+
     function mint(
         address _account,
         uint256 _id,
         uint256 _amount,
         bytes memory _data
     ) public onlyRole(MINTER_ROLE) {
+        require(!isMinted[_id], "APWarsCollectibles:ALREADY_MINTED");
+
         _mint(_account, _id, _amount, _data);
+        totalSupply[_id] = _amount;
+        isMinted[_id] = true;
     }
 
     function hashClaim(
         address _address,
         uint256 _id,
-        uint256 _price,
-        bool _mint
+        uint256 _price
     ) public pure returns (bytes32) {
-        return keccak256(abi.encodePacked(_address, _id, _price, _mint));
+        return keccak256(abi.encodePacked(_address, _id, _price));
+    }
+
+    function getTotalSupply(uint256 _id) public returns (uint256) {
+        return totalSupply[_id];
+    }
+
+    function getMaxSupply(uint256 _id) public returns (uint256) {
+        return maxSupply[_id];
+    }
+
+    function setMaxSupply(uint256 _id, uint256 _maxSupply)
+        public
+        returns (uint256)
+    {
+        require(maxSupply[_id] == 0, "APWarsCollectibles:setMaxSupply");
+        return maxSupply[_id] = _maxSupply;
     }
 
     /**
@@ -99,19 +153,14 @@ contract APWarsCollectibles is
         IAPWarsBaseToken _token,
         uint256 _id,
         uint256 _price,
-        bool _mint,
         bytes memory _signature
     ) public {
         require(
-            _mint || (!_mint && balanceOf(address(this), _id) > 0),
-            "APWarsCollectibles:NO_BALANCE"
+            totalSupply[_id] < maxSupply[_id],
+            "APWarsCollectibles:FORBIDDEN"
         );
-        require(
-            !claims[_signature][msg.sender],
-            "APWarsCollectibles:ALREADY_CLAIMED"
-        );
-        bytes32 hash = hashClaim(address(_token), _id, _price, _mint);
 
+        bytes32 hash = hashClaim(address(_token), _id, _price);
         address validator = recover(hash, _signature);
 
         require(
@@ -123,19 +172,17 @@ contract APWarsCollectibles is
             "APWarsCollectibles:INVALID_VALIDATOR"
         );
 
+        uint256 amount = 1;
+
         uint256 fee = _price.div(DEV_FEE);
         uint256 netAmount = _price.sub(fee);
         _token.transferFrom(msg.sender, address(this), netAmount);
         _token.transferFrom(msg.sender, devAddress, fee);
         _token.burn(netAmount);
 
-        if (_mint) {
-            super._mint(msg.sender, _id, 1, _signature);
-        } else {
-            safeTransferFrom(address(this), msg.sender, _id, 1, _signature);
-        }
+        super._mint(msg.sender, _id, amount, _signature);
 
-        claims[_signature][msg.sender] = true;
+        totalSupply[_id] = totalSupply[_id].add(amount);
     }
 
     function _beforeTokenTransfer(

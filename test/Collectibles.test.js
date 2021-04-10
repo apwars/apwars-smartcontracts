@@ -1,7 +1,7 @@
 const APWarsCollectibles = artifacts.require('APWarsCollectibles');
 const APWarsBaseToken = artifacts.require('APWarsBaseToken');
 
-contract.only('BurnManager', accounts => {
+contract('BurnManager', accounts => {
   const UNIT_DEFAULT_SUPPLY = 10000000;
 
   let wGOLDToken = null;

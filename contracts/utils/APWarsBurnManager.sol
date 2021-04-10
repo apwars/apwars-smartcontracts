@@ -10,13 +10,13 @@ import "./IAPWarsBurnManager.sol";
 contract APWarsBurnManager is Ownable, IAPWarsBurnManager {
     uint16 private constant ONE_HUNDRED_PERCENT = 10000;
     uint16 private constant ONE_PERCENT = 100;
-    IAPWarsBaseToken private token;
     IERC1155 private collectibles;
     mapping(uint256 => uint16) goldSaverConfig;
     uint256[] goldSavers;
 
     event Burned(
         address farmManager,
+        address _token,
         address player,
         uint256 pid,
         uint256 userAmount,
@@ -38,8 +38,18 @@ contract APWarsBurnManager is Ownable, IAPWarsBurnManager {
         goldSaverConfig[_id] = _amount;
     }
 
+    function getBurnedAmount(address _token)
+        external
+        view
+        override
+        returns (uint256)
+    {
+        return 0;
+    }
+
     function getBurnRate(
         address _farmManager,
+        address _token,
         address _player,
         uint256 _pid
     ) external view override returns (uint16) {
@@ -64,18 +74,23 @@ contract APWarsBurnManager is Ownable, IAPWarsBurnManager {
 
     function manageAmount(
         address _farmManager,
+        address _token,
         address _player,
         uint256 _pid,
         uint256 _userAmount,
         uint256 _burnAmount
     ) external override {
+        IAPWarsBaseToken token = IAPWarsBaseToken(_token);
         token.burn(_burnAmount);
 
-        emit Burned(_farmManager, _player, _pid, _userAmount, _burnAmount);
-    }
-
-    function setBaseToken(IAPWarsBaseToken _token) public onlyOwner {
-        token = _token;
+        emit Burned(
+            _farmManager,
+            _token,
+            _player,
+            _pid,
+            _userAmount,
+            _burnAmount
+        );
     }
 
     function setCollectibles(IERC1155 _collectitles) public onlyOwner {

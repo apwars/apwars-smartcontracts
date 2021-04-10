@@ -8,6 +8,7 @@ abstract contract APWarsUnitFarmManagerAccessControl is AccessControl {
 
     constructor() {
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
+        _setupRole(CONFIGURATOR_ROLE, _msgSender());
     }
 
     modifier onlyRole(bytes32 role) {
