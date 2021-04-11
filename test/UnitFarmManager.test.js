@@ -122,7 +122,7 @@ contract('UnitFarmManager > Collectible burning rules', accounts => {
   });
 });
 
-contract.only('UnitFarmManager > Mocked burning rules', accounts => {
+contract('UnitFarmManager > Mocked burning rules', accounts => {
   const UNIT_DEFAULT_SUPPLY = 10000000;
   const MULT = 10 ** 18;
 
@@ -302,7 +302,7 @@ contract('UnitFarmManager > Checking pending tokens', accounts => {
     );
     await unitFarmManager.add(wWARRIOR.address,
       20,
-      1000,
+      10000,
       wGOLDToken.address,
       burnManager.address,
       true
@@ -362,5 +362,84 @@ contract('UnitFarmManager > Checking pending tokens', accounts => {
 
     expect((await wGOLDToken.balanceOf(accounts[2])).toString()).to.be.equal('600');
     expect((await wARCHER.balanceOf(accounts[2])).toString()).to.be.equal('85'); //+5 due to withdraw request
+  });
+});
+
+contract('UnitFarmManager > Checking pending tokens (same user but different pools)', accounts => {
+  const UNIT_DEFAULT_SUPPLY = 10000000;
+  const MULT = 10 ** 18;
+
+  let wGOLDToken = null;
+  let unitFarmManager = null;
+  let burnManager = null;
+  let wWARRIOR = null;
+
+  it('should setup tokens and farm', async () => {
+    const currentBlock = await web3.eth.getBlockNumber();
+    wGOLDToken = await APWarsGoldToken.new('wGOLD', 'wGOLD');
+    wARCHER = await APWarsBaseToken.new('wARCHER', 'wARCHER');
+    wWARRIOR = await APWarsBaseToken.new('wWARRIOR', 'wWARRIOR');
+    burnManager = await APWarsBurnManagerMOCK.new();
+    unitFarmManager = await APWarsUnitFarmManager.new(accounts[0], currentBlock);
+
+    await Promise.all(
+      [
+        wGOLDToken,
+      ].map(token => token.mint(accounts[0], UNIT_DEFAULT_SUPPLY))
+    );
+
+    await wGOLDToken.transfer(accounts[2], 1000);
+    await wGOLDToken.approve(unitFarmManager.address, 1000, { from: accounts[2] });
+    await wARCHER.transferOwnership(unitFarmManager.address);
+    await wWARRIOR.transferOwnership(unitFarmManager.address);
+
+    await unitFarmManager.add(wARCHER.address,
+      10,
+      1000,
+      wGOLDToken.address,
+      burnManager.address,
+      true
+    );
+    await unitFarmManager.add(wWARRIOR.address,
+      20,
+      10000,
+      wGOLDToken.address,
+      burnManager.address,
+      true
+    );
+
+    await unitFarmManager.deposit(0, 200, { from: accounts[2] });
+    await unitFarmManager.deposit(1, 400, { from: accounts[2] });
+    const account2AmountPool1 = await unitFarmManager.getUserAmount(0, accounts[2]);
+    const account2AmountPool2 = await unitFarmManager.getUserAmount(1, accounts[2]);
+    expect(account2AmountPool1.toString()).to.be.equal('200');
+    expect(account2AmountPool2.toString()).to.be.equal('400');
+
+    let wARCHERPool = await unitFarmManager.poolInfo(0);
+    let wWARRIORPool = await unitFarmManager.poolInfo(1);
+    expect(wARCHERPool.balance.toString()).to.be.equal('200');
+    expect(wWARRIORPool.balance.toString()).to.be.equal('400');
+
+    // moving 5 block (+1 from second deposit)
+    await wGOLDToken.transfer(accounts[3], 1);
+    await wGOLDToken.transfer(accounts[3], 1);
+    await wGOLDToken.transfer(accounts[3], 1);
+    await wGOLDToken.transfer(accounts[3], 1);
+    await wGOLDToken.transfer(accounts[3], 1);
+
+    let pendingwARCHERAccount2 = await unitFarmManager.pendingTokens(0, accounts[2]);
+    let pendingwWARRIORAccount2 = await unitFarmManager.pendingTokens(1, accounts[2]);
+    expect(pendingwARCHERAccount2.toString()).to.be.equal('60');
+    expect(pendingwWARRIORAccount2.toString()).to.be.equal('100');
+
+    expect((await wARCHER.balanceOf(accounts[2])).toString()).to.be.equal('0'); 
+    expect((await wWARRIOR.balanceOf(accounts[2])).toString()).to.be.equal('0'); 
+    expect((await wGOLDToken.balanceOf(accounts[2])).toString()).to.be.equal('400'); 
+    await unitFarmManager.withdraw(0, '200', { from: accounts[2] });
+    await unitFarmManager.withdraw(1, '400', { from: accounts[2] });
+
+    expect((await wGOLDToken.balanceOf(accounts[2])).toString()).to.be.equal('1000');
+    expect((await wARCHER.balanceOf(accounts[2])).toString()).to.be.equal('70'); //+20 due to withdraw request
+    expect((await wWARRIOR.balanceOf(accounts[2])).toString()).to.be.equal('140'); //+20 due to withdraw request
   });
 });

@@ -21,4 +21,6 @@ interface IAPWarsBurnManager {
         uint256 _userAmount,
         uint256 _burnAmount
     ) external;
+
+    function burn(address _token) external;
 }

@@ -71,7 +71,7 @@ contract APWarsBurnManagerMOCK is Ownable, IAPWarsBurnManager {
         autoBurn = _autoBurn;
     }
 
-    function burn(address _token) public {
+    function burn(address _token) public override {
         IAPWarsBaseToken token = IAPWarsBaseToken(_token);
         uint256 amount = token.balanceOf(address(this));
         token.burn(amount);

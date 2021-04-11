@@ -13,6 +13,7 @@ contract APWarsBurnManager is Ownable, IAPWarsBurnManager {
     IERC1155 private collectibles;
     mapping(uint256 => uint16) goldSaverConfig;
     uint256[] goldSavers;
+    mapping(address => uint256) private burnedAmount;
 
     event Burned(
         address farmManager,
@@ -22,6 +23,8 @@ contract APWarsBurnManager is Ownable, IAPWarsBurnManager {
         uint256 userAmount,
         uint256 burnAmount
     );
+
+    event BurnedAll(address token, uint256 burnAmount);
 
     function _addToGoldSaverArray(uint256 _id) internal {
         for (uint256 i = 0; i < goldSavers.length; i++) {
@@ -44,7 +47,7 @@ contract APWarsBurnManager is Ownable, IAPWarsBurnManager {
         override
         returns (uint256)
     {
-        return 0;
+        return burnedAmount[_token];
     }
 
     function getBurnRate(
@@ -95,5 +98,15 @@ contract APWarsBurnManager is Ownable, IAPWarsBurnManager {
 
     function setCollectibles(IERC1155 _collectitles) public onlyOwner {
         collectibles = _collectitles;
+    }
+
+    function burn(address _token) public override {
+        IAPWarsBaseToken token = IAPWarsBaseToken(_token);
+        uint256 amount = token.balanceOf(address(this));
+        token.burn(amount);
+
+        burnedAmount[_token] += amount;
+
+        BurnedAll(_token, amount);
     }
 }

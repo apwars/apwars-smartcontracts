@@ -9,6 +9,7 @@ import "@openzeppelin/contracts/token/ERC1155/ERC1155Pausable.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 
 import "../IAPWarsBaseToken.sol";
+import "../utils/IAPWarsBurnManager.sol";
 
 contract APWarsCollectibles is
     ERC1155Receiver,
@@ -26,11 +27,18 @@ contract APWarsCollectibles is
     mapping(uint256 => uint256) totalSupply;
     mapping(uint256 => uint256) maxSupply;
     mapping(uint256 => bool) isMinted;
+    mapping(uint256 => bool) multipleClaimsForbidden;
 
-    constructor(string memory uri) ERC1155(uri) {
+    IAPWarsBurnManager private burnManager;
+
+    constructor(IAPWarsBurnManager _burnManager, string memory uri)
+        ERC1155(uri)
+    {
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
         _setupRole(MINTER_ROLE, _msgSender());
         _setupRole(VALIDATOR_ROLE, _msgSender());
+
+        burnManager = _burnManager;
     }
 
     modifier onlyRole(bytes32 role) {
@@ -100,12 +108,34 @@ contract APWarsCollectibles is
         return maxSupply[_id];
     }
 
+    function getMultipleClaimsForbidden(uint256 _id) public returns (bool) {
+        return multipleClaimsForbidden[_id];
+    }
+
+    function setMultipleClaimsForbidden(uint256 _id, bool _value)
+        public
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        multipleClaimsForbidden[_id] = _value;
+    }
+
     function setMaxSupply(uint256 _id, uint256 _maxSupply)
         public
-        returns (uint256)
+        onlyRole(DEFAULT_ADMIN_ROLE)
     {
         require(maxSupply[_id] == 0, "APWarsCollectibles:setMaxSupply");
-        return maxSupply[_id] = _maxSupply;
+        maxSupply[_id] = _maxSupply;
+    }
+
+    function setBurnManager(IAPWarsBurnManager _burnManager)
+        public
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        burnManager = _burnManager;
+    }
+
+    function getBurnManager() public view returns (IAPWarsBurnManager) {
+        return burnManager;
     }
 
     /**
@@ -159,6 +189,12 @@ contract APWarsCollectibles is
             totalSupply[_id] < maxSupply[_id],
             "APWarsCollectibles:FORBIDDEN"
         );
+        require(
+            !claims[_signature][msg.sender] ||
+                (claims[_signature][msg.sender] &&
+                    !multipleClaimsForbidden[_id]),
+            "APWarsCollectibles:ALREADY_CLAIMED"
+        );
 
         bytes32 hash = hashClaim(address(_token), _id, _price);
         address validator = recover(hash, _signature);
@@ -176,13 +212,14 @@ contract APWarsCollectibles is
 
         uint256 fee = _price.div(DEV_FEE);
         uint256 netAmount = _price.sub(fee);
-        _token.transferFrom(msg.sender, address(this), netAmount);
         _token.transferFrom(msg.sender, devAddress, fee);
-        _token.burn(netAmount);
+        _token.transferFrom(msg.sender, address(burnManager), netAmount);
+        burnManager.burn(address(_token));
 
         super._mint(msg.sender, _id, amount, _signature);
 
         totalSupply[_id] = totalSupply[_id].add(amount);
+        claims[_signature][msg.sender] = true;
     }
 
     function _beforeTokenTransfer(

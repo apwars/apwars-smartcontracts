@@ -1,0 +1,4 @@
+instance = await APWarsCollectibles.deployed(); 
+hash = await instance.hashClaim('0x7ab6eedd9443e0e98e5ea93667ca5b250b8dda51', 0, '1000000000000000000000');
+signature = await web3.eth.sign(hash, accounts[0]);
+signature

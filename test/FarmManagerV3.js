@@ -1,5 +1,5 @@
 const APWarsBaseToken = artifacts.require('APWarsBaseToken');
-const APWarsUnitFarmManager = artifacts.require('APWarsUnitFarmManager');
+const APWarsFarmManagerV3 = artifacts.require('APWarsFarmManagerV3');
 const APWarsBurnManager = artifacts.require('APWarsBurnManager');
 const APWarsCollectibles = artifacts.require('APWarsCollectibles');
 
@@ -20,7 +20,7 @@ contract('UnitFarmManager', accounts => {
     wGOLDToken = await APWarsBaseToken.new('wGOLD', 'wGOLD');
     wARCHER = await APWarsBaseToken.new('wARCHER', 'wARCHER');
     burnManager = await APWarsBurnManager.new();
-    unitFarmManager = await APWarsUnitFarmManager.new(accounts[0], burnManager.address, currentBlock);
+    unitFarmManager = await APWarsFarmManagerV3.new(wARCHER.address, accounts[0], burnManager.address, currentBlock);
 
     await collectibles.mint(accounts[1], 0, 1, '0x0');
     await collectibles.mint(accounts[2], 1, 1, '0x0');
@@ -31,7 +31,6 @@ contract('UnitFarmManager', accounts => {
     await burnManager.setGoldSaverConfig(1, 4000); //60% burn rate
     await burnManager.setGoldSaverConfig(2, 5000); //50% burn rate
     await burnManager.setGoldSaverConfig(3, 10000); //0% burn rate
-    await burnManager.setBaseToken(wGOLDToken.address);
 
     await burnManager.setCollectibles(collectibles.address);
 
@@ -53,8 +52,7 @@ contract('UnitFarmManager', accounts => {
 
     await wARCHER.transferOwnership(unitFarmManager.address);
 
-    await unitFarmManager.add(wARCHER.address,
-      web3.utils.toWei('1', 'ether'),
+    await unitFarmManager.add(
       1000,
       wGOLDToken.address,
       burnManager.address,
