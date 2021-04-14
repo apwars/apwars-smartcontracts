@@ -26,19 +26,65 @@ contract APWarsBurnManager is Ownable, IAPWarsBurnManager {
 
     event BurnedAll(address token, uint256 burnAmount);
 
-    function _addToGoldSaverArray(uint256 _id) internal {
+    function checkIfConfigured(uint256 _id) public view returns (bool) {
         for (uint256 i = 0; i < goldSavers.length; i++) {
             if (goldSavers[i] == _id) {
-                return;
+                return true;
             }
         }
 
-        goldSavers.push(_id);
+        return false;
     }
 
-    function setGoldSaverConfig(uint256 _id, uint16 _amount) public {
-        _addToGoldSaverArray(_id);
+    function setGoldSaverConfig(uint256 _id, uint16 _amount) public onlyOwner {
+        if (!checkIfConfigured(_id)) {
+            goldSavers.push(_id);
+        }
+
         goldSaverConfig[_id] = _amount;
+    }
+
+    function getGoldSaverConfig(uint256 _id) public view returns (uint16) {
+        return goldSaverConfig[_id];
+    }
+
+    function getGoldSaverConfigByIndex(uint256 _index)
+        public
+        view
+        returns (uint16)
+    {
+        return goldSaverConfig[goldSavers[_index]];
+    }
+
+    function getPlayerBalanceOfByIndex(address _player, uint256 _index)
+        public
+        view
+        returns (uint256)
+    {
+        return collectibles.balanceOf(_player, goldSavers[_index]);
+    }
+
+    function getPlayerBalanceOfById(address _player, uint256 _id)
+        public
+        view
+        returns (uint256)
+    {
+        return collectibles.balanceOf(_player, _id);
+    }
+
+    function getCompundGoldSaverByPlayer(address _player)
+        public
+        view
+        returns (uint16)
+    {
+        uint16 goldSaver = 0;
+        for (uint256 i = 0; i < goldSavers.length; i++) {
+            if (getPlayerBalanceOfByIndex(_player, i) > 0) {
+                goldSaver += getGoldSaverConfigByIndex(i);
+            }
+        }
+
+        return goldSaver;
     }
 
     function getBurnedAmount(address _token)
@@ -57,15 +103,12 @@ contract APWarsBurnManager is Ownable, IAPWarsBurnManager {
         uint256 _pid
     ) external view override returns (uint16) {
         uint16 burnRate = ONE_HUNDRED_PERCENT;
+        uint16 compoundGoldSaver = getCompundGoldSaverByPlayer(_player);
 
-        for (uint256 i = 0; i < goldSavers.length; i++) {
-            if (collectibles.balanceOf(_player, goldSavers[i]) > 0) {
-                if (goldSaverConfig[i] > burnRate) {
-                    burnRate = 0;
-                } else {
-                    burnRate -= goldSaverConfig[i];
-                }
-            }
+        if (compoundGoldSaver > burnRate) {
+            burnRate = 0;
+        } else {
+            burnRate -= compoundGoldSaver;
         }
 
         if (burnRate == ONE_HUNDRED_PERCENT) {
@@ -83,8 +126,7 @@ contract APWarsBurnManager is Ownable, IAPWarsBurnManager {
         uint256 _userAmount,
         uint256 _burnAmount
     ) external override {
-        IAPWarsBaseToken token = IAPWarsBaseToken(_token);
-        token.burn(_burnAmount);
+        burn(_token);
 
         emit Burned(
             _farmManager,
@@ -98,6 +140,10 @@ contract APWarsBurnManager is Ownable, IAPWarsBurnManager {
 
     function setCollectibles(IERC1155 _collectitles) public onlyOwner {
         collectibles = _collectitles;
+    }
+
+    function getCollectibles() public view returns (IERC1155) {
+        return collectibles;
     }
 
     function burn(address _token) public override {
