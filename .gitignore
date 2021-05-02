@@ -61,7 +61,7 @@ artifacts
 .env
 .zip
 
-
+*.env
 
 scripts
 scripts-bkp

@@ -20,7 +20,7 @@ import "./IAPWarsUnit.sol";
  *         The Dragon will burn all remaining gold that troop can't bring home.
  * @dev See the docs to understand how the battle system works. It is not so hard, but be guided by examples is a better way.
  */
-contract APWar is Ownable, ReentrancyGuard {
+contract APWarsWarMachine is Ownable, ReentrancyGuard {
     using SafeMath for uint256;
 
     enum WarStage {FIRST_ROUND, SECOND_ROUND, FINISHED, CLOSED}
