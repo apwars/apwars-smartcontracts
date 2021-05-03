@@ -256,7 +256,7 @@ contract APWarsWarMachine is Ownable, ReentrancyGuard {
      * @param externalRandomSource The revealed external random source.
      * @param winner The winner team.
      */
-    event RondFinished(
+    event RoundFinished(
         uint256 indexed warId,
         uint256 indexed round,
         address sender,
@@ -559,20 +559,22 @@ contract APWarsWarMachine is Ownable, ReentrancyGuard {
         uint256 initialDefensePower = defensePower[_warId][TEAM_A];
 
         for (uint256 i = 0; i < allowedTeamTokenAddresses[TEAM_A].length; i++) {
-            IAPWarsUnit unit = IAPWarsUnit(allowedTeamTokenAddresses[1][i]);
+            IAPWarsUnit unit =
+                IAPWarsUnit(allowedTeamTokenAddresses[TEAM_A][i]);
+            uint256 balance = unit.balanceOf(address(this));
 
-            if (unit.getTroopImproveFactor() > 0) {
+            if (unit.getTroopImproveFactor() > 0 && balance > 0) {
                 attackImprovement = attackPower[_warId][TEAM_A]
                     .mul(unit.getTroopImproveFactor())
                     .div(ONE_HUNDRED_PERCENT)
-                    .mul(unit.balanceOf(address(this)).div(ONE));
+                    .mul(balance.div(ONE));
 
                 attackPower[_warId][TEAM_A] = attackImprovement;
 
                 defenseImprovement = defensePower[_warId][TEAM_A]
                     .mul(unit.getTroopImproveFactor())
                     .div(ONE_HUNDRED_PERCENT)
-                    .mul(unit.balanceOf(address(this)).div(ONE));
+                    .mul(balance.div(ONE));
 
                 defensePower[_warId][TEAM_A] = defenseImprovement;
             }
@@ -596,18 +598,20 @@ contract APWarsWarMachine is Ownable, ReentrancyGuard {
             IAPWarsUnit unit =
                 IAPWarsUnit(allowedTeamTokenAddresses[TEAM_B][i]);
 
-            if (unit.getTroopImproveFactor() > 0) {
+            uint256 balance = unit.balanceOf(address(this));
+
+            if (unit.getTroopImproveFactor() > 0 && balance > 0) {
                 attackImprovement = attackPower[_warId][TEAM_B]
                     .mul(unit.getTroopImproveFactor())
                     .div(ONE_HUNDRED_PERCENT)
-                    .mul(unit.balanceOf(address(this)).div(ONE));
+                    .mul(balance.div(ONE));
 
                 attackPower[_warId][TEAM_B] = attackImprovement;
 
                 defenseImprovement = defensePower[_warId][TEAM_B]
                     .mul(unit.getTroopImproveFactor())
                     .div(ONE_HUNDRED_PERCENT)
-                    .mul(unit.balanceOf(address(this)).div(ONE));
+                    .mul(balance.div(ONE));
 
                 defensePower[_warId][TEAM_B] = defenseImprovement;
             }
@@ -742,20 +746,29 @@ contract APWarsWarMachine is Ownable, ReentrancyGuard {
 
         uint256 totalPower = war.finalAttackPower.add(war.finalDefensePower);
 
-        war.percAttackerLosses = war
-            .finalAttackPower
-            .mul(ONE_HUNDRED_PERCENT)
-            .div(totalPower);
-        war.percAttackerLosses = ONE_HUNDRED_PERCENT.sub(
-            war.percAttackerLosses
-        );
-        war.percDefenderLosses = war
-            .finalDefensePower
-            .mul(ONE_HUNDRED_PERCENT)
-            .div(totalPower);
-        war.percDefenderLosses = ONE_HUNDRED_PERCENT.sub(
-            war.percDefenderLosses
-        );
+        if (war.finalAttackPower == 0) {
+            war.percAttackerLosses = 0;
+        } else {
+            war.percAttackerLosses = war
+                .finalAttackPower
+                .mul(ONE_HUNDRED_PERCENT)
+                .div(totalPower);
+            war.percAttackerLosses = ONE_HUNDRED_PERCENT.sub(
+                war.percAttackerLosses
+            );
+        }
+
+        if (war.finalDefensePower == 0) {
+            war.percDefenderLosses = 0;
+        } else {
+            war.percDefenderLosses = war
+                .finalDefensePower
+                .mul(ONE_HUNDRED_PERCENT)
+                .div(totalPower);
+            war.percDefenderLosses = ONE_HUNDRED_PERCENT.sub(
+                war.percDefenderLosses
+            );
+        }
 
         emit TeamLosses(
             _warId,
@@ -803,7 +816,7 @@ contract APWarsWarMachine is Ownable, ReentrancyGuard {
 
         warStage[_warId] = WarStage.SECOND_ROUND;
 
-        emit RondFinished(
+        emit RoundFinished(
             _warId,
             1,
             msg.sender,
@@ -872,7 +885,7 @@ contract APWarsWarMachine is Ownable, ReentrancyGuard {
             secondRoundRandomParameters[_warId].unlockedPrize,
             secondRoundRandomParameters[_warId].casualty
         );
-        emit RondFinished(
+        emit RoundFinished(
             _warId,
             2,
             msg.sender,

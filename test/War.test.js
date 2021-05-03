@@ -1,7 +1,8 @@
-const War = artifacts.require('APWar');
+const War = artifacts.require('APWarsWarMachine');
 const UnitToken = artifacts.require('APWarsUnitToken');
 
-contract('UnitFarmManager', accounts => {
+contract.only('WarMachine', accounts => {
+  const externalRandomSource = '0x019f7d857c47a36ffce885e3978b815ae7b7b5b6f52fff6dae164a3845ad7eff';
   const UNIT_DEFAULT_SUPPLY = 10000000;
   const MULT = 10 ** 18;
 
@@ -272,49 +273,13 @@ contract('A war with just one side (A)', accounts => {
     }
 
     await depositAndCheck([1, 2, 3], teamAArcher);
-    //await depositAndCheck([4, 5, 6], teamBArcher);
   });
 
   it('should finish war', async () => {
     const instance = await War.deployed();
 
     await instance.finishFirstRound(0, externalRandomSource);
-
-    const war = await instance.wars(0);
-    const attackPowerTeamA = await instance.getAttackPower(0, 1);
-    const attackPowerTeamB = await instance.getAttackPower(0, 2);
-    const defensePowerTeamA = await instance.getDefensePower(0, 1);
-    const defensePowerTeamB = await instance.getDefensePower(0, 1);
-
-    console.log({
-      attackPowerTeamA: attackPowerTeamA.toString(),
-      attackPowerTeamB: attackPowerTeamB.toString(),
-      defensePowerTeamA: defensePowerTeamA.toString(),
-      defensePowerTeamB: defensePowerTeamB.toString(),
-    });
-
-    await instance.withdraw(0, teamAArcher.address, {from: accounts[1]});
-    
-    console.log('name', war.name);
-    console.log('attackerTeam', war.attackerTeam.toString());
-    console.log('defenderTeam', war.defenderTeam.toString());
-    console.log('winner', war.winner.toString());
-    console.log('luck', war.luck.toString());
-    console.log('isBadLuck', war.isBadLuck);
-    console.log('attackerCasualty', war.attackerCasualty.toString());
-    console.log('defenderCasualty', war.defenderCasualty.toString());
-    console.log('-------');
-    console.log('finalAttackPower', war.finalAttackPower.toString());
-    console.log('finalDefensePower', war.finalDefensePower.toString());
-    console.log('-------');
-    console.log('percAttackerLosses', war.percAttackerLosses.toString());
-    console.log('percDefenderLosses', war.percDefenderLosses.toString());
-  });
-
-  it('should finish war', async () => {
-    const instance = await War.deployed();
-
-    await instance.finishFirstRound(0, externalRandomSource);
+    await instance.finishSecondRound(0, externalRandomSource);
 
     const war = await instance.wars(0);
     const attackPowerTeamA = await instance.getAttackPower(0, 1);

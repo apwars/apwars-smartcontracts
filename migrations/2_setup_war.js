@@ -33,8 +33,8 @@ module.exports = async (deployer, network, accounts) => {
   await deployer.deploy(APWarsWarMachine, "wGOLD", "wGOLD");
   const warMachine = await APWarsWarMachine.deployed();
 
-  const externalRandomSourceHash = await warMachine.hashExternalRandomSource(externalRandomSource);
-  await warMachine.createWar('War#1', externalRandomSourceHash);
+  // const externalRandomSourceHash = await warMachine.hashExternalRandomSource(externalRandomSource);
+  // await warMachine.createWar('War#1', externalRandomSourceHash);
 
   await warMachine.defineTokenTeam(0, wWARRIOR.address, 1);
   await warMachine.defineTokenTeam(0, wARCHER.address, 1);

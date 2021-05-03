@@ -2,7 +2,7 @@ const APWarsCollectibles = artifacts.require('APWarsCollectibles');
 const APWarsBurnManager = artifacts.require('APWarsBurnManagerV2');
 const APWarsGoldToken = artifacts.require('APWarsGoldToken');
 
-contract.only('BurnTest', accounts => {
+contract('BurnTest', accounts => {
   it('should mint and burn', async () => {
     wGOLD = await APWarsGoldToken.new('wGOLD', 'wGOLD');
     await wGOLD.mint(accounts[0], '1000000');
