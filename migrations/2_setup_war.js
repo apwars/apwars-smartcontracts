@@ -36,18 +36,18 @@ module.exports = async (deployer, network, accounts) => {
   // const externalRandomSourceHash = await warMachine.hashExternalRandomSource(externalRandomSource);
   // await warMachine.createWar('War#1', externalRandomSourceHash);
 
-  await warMachine.defineTokenTeam(0, wWARRIOR.address, 1);
-  await warMachine.defineTokenTeam(0, wARCHER.address, 1);
-  await warMachine.defineTokenTeam(0, wARMOUREDWARRIOR.address, 1);
-  await warMachine.defineTokenTeam(0, wCROSSBOWMAN.address, 1);
-  await warMachine.defineTokenTeam(0, wWIZARD.address, 1);
-  await warMachine.defineTokenTeam(0, wGRUNT.address, 2);
-  await warMachine.defineTokenTeam(0, wORCARCHER.address, 2);
-  await warMachine.defineTokenTeam(0, wPIKEORC.address, 2);
-  await warMachine.defineTokenTeam(0, wARMOUREDGRUNT.address, 2);
-  await warMachine.defineTokenTeam(0, wSHAMAN.address, 2);
+  // await warMachine.defineTokenTeam(0, wWARRIOR.address, 1);
+  // await warMachine.defineTokenTeam(0, wARCHER.address, 1);
+  // await warMachine.defineTokenTeam(0, wARMOUREDWARRIOR.address, 1);
+  // await warMachine.defineTokenTeam(0, wCROSSBOWMAN.address, 1);
+  // await warMachine.defineTokenTeam(0, wWIZARD.address, 1);
+  // await warMachine.defineTokenTeam(0, wGRUNT.address, 2);
+  // await warMachine.defineTokenTeam(0, wORCARCHER.address, 2);
+  // await warMachine.defineTokenTeam(0, wPIKEORC.address, 2);
+  // await warMachine.defineTokenTeam(0, wARMOUREDGRUNT.address, 2);
+  // await warMachine.defineTokenTeam(0, wSHAMAN.address, 2);
 
-  await warMachine.defineTokenPrize(0, wGOLD.address);
+  //await warMachine.defineTokenPrize(0, wGOLD.address);
 
   await wGOLD.mint('10000000000000000000000');
   await wWARRIOR.mint('10000000000000000000000');
