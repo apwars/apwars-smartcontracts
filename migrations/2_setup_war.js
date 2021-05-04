@@ -32,8 +32,8 @@ module.exports = async (deployer, network, accounts) => {
   await deployer.deploy(APWarsUnitToken, "wSHAMAN", "wSHAMAN", 70, 20, 10);
   const wSHAMAN = await APWarsUnitToken.deployed();
 
-  await deployer.deploy(APWarsWarMachine, "wGOLD", "wGOLD");
-  const warMachine = await APWarsWarMachine.deployed();
+  await deployer.deploy(APWarsWarMachine);
+  const warMachine = await APWarsWarMachine.new();
 
   const burnManager = await BurnManager.new(accounts[0]);
   const collectibles = await Collectibles.new(burnManager.address, "");

@@ -54,6 +54,8 @@ contract APWarsWarMachine is Ownable, ReentrancyGuard {
 
     APWarsCollectibles private collectibles;
 
+    uint256 public emergencyWithdralInterval;
+
     /**
      * @notice War information.
      * @param name The war name.
@@ -304,6 +306,19 @@ contract APWarsWarMachine is Ownable, ReentrancyGuard {
         uint256 net
     );
 
+    constructor() {
+        emergencyWithdralInterval = block.timestamp + 15 days;
+    }
+
+    /**
+     * @notice It configures a the war with addresses and initial values.
+     * @param _tokenPrize The token prize address (wGOLD contract).
+     * @param _burnManager The BurnManager address.
+     * @param _teamA Team A token addresses.
+     * @param _teamB Team B token addresses.
+     * @param _collectibles Collectibles address.
+     * @param _nfts NFTs ids. Indexes 0-2 are the exlixirs ID, index 3 the Arcane's Book Id and index 4 Beloved Hater.
+     */
     function setup(
         IAPWarsBaseToken _tokenPrize,
         APWarsBurnManagerV2 _burnManager,
@@ -346,6 +361,22 @@ contract APWarsWarMachine is Ownable, ReentrancyGuard {
         war = WarInfo(_name, 0, 0, 0, 0, 0, 0, 0, 0, 0, false, 0, 0);
         warStage = WarStage.FIRST_ROUND;
         externalRandomSourceHashes = _externalRandomSourceHash;
+    }
+
+    /**
+     * @notice It returns the player address by index.
+     * @return The player address.
+     */
+    function getPlayerAddress(uint256 index) public view returns (address) {
+        return players[index];
+    }
+
+    /**
+     * @notice It returns how many players joined the war.
+     * @return The players length.
+     */
+    function getPlayerLength() public view returns (uint256) {
+        return players.length;
     }
 
     /**
@@ -945,10 +976,13 @@ contract APWarsWarMachine is Ownable, ReentrancyGuard {
     }
 
     /**
-     * @notice It returns the total prize locked when the war was finished.
+     * @notice It returns the total prize locked when the war was finished or the current balance if the war is running.
      */
     function getTotalPrize() public view returns (uint256) {
-        return totalPrize;
+        return
+            totalPrize == 0
+                ? IAPWarsBaseToken(tokenPrize).balanceOf(address(this))
+                : totalPrize;
     }
 
     //TODO: Check if the user can run this method
@@ -1010,6 +1044,18 @@ contract APWarsWarMachine is Ownable, ReentrancyGuard {
             amountToBurn,
             net
         );
+    }
+
+    function emergencyWithdraw(IAPWarsBaseToken _token, uint256 _amount)
+        public
+        onlyOwner
+    {
+        require(
+            block.timestamp > emergencyWithdralInterval,
+            "War:NOT_ALLOWED_YET"
+        );
+
+        _token.transfer(msg.sender, _amount);
     }
 
     /**
