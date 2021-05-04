@@ -1,6 +1,8 @@
 const APWarsUnitToken = artifacts.require("APWarsUnitToken");
 const APWarsGoldToken = artifacts.require("APWarsGoldToken");
 const APWarsWarMachine = artifacts.require("APWarsWarMachine");
+const Collectibles = artifacts.require('APWarsCollectibles');
+const BurnManager = artifacts.require('APWarsBurnManagerV2');
 
 module.exports = async (deployer, network, accounts) => {
   const externalRandomSource = '0x019f7d857c47a36ffce885e3978b815ae7b7b5b6f52fff6dae164a3845ad7eff';
@@ -33,21 +35,32 @@ module.exports = async (deployer, network, accounts) => {
   await deployer.deploy(APWarsWarMachine, "wGOLD", "wGOLD");
   const warMachine = await APWarsWarMachine.deployed();
 
+  const burnManager = await BurnManager.new(accounts[0]);
+  const collectibles = await Collectibles.new(burnManager.address, "");
+
   const externalRandomSourceHash = await warMachine.hashExternalRandomSource(externalRandomSource);
+  await warMachine.setup(
+    wGOLD.address,
+    burnManager.address,
+    [
+      wWARRIOR.address,
+      wARCHER.address,
+      wARMOUREDWARRIOR.address,
+      wCROSSBOWMAN.address,
+      wWIZARD.address,
+    ],
+    [
+      wGRUNT.address,
+      wORCARCHER.address,
+      wPIKEORC.address,
+      wARMOUREDGRUNT.address,
+      wSHAMAN.address,
+    ],
+    collectibles.address,
+    [0, 0, 0, 0, 0]
+  );
+
   await warMachine.createWar('War#1', externalRandomSourceHash);
-
-  await warMachine.defineTokenTeam(0, wWARRIOR.address, 1);
-  await warMachine.defineTokenTeam(0, wARCHER.address, 1);
-  await warMachine.defineTokenTeam(0, wARMOUREDWARRIOR.address, 1);
-  await warMachine.defineTokenTeam(0, wCROSSBOWMAN.address, 1);
-  await warMachine.defineTokenTeam(0, wWIZARD.address, 1);
-  await warMachine.defineTokenTeam(0, wGRUNT.address, 2);
-  await warMachine.defineTokenTeam(0, wORCARCHER.address, 2);
-  await warMachine.defineTokenTeam(0, wPIKEORC.address, 2);
-  await warMachine.defineTokenTeam(0, wARMOUREDGRUNT.address, 2);
-  await warMachine.defineTokenTeam(0, wSHAMAN.address, 2);
-
-  await warMachine.defineTokenPrize(0, wGOLD.address);
 
   await wGOLD.mint('10000000000000000000000');
   await wWARRIOR.mint('10000000000000000000000');
@@ -65,6 +78,8 @@ module.exports = async (deployer, network, accounts) => {
   console.log('_______________________________');
   console.log('wGOLD:', wGOLD.address);
   console.log('WarMachine:', warMachine.address);
+  console.log('BurnManager:', BurnManager.address);
+  console.log('Collectibles:', collectibles.address);
 
   console.log("\nHumans:");
   console.log('_______________________________');

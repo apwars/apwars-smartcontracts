@@ -6,6 +6,8 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 import "./IAPWarsBaseToken.sol";
+import "./nfts/APWarsCollectibles.sol";
+import "./utils/APWarsBurnManagerV2.sol";
 import "./IAPWarsUnit.sol";
 
 /**
@@ -26,24 +28,31 @@ contract APWarsWarMachine is Ownable, ReentrancyGuard {
     enum WarStage {FIRST_ROUND, SECOND_ROUND, FINISHED, CLOSED}
 
     uint256 private constant ONE = 10**18;
-    uint256 private constant ONE_HUNDRED_PERCENT = 10**3;
-    uint256 private constant TEN_PERCENT = 10;
+    uint256 private constant ONE_HUNDRED_PERCENT = 10**4;
+    uint256 private constant ONE_PERCENT = 10**2;
+    uint256 private constant TEN_PERCENT = 10**3;
+    uint256 private constant FIVE_PERCENT = 10**3 / 2;
     uint256 private constant TEAM_A = 1;
     uint256 private constant TEAM_B = 2;
 
     mapping(uint256 => address[]) private allowedTeamTokenAddresses;
 
-    mapping(uint256 => mapping(address => mapping(address => uint256)))
-        private depositsByPlayer;
-    mapping(uint256 => mapping(address => uint256)) private teams;
-    mapping(uint256 => mapping(uint256 => uint256)) private attackPower;
-    mapping(uint256 => mapping(uint256 => mapping(address => uint256)))
+    mapping(address => mapping(address => uint256)) private depositsByPlayer;
+    mapping(address => uint256) private depositsByToken;
+
+    mapping(address => uint256) private teams;
+    mapping(uint256 => uint256) private attackPower;
+    mapping(uint256 => mapping(address => uint256))
         private attackPowerByAddress;
-    mapping(uint256 => mapping(uint256 => uint256)) private defensePower;
-    mapping(uint256 => mapping(uint256 => mapping(address => uint256)))
+    mapping(uint256 => uint256) private defensePower;
+    mapping(uint256 => mapping(address => uint256))
         private defensePowerByAddress;
 
-    uint256 private interval;
+    address private tokenPrize;
+    address[] private players;
+    mapping(address => bool) private playersMapping;
+
+    APWarsCollectibles private collectibles;
 
     /**
      * @notice War information.
@@ -55,11 +64,11 @@ contract APWarsWarMachine is Ownable, ReentrancyGuard {
      * @param attackerTeam The attacker team number.
      * @param defenderTeam The defender team number.
      * @param winner The winner team number.
-     * @param luck The attacker luck.
+     * @param attackerLuck The attacker luck.
+     * @param defenderLuck The defender luck.
      * @param isBadLuck Sepecifies if it is a bad luck (negative luck).
      * @param attackerCasualty The attacker casualty.
      * @param defenderCasualty The defender casualty.
-     * @param externalRandomSourceHash The external random source hash.
      */
     struct WarInfo {
         string name;
@@ -70,11 +79,11 @@ contract APWarsWarMachine is Ownable, ReentrancyGuard {
         uint256 attackerTeam;
         uint256 defenderTeam;
         uint256 winner;
-        uint256 luck;
+        uint256 attackerLuck;
+        uint256 defenderLuck;
         bool isBadLuck;
         uint256 attackerCasualty;
         uint256 defenderCasualty;
-        bytes32 externalRandomSourceHash;
     }
 
     /**
@@ -82,14 +91,16 @@ contract APWarsWarMachine is Ownable, ReentrancyGuard {
      * @param randomTeamSource The random number used to define the attacker and defender.
      * @param attackerCasualty The attacker casualty pecentage.
      * @param defenderCasualty The defender casualty pecentage.
-     * @param luck The luck pecentage.
+     * @param attackerLuck The luck pecentage.
+     * @param defenderLuck The luck pecentage.
      * @param randomBadLuckSource The number used to defined if it is a bad luck (negative luck).
      */
     struct WarFirstRoundRandomParameters {
         uint256 randomTeamSource;
         uint256 attackerCasualty;
         uint256 defenderCasualty;
-        uint256 luck;
+        uint256 attackerLuck;
+        uint256 defenderLuck;
         uint256 randomBadLuckSource;
     }
 
@@ -103,32 +114,33 @@ contract APWarsWarMachine is Ownable, ReentrancyGuard {
         uint256 casualty;
     }
 
-    /// @notice The wars information.
+    /// @notice The war information.
     /// @dev See the WarInfo struct.
-    WarInfo[] public wars;
+    WarInfo public war;
 
-    /// @notice The current war id.
-    uint256 public currentWarId;
+    /// @notice The external random source hash.
+    bytes32 public externalRandomSourceHashes;
 
     /// @notice It stores the current stage per war.
-    mapping(uint256 => WarStage) public warStage;
+    WarStage public warStage;
 
     /// @notice It stores the first round random parameters generated for a war.
-    mapping(uint256 => WarFirstRoundRandomParameters)
-        public warFirstRoundRandomParameters;
+    WarFirstRoundRandomParameters public warFirstRoundRandomParameters;
 
     /// @notice It stores the second round random parameters generated for a war.
-    mapping(uint256 => WarSecondRoundRandomParameters)
-        public secondRoundRandomParameters;
-
-    /// @notice It stores the token prize to a War.
-    mapping(uint256 => address) public tokenPrize;
-
-    /// @notice It stores the timestamp when the second round is finished.
-    mapping(uint256 => uint256) public secoundRoundFinishTimestamp;
+    WarSecondRoundRandomParameters public secondRoundRandomParameters;
 
     /// @notice It stores the total prize.
-    mapping(uint256 => uint256) public totalPrize;
+    uint256 public totalPrize;
+
+    /// @notice It stores the id of each elixir NFT.
+    uint256[] public nfts;
+
+    /// @notice It stores the user alread withdrawn a token.
+    mapping(address => mapping(address => bool)) public withdrawn;
+
+    /// @notice It stores the BurnManager address.
+    APWarsBurnManagerV2 public burnManager;
 
     /**
      * @notice Fired when a user sends troops (token units) to war.
@@ -139,6 +151,7 @@ contract APWarsWarMachine is Ownable, ReentrancyGuard {
      * @param attackPower The unit attack power.
      * @param newTeamAttackPower The team attack power after deposit.
      * @param newTeamDefensePower The team defense power after deposit.
+     * @param belovedHaterImprovement The team defense power after deposit.
      */
     event NewDeposit(
         address indexed player,
@@ -148,12 +161,12 @@ contract APWarsWarMachine is Ownable, ReentrancyGuard {
         uint256 attackPower,
         uint256 defensePower,
         uint256 newTeamAttackPower,
-        uint256 newTeamDefensePower
+        uint256 newTeamDefensePower,
+        uint256 belovedHaterImprovement
     );
 
     /**
      * @notice Fired when the contract calculates the a new power for the teams.
-     * @param warId War id.
      * @param initialAttackPower The initial attacker power.
      * @param initialDefensePower The initial defense power.
      * @param attackerPowerIncrement The calculated attack increment.
@@ -164,7 +177,6 @@ contract APWarsWarMachine is Ownable, ReentrancyGuard {
      * @param newDefensePower The defense power after changes.
      */
     event PowerChanged(
-        uint256 indexed warId,
         uint256 initialAttackPower,
         uint256 initialDefensePower,
         uint256 attackerPowerIncrement,
@@ -177,7 +189,6 @@ contract APWarsWarMachine is Ownable, ReentrancyGuard {
 
     /**
      * @notice Fired when the contract calculates the team improvement.
-     * @param warId War id.
      * @param team The improved team number.
      * @param initialAttackPower The initial attacker power.
      * @param initialDefensePower The initial defense power.
@@ -187,7 +198,6 @@ contract APWarsWarMachine is Ownable, ReentrancyGuard {
      * @param newDefensePower The defense power after improvement.
      */
     event TroopImprovement(
-        uint256 indexed warId,
         uint256 indexed team,
         uint256 initialAttackPower,
         uint256 initialDefensePower,
@@ -199,39 +209,33 @@ contract APWarsWarMachine is Ownable, ReentrancyGuard {
 
     /**
      * @notice Fired when the contract calculates the first random parameters.
-     * @param warId War id.
      * @param attackerTeam The attacker team number.
      * @param defenderTeam The defender team number.
      * @param attackerCasualty The percentage of attacker casualty.
      * @param defenderCasualty The percentage of defender casualty.
-     * @param luck The percentage of attacker luck.
+     * @param attackerLuck The percentage of attacker luck.
+     * @param defenderLuck The percentage of defender luck.
      * @param isBadLuck Specifies if is a bad luck (negative luck).
      */
     event FirstRoundRandomParameters(
-        uint256 indexed warId,
         uint256 attackerTeam,
         uint256 defenderTeam,
         uint256 attackerCasualty,
         uint256 defenderCasualty,
-        uint256 luck,
+        uint256 attackerLuck,
+        uint256 defenderLuck,
         bool isBadLuck
     );
 
     /**
      * @notice Fired when the contract calculates the second round random parameters.
-     * @param warId War id.
      * @param unlockedPrize The percentual of the unlocked prize.
      * @param casualty The casualty in the second round.
      */
-    event SecondRoundRandomParameters(
-        uint256 indexed warId,
-        uint256 unlockedPrize,
-        uint256 casualty
-    );
+    event SecondRoundRandomParameters(uint256 unlockedPrize, uint256 casualty);
 
     /**
      * @notice Fired when the contract calculates the team losses.
-     * @param warId War id.
      * @param team The team number.
      * @param isAttacker Specifies if the team is the attacker.
      * @param initialPower Specifies the team's initial power.
@@ -240,7 +244,6 @@ contract APWarsWarMachine is Ownable, ReentrancyGuard {
      * @param losses Specifies the losses percentage.
      */
     event TeamLosses(
-        uint256 indexed warId,
         uint256 indexed team,
         bool indexed isAttacker,
         uint256 initialPower,
@@ -251,13 +254,11 @@ contract APWarsWarMachine is Ownable, ReentrancyGuard {
 
     /**
      * @notice Fired when the contract owner finishes a round.
-     * @param warId War id.
      * @param sender Transaction sender.
      * @param externalRandomSource The revealed external random source.
      * @param winner The winner team.
      */
     event RoundFinished(
-        uint256 indexed warId,
         uint256 indexed round,
         address sender,
         bytes32 externalRandomSource,
@@ -267,7 +268,6 @@ contract APWarsWarMachine is Ownable, ReentrancyGuard {
 
     /**
      * @notice Fired when an user request to withdraw the amount after a war.
-     * @param warId War id.
      * @param player The player address.
      * @param tokenAddress The unit token address.
      * @param deposit The deposited amount.
@@ -275,17 +275,17 @@ contract APWarsWarMachine is Ownable, ReentrancyGuard {
      * @param net The net amount sent to user.
      */
     event Withdraw(
-        uint256 indexed warId,
         address indexed player,
         address indexed tokenAddress,
         uint256 deposit,
+        uint256 amountToBurn,
+        uint256 amountToSave,
         uint256 burned,
         uint256 net
     );
 
     /**
      * @notice Fired when an user request to withdraw the prize after the second round of war.
-     * @param warId War id.
      * @param player The player address.
      * @param tokenAddress The token prize address.
      * @param totalPower The team total power.
@@ -295,7 +295,6 @@ contract APWarsWarMachine is Ownable, ReentrancyGuard {
      * @param net The net amount sent to user.
      */
     event PrizeWithdraw(
-        uint256 indexed warId,
         address indexed player,
         address indexed tokenAddress,
         uint256 totalPower,
@@ -305,78 +304,32 @@ contract APWarsWarMachine is Ownable, ReentrancyGuard {
         uint256 net
     );
 
-    /**
-     * @notice Fired when the owner closes the war.
-     * @param warId War id.
-     * @param sender The sender address.
-     */
-    event WarClosed(uint256 indexed warId, address indexed sender);
-
-    /**
-     * @notice It defines the interval to be used in the burn process when a war is finished. This function can be called once to avoid
-     *         unfair game.
-     * @param _interval The internal.
-     */
-    function defineInterval(uint256 _interval) public onlyOwner {
-        require(interval == 0, "War:INTERVAL_ALREADY_DECLARED");
-        interval = _interval;
-    }
-
-    /**
-     * @notice It returns the total attack power to a specified team.
-     * @param _warId War id.
-     * @param _team The team.
-     * @return The computed total attack power.
-     */
-    function getAttackPower(uint256 _warId, uint256 _team)
-        public
-        view
-        returns (uint256)
-    {
-        return attackPower[_warId][_team];
-    }
-
-    /**
-     * @notice It returns the total defense power to a specified team.
-     * @param _warId War id.
-     * @param _team The team.
-     * @return The computed total defense power.
-     */
-    function getDefensePower(uint256 _warId, uint256 _team)
-        public
-        view
-        returns (uint256)
-    {
-        return defensePower[_warId][_team];
-    }
-
-    //TODO: restrict call twice to same parameters
-    /**
-     * @notice It defines the what tem a token address is linked.
-     * @param _warId War id.
-     * @param _unit Token unit address.
-     * @param _team The team number. If it is necessary remove a link the parameter must be zero.
-     */
-    function defineTokenTeam(
-        uint256 _warId,
-        IAPWarsUnit _unit,
-        uint256 _team
+    function setup(
+        IAPWarsBaseToken _tokenPrize,
+        APWarsBurnManagerV2 _burnManager,
+        IAPWarsUnit[] calldata _teamA,
+        IAPWarsUnit[] calldata _teamB,
+        APWarsCollectibles _collectibles,
+        uint256[] calldata _nfts
     ) public onlyOwner {
-        require(_team < 3, "War:INVALID_TEAM_NUMBER");
-        teams[_warId][address(_unit)] = _team;
-        allowedTeamTokenAddresses[_team].push(address(_unit));
-    }
+        collectibles = _collectibles;
+        burnManager = _burnManager;
+        nfts = _nfts;
 
-    /**
-     * @notice It defines the second round token prize.
-     * @param _warId War id.
-     * @param _tokenPrize Token prize address.
-     */
-    function defineTokenPrize(uint256 _warId, IAPWarsBaseToken _tokenPrize)
-        public
-        onlyOwner
-    {
-        tokenPrize[_warId] = address(_tokenPrize);
+        tokenPrize = address(_tokenPrize);
+
+        delete allowedTeamTokenAddresses[TEAM_A];
+        delete allowedTeamTokenAddresses[TEAM_B];
+
+        for (uint256 i = 0; i < _teamA.length; i++) {
+            teams[address(_teamA[i])] = TEAM_A;
+            allowedTeamTokenAddresses[TEAM_A].push(address(_teamA[i]));
+        }
+
+        for (uint256 i = 0; i < _teamB.length; i++) {
+            teams[address(_teamB[i])] = TEAM_B;
+            allowedTeamTokenAddresses[TEAM_B].push(address(_teamB[i]));
+        }
     }
 
     /**
@@ -390,52 +343,36 @@ contract APWarsWarMachine is Ownable, ReentrancyGuard {
         public
         onlyOwner
     {
-        WarInfo memory war =
-            WarInfo(
-                _name,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                false,
-                0,
-                0,
-                _externalRandomSourceHash
-            );
-        wars.push(war);
-        currentWarId = wars.length - 1;
-
-        warStage[currentWarId] = WarStage.FIRST_ROUND;
+        war = WarInfo(_name, 0, 0, 0, 0, 0, 0, 0, 0, 0, false, 0, 0);
+        warStage = WarStage.FIRST_ROUND;
+        externalRandomSourceHashes = _externalRandomSourceHash;
     }
 
     /**
      * @notice The way to send troops to war is depositing unit tokens, each unit token has attack and defense power and by
      * depositing the user is inscreasing the team power. Both sides do not for if they will attack or defense, so the rigth way
-     * to fish this war is send the maximum amount of troops! The method uses the currentWarId storage variable.
+     * to fish this war is send the maximum amount of troops!
      * This method needs to receive the approval from the unit token contract to transfer the specified amount.
      * If the war is in the second round only winners can send more troops to collect more gold.
      * @param _unit Unit token address.
      * @param _amount How many troops the user is sending to war.
      */
     function deposit(IAPWarsUnit _unit, uint256 _amount) public nonReentrant {
-        WarInfo storage war = wars[currentWarId];
         address tokenAddress = address(_unit);
 
         //identifying if the token is part from the TEAM_A or TEAM_B;
-        uint256 team = teams[currentWarId][tokenAddress];
-        WarStage stage = warStage[currentWarId];
+        uint256 team = teams[tokenAddress];
+        WarStage stage = warStage;
 
         require(stage == WarStage.FIRST_ROUND, "War:DEPOSIT_IS_BLOCKED");
 
-        //transfering the amount to this contranct and increase the user deposit amount
+        //transfering the amount to this contract and increase the user deposit amount
         _unit.transferFrom(msg.sender, address(this), _amount);
-        depositsByPlayer[currentWarId][tokenAddress][
-            msg.sender
-        ] = depositsByPlayer[currentWarId][tokenAddress][msg.sender].add(
+        depositsByPlayer[tokenAddress][msg.sender] = depositsByPlayer[
+            tokenAddress
+        ][msg.sender]
+            .add(_amount);
+        depositsByToken[tokenAddress] = depositsByToken[tokenAddress].add(
             _amount
         );
 
@@ -443,23 +380,32 @@ contract APWarsWarMachine is Ownable, ReentrancyGuard {
         uint256 troopAttackPower = _unit.getAttackPower().mul(_amount);
         uint256 troopDefensePower = _unit.getDefensePower().mul(_amount);
 
+        //if the user has the Beloved Hate NFT it will increase the attack power in 1%
+        uint256 belovedHaterImprovement = 0;
+        if (collectibles.balanceOf(msg.sender, nfts[4]) > 0) {
+            belovedHaterImprovement = troopAttackPower.mul(ONE_PERCENT).div(
+                ONE_HUNDRED_PERCENT
+            );
+
+            troopAttackPower = troopAttackPower.add(belovedHaterImprovement);
+        }
+
         //updating attack and defense powers
-        attackPowerByAddress[currentWarId][team][
+        attackPowerByAddress[team][msg.sender] = attackPowerByAddress[team][
             msg.sender
-        ] = attackPowerByAddress[currentWarId][team][msg.sender].add(
-            troopAttackPower
-        );
-        attackPower[currentWarId][team] = attackPower[currentWarId][team].add(
-            troopAttackPower
-        );
-        defensePowerByAddress[currentWarId][team][
+        ]
+            .add(troopAttackPower);
+        attackPower[team] = attackPower[team].add(troopAttackPower);
+        defensePowerByAddress[team][msg.sender] = defensePowerByAddress[team][
             msg.sender
-        ] = defensePowerByAddress[currentWarId][team][msg.sender].add(
-            troopDefensePower
-        );
-        defensePower[currentWarId][team] = defensePower[currentWarId][team].add(
-            troopDefensePower
-        );
+        ]
+            .add(troopDefensePower);
+        defensePower[team] = defensePower[team].add(troopDefensePower);
+
+        if (!playersMapping[msg.sender]) {
+            playersMapping[msg.sender] = true;
+            players.push(msg.sender);
+        }
 
         emit NewDeposit(
             msg.sender,
@@ -468,31 +414,28 @@ contract APWarsWarMachine is Ownable, ReentrancyGuard {
             _amount,
             troopAttackPower,
             troopDefensePower,
-            attackPower[currentWarId][team],
-            defensePower[currentWarId][team]
+            attackPower[team],
+            defensePower[team],
+            belovedHaterImprovement
         );
     }
 
     /**
      * @notice It calculates the random parameters from the revealed externam random source.
-     * @param _warId War id.
      * @param _externalRandomSource The revealed origin external random source registered on the war creation.
      */
     /**
      * @notice It calculates the random parameters from the revealed externam random source.
      * @dev See the docs to understand how it works. It is not so hard, but be guided by examples is a better way.
-     * @param _warId War id.
      * @param _externalRandomSource The revealed origin external random source registered on the war creation.
      */
-    function _defineFirstRoundRandomParameters(
-        uint256 _warId,
-        bytes32 _externalRandomSource
-    ) internal {
-        WarInfo storage war = wars[_warId];
+    function _defineFirstRoundRandomParameters(bytes32 _externalRandomSource)
+        internal
+    {
         uint256 salt = 0;
 
         uint256 randomTeamSource =
-            random(_warId, _externalRandomSource, salt, ONE_HUNDRED_PERCENT);
+            random(_externalRandomSource, salt, ONE_HUNDRED_PERCENT);
         bool isTeamA = randomTeamSource > ONE_HUNDRED_PERCENT / 2;
 
         war.attackerTeam = isTeamA ? TEAM_A : TEAM_B;
@@ -501,47 +444,51 @@ contract APWarsWarMachine is Ownable, ReentrancyGuard {
         salt = salt.add(randomTeamSource);
 
         war.attackerCasualty = random(
-            _warId,
             _externalRandomSource,
             salt,
             ONE_HUNDRED_PERCENT
         );
         salt = salt.add(war.attackerCasualty);
         war.defenderCasualty = random(
-            _warId,
             _externalRandomSource,
             salt,
             ONE_HUNDRED_PERCENT
         );
         salt = salt.add(war.defenderCasualty);
-        war.luck = random(
-            _warId,
+        war.attackerLuck = random(
             _externalRandomSource,
             salt,
             ONE_HUNDRED_PERCENT / 5
         );
-        salt = salt.add(war.luck);
+        salt = salt.add(war.attackerLuck);
+        war.defenderLuck = random(
+            _externalRandomSource,
+            salt,
+            ONE_HUNDRED_PERCENT / 5
+        );
+        salt = salt.add(war.defenderLuck);
 
         uint256 randomBadLuckSource =
-            random(_warId, _externalRandomSource, salt, ONE_HUNDRED_PERCENT);
+            random(_externalRandomSource, salt, ONE_HUNDRED_PERCENT);
 
         war.isBadLuck = randomBadLuckSource > ONE_HUNDRED_PERCENT / 2;
 
-        warFirstRoundRandomParameters[_warId] = WarFirstRoundRandomParameters(
+        warFirstRoundRandomParameters = WarFirstRoundRandomParameters(
             randomTeamSource,
             war.attackerCasualty,
             war.defenderCasualty,
-            war.luck,
+            war.attackerLuck,
+            war.defenderLuck,
             randomBadLuckSource
         );
 
         emit FirstRoundRandomParameters(
-            _warId,
             war.attackerTeam,
             war.defenderTeam,
             war.attackerCasualty,
             war.defenderCasualty,
-            war.luck,
+            war.attackerLuck,
+            war.defenderLuck,
             war.isBadLuck
         );
     }
@@ -549,14 +496,13 @@ contract APWarsWarMachine is Ownable, ReentrancyGuard {
     //TODO: refactor the code to reduce the amount of duplicated code.
     /**
      * @notice It calculates the troop improvement by analysing if a specified unit has a troop impact factor, which is a percentual by unit.
-     * @param _warId War id.
      */
-    function _calculateTroopImprovement(uint256 _warId) internal {
+    function _calculateTroopImprovement() internal {
         uint256 attackImprovement = 0;
         uint256 defenseImprovement = 0;
 
-        uint256 initialAttackePower = attackPower[_warId][TEAM_A];
-        uint256 initialDefensePower = defensePower[_warId][TEAM_A];
+        uint256 initialAttackePower = attackPower[TEAM_A];
+        uint256 initialDefensePower = defensePower[TEAM_A];
 
         for (uint256 i = 0; i < allowedTeamTokenAddresses[TEAM_A].length; i++) {
             IAPWarsUnit unit =
@@ -564,35 +510,34 @@ contract APWarsWarMachine is Ownable, ReentrancyGuard {
             uint256 balance = unit.balanceOf(address(this));
 
             if (unit.getTroopImproveFactor() > 0 && balance > 0) {
-                attackImprovement = attackPower[_warId][TEAM_A]
+                attackImprovement = attackPower[TEAM_A]
                     .mul(unit.getTroopImproveFactor())
                     .div(ONE_HUNDRED_PERCENT)
                     .mul(balance.div(ONE));
 
-                attackPower[_warId][TEAM_A] = attackImprovement;
+                attackPower[TEAM_A] = attackImprovement;
 
-                defenseImprovement = defensePower[_warId][TEAM_A]
+                defenseImprovement = defensePower[TEAM_A]
                     .mul(unit.getTroopImproveFactor())
                     .div(ONE_HUNDRED_PERCENT)
                     .mul(balance.div(ONE));
 
-                defensePower[_warId][TEAM_A] = defenseImprovement;
+                defensePower[TEAM_A] = defenseImprovement;
             }
         }
 
         emit TroopImprovement(
-            _warId,
             TEAM_A,
             initialAttackePower,
             initialDefensePower,
             attackImprovement,
             defenseImprovement,
-            attackPower[_warId][TEAM_A],
-            defensePower[_warId][TEAM_A]
+            attackPower[TEAM_A],
+            defensePower[TEAM_A]
         );
 
-        initialAttackePower = attackPower[_warId][TEAM_B];
-        initialDefensePower = defensePower[_warId][TEAM_B];
+        initialAttackePower = attackPower[TEAM_B];
+        initialDefensePower = defensePower[TEAM_B];
 
         for (uint256 i = 0; i < allowedTeamTokenAddresses[TEAM_B].length; i++) {
             IAPWarsUnit unit =
@@ -601,49 +546,45 @@ contract APWarsWarMachine is Ownable, ReentrancyGuard {
             uint256 balance = unit.balanceOf(address(this));
 
             if (unit.getTroopImproveFactor() > 0 && balance > 0) {
-                attackImprovement = attackPower[_warId][TEAM_B]
+                attackImprovement = attackPower[TEAM_B]
                     .mul(unit.getTroopImproveFactor())
                     .div(ONE_HUNDRED_PERCENT)
                     .mul(balance.div(ONE));
 
-                attackPower[_warId][TEAM_B] = attackImprovement;
+                attackPower[TEAM_B] = attackImprovement;
 
-                defenseImprovement = defensePower[_warId][TEAM_B]
+                defenseImprovement = defensePower[TEAM_B]
                     .mul(unit.getTroopImproveFactor())
                     .div(ONE_HUNDRED_PERCENT)
                     .mul(balance.div(ONE));
 
-                defensePower[_warId][TEAM_B] = defenseImprovement;
+                defensePower[TEAM_B] = defenseImprovement;
             }
         }
 
         emit TroopImprovement(
-            _warId,
             TEAM_B,
             initialAttackePower,
             initialDefensePower,
             attackImprovement,
             defenseImprovement,
-            attackPower[_warId][TEAM_B],
-            defensePower[_warId][TEAM_B]
+            attackPower[TEAM_B],
+            defensePower[TEAM_B]
         );
     }
 
     /**
      * @notice It calculates the luck of a team. The luck of a team is the same amount of badluck to another.
      *         This function uses the pre-calculated random luck percentual.
-     * @param _warId War id.
      */
-    function _calculateLuckImpact(uint256 _warId) internal {
-        WarInfo storage war = wars[_warId];
-
-        uint256 initialAttackPower = attackPower[_warId][war.attackerTeam];
-        uint256 initialDefensePower = defensePower[_warId][war.defenderTeam];
+    function _calculateLuckImpact() internal {
+        uint256 initialAttackPower = attackPower[war.attackerTeam];
+        uint256 initialDefensePower = defensePower[war.defenderTeam];
 
         uint256 attackerPowerByLuck =
-            initialAttackPower.mul(war.luck).div(ONE_HUNDRED_PERCENT);
+            initialAttackPower.mul(war.attackerLuck).div(ONE_HUNDRED_PERCENT);
         uint256 defensePowerByLuck =
-            initialDefensePower.mul(war.luck).div(ONE_HUNDRED_PERCENT);
+            initialDefensePower.mul(war.defenderLuck).div(ONE_HUNDRED_PERCENT);
 
         // the luck is in the attacker point of view
         if (war.isBadLuck) {
@@ -655,7 +596,6 @@ contract APWarsWarMachine is Ownable, ReentrancyGuard {
         }
 
         emit PowerChanged(
-            _warId,
             initialAttackPower,
             initialDefensePower,
             attackerPowerByLuck,
@@ -669,11 +609,8 @@ contract APWarsWarMachine is Ownable, ReentrancyGuard {
 
     /**
      * @notice It calculates the morale from both sides.
-     * @param _warId War id.
      */
-    function _calculateMoraleImpact(uint256 _warId) internal {
-        WarInfo storage war = wars[_warId];
-
+    function _calculateMoraleImpact() internal {
         uint256 initialAttackPower = war.finalAttackPower;
         uint256 initialDefensePower = war.finalDefensePower;
 
@@ -716,7 +653,6 @@ contract APWarsWarMachine is Ownable, ReentrancyGuard {
         }
 
         emit PowerChanged(
-            _warId,
             initialAttackPower,
             initialDefensePower,
             attackerMoraleImpactPerc,
@@ -730,13 +666,10 @@ contract APWarsWarMachine is Ownable, ReentrancyGuard {
 
     /**
      * @notice It calculates the losses from the both sides. This function uses the pre-calculated random losses percentual.
-     * @param _warId War id.
      */
-    function _calculateLosses(uint256 _warId) internal {
-        WarInfo storage war = wars[_warId];
-
-        uint256 initialAttackPower = attackPower[_warId][war.attackerTeam];
-        uint256 initialDefensePower = defensePower[_warId][war.defenderTeam];
+    function _calculateLosses() internal {
+        uint256 initialAttackPower = attackPower[war.attackerTeam];
+        uint256 initialDefensePower = defensePower[war.defenderTeam];
 
         if (war.finalAttackPower > war.finalDefensePower) {
             war.winner = war.attackerTeam;
@@ -771,7 +704,6 @@ contract APWarsWarMachine is Ownable, ReentrancyGuard {
         }
 
         emit TeamLosses(
-            _warId,
             war.attackerTeam,
             true,
             initialAttackPower,
@@ -781,7 +713,6 @@ contract APWarsWarMachine is Ownable, ReentrancyGuard {
         );
 
         emit TeamLosses(
-            _warId,
             war.defenderTeam,
             false,
             initialDefensePower,
@@ -795,29 +726,22 @@ contract APWarsWarMachine is Ownable, ReentrancyGuard {
      * @notice It finishes the first round of a war. All the random parameters will be computed by revealing the original
      * external random source. This function is a templated method pattern which calls other helper functions. At the end of
      * the execution the war is changed to second round and the survivors can figth to get the gold from the dragon.
-     * @param _warId War id.
      * @param _externalRandomSource The revealed origin external random source registered on the war creation.
      */
-    function finishFirstRound(uint256 _warId, bytes32 _externalRandomSource)
-        public
-        onlyOwner
-    {
-        WarInfo storage war = wars[_warId];
-
-        _calculateTroopImprovement(_warId);
-        _defineFirstRoundRandomParameters(_warId, _externalRandomSource);
-        _calculateLuckImpact(_warId);
+    function finishFirstRound(bytes32 _externalRandomSource) public onlyOwner {
+        _calculateTroopImprovement();
+        _defineFirstRoundRandomParameters(_externalRandomSource);
+        _calculateLuckImpact();
 
         // if there is no other side there is no morale impact
         if (war.finalAttackPower > 0 && war.finalDefensePower > 0) {
-            _calculateMoraleImpact(_warId);
+            _calculateMoraleImpact();
         }
-        _calculateLosses(_warId);
+        _calculateLosses();
 
-        warStage[_warId] = WarStage.SECOND_ROUND;
+        warStage = WarStage.SECOND_ROUND;
 
         emit RoundFinished(
-            _warId,
             1,
             msg.sender,
             _externalRandomSource,
@@ -832,32 +756,24 @@ contract APWarsWarMachine is Ownable, ReentrancyGuard {
      * @notice It finishes the first round of a war. All the random parameters will be computed by revealing the original
      * external random source. This function is a templated method pattern which calls other helper functions. At the end of
      * the execution the war is changed to second round and the survivors can figth to get the gold from the dragon.
-     * @param _warId War id.
      * @param _externalRandomSource The revealed origin external random source registered on the war creation.
      */
-    function finishSecondRound(uint256 _warId, bytes32 _externalRandomSource)
-        public
-        onlyOwner
-    {
-        WarInfo storage war = wars[_warId];
-        IAPWarsBaseToken token = IAPWarsBaseToken(tokenPrize[_warId]);
+    function finishSecondRound(bytes32 _externalRandomSource) public onlyOwner {
+        IAPWarsBaseToken token = IAPWarsBaseToken(tokenPrize);
 
-        secondRoundRandomParameters[_warId].unlockedPrize = random(
-            _warId,
+        secondRoundRandomParameters.unlockedPrize = random(
             _externalRandomSource,
             0,
             ONE_HUNDRED_PERCENT
         );
-        secondRoundRandomParameters[_warId].casualty = random(
-            _warId,
+        secondRoundRandomParameters.casualty = random(
             _externalRandomSource,
-            secondRoundRandomParameters[_warId].unlockedPrize,
+            secondRoundRandomParameters.unlockedPrize,
             ONE_HUNDRED_PERCENT
         );
 
-        warStage[_warId] = WarStage.FINISHED;
-        secoundRoundFinishTimestamp[_warId] = block.timestamp;
-        totalPrize[_warId] = token.balanceOf(address(this));
+        warStage = WarStage.FINISHED;
+        totalPrize = token.balanceOf(address(this));
 
         //calculating the new losses after the second round
         uint256 losses =
@@ -866,7 +782,7 @@ contract APWarsWarMachine is Ownable, ReentrancyGuard {
                 : war.percDefenderLosses;
         uint256 newLosses =
             losses
-                .mul(secondRoundRandomParameters[_warId].casualty)
+                .mul(secondRoundRandomParameters.casualty)
                 .div(ONE_HUNDRED_PERCENT)
                 .add(losses);
 
@@ -881,12 +797,10 @@ contract APWarsWarMachine is Ownable, ReentrancyGuard {
         }
 
         emit SecondRoundRandomParameters(
-            _warId,
-            secondRoundRandomParameters[_warId].unlockedPrize,
-            secondRoundRandomParameters[_warId].casualty
+            secondRoundRandomParameters.unlockedPrize,
+            secondRoundRandomParameters.casualty
         );
         emit RoundFinished(
-            _warId,
             2,
             msg.sender,
             _externalRandomSource,
@@ -895,101 +809,136 @@ contract APWarsWarMachine is Ownable, ReentrancyGuard {
         );
     }
 
-    /**
-     * @notice It a help function to burn tokens by team.
-     * @dev This function is a helper function called by closeWar.
-     * @param _team Team number.
-     */
-    function _burnTokensByTeam(uint256 _team) internal {
-        for (uint256 i = 0; i < allowedTeamTokenAddresses[_team].length; i++) {
-            IAPWarsUnit unit = IAPWarsUnit(allowedTeamTokenAddresses[_team][i]);
-
-            uint256 amount = unit.balanceOf(address(this));
-            if (amount > 0) {
-                unit.burn(amount);
-            }
+    function getPlayerInfo(address[] calldata _tokenAddresses, address _player)
+        public
+        view
+        returns (
+            uint256 depositAmount,
+            uint256 totalAttackPowerTeamA,
+            uint256 totalAttackPowerTeamB,
+            uint256 totalDefensePowerTeamA,
+            uint256 totalDefensePowerTeamB
+        )
+    {
+        for (uint256 i = 0; i < _tokenAddresses.length; i++) {
+            depositAmount = depositAmount.add(
+                depositsByPlayer[_tokenAddresses[i]][_player]
+            );
         }
+
+        totalAttackPowerTeamA = attackPowerByAddress[TEAM_A][_player];
+        totalAttackPowerTeamB = attackPowerByAddress[TEAM_B][_player];
+        totalDefensePowerTeamA = defensePowerByAddress[TEAM_A][_player];
+        totalDefensePowerTeamB = defensePowerByAddress[TEAM_B][_player];
     }
 
-    /**
-     * @notice It closes the war. After the war is finished all the remaining token balances are burned.
-     * @param _warId War id.
-     */
-    function closeWar(uint256 _warId) public onlyOwner {
-        require(
-            secoundRoundFinishTimestamp[_warId] + interval <= block.timestamp,
-            "War:INVALID_TIMESTAMP"
-        );
-        warStage[_warId] = WarStage.CLOSED;
+    function getWarInfo(uint256 _team, address[] calldata _tokenAddresses)
+        public
+        view
+        returns (
+            uint256 totalDepositAmount,
+            uint256 totalAttackPower,
+            uint256 totalDefensePower,
+            address warTokenPrize,
+            APWarsCollectibles warCollectibles
+        )
+    {
+        address tokenAddress = address(0);
 
-        _burnTokensByTeam(TEAM_A);
-        _burnTokensByTeam(TEAM_B);
+        for (uint256 i = 0; i < _tokenAddresses.length; i++) {
+            tokenAddress = _tokenAddresses[i];
+            totalDepositAmount = totalDepositAmount.add(
+                depositsByToken[tokenAddress]
+            );
+        }
 
-        emit WarClosed(_warId, msg.sender);
+        totalAttackPower = attackPower[_team];
+        totalDefensePower = defensePower[_team];
+        warTokenPrize = tokenPrize;
+        warCollectibles = collectibles;
     }
 
-    /**
-     * @notice It returns the deposited amount of a specified unit token.
-     * @param _warId War id.
-     * @param _tokenAddress The specified unit token address to check the user's amount.
-     * @param _player The player' address to check the deposited amount.
-     * @return The deposited amount.
-     */
-    function getPlayerDeposit(
-        uint256 _warId,
-        address _tokenAddress,
-        address _player
-    ) public view returns (uint256) {
-        return depositsByPlayer[_warId][_tokenAddress][_player];
-    }
-
-    // TODO: Subtract the deposited amount or control the requested amount
     /**
      * @notice It withdraws the remaining amount of a unit token after the war. This function get the troop back to home.
-     * @param _warId War id.
      * @param _unit Unit token address.
      */
-    function withdraw(uint256 _warId, IAPWarsUnit _unit) public nonReentrant {
-        WarInfo storage war = wars[_warId];
+    function withdraw(IAPWarsUnit _unit) public nonReentrant {
         address tokenAddress = address(_unit);
 
+        require(address(_unit) != tokenPrize, "War:INVALID_TOKEN_ADDRESS");
+
         require(
-            teams[_warId][tokenAddress] == TEAM_A ||
-                teams[_warId][tokenAddress] == TEAM_B,
+            !withdrawn[msg.sender][address(_unit)],
+            "War:ALREADY_WITHDRAWN"
+        );
+
+        require(
+            teams[tokenAddress] == TEAM_A || teams[tokenAddress] == TEAM_B,
             "War:INVALID_TOKEN_ADDRESS"
         );
         require(
-            warStage[_warId] == WarStage.FINISHED,
+            warStage == WarStage.FINISHED,
             "War:INVALID_WAR_STAGE_TO_WITHDRAW"
         );
 
-        uint256 team = teams[currentWarId][tokenAddress];
-        uint256 depositAmount =
-            depositsByPlayer[_warId][tokenAddress][msg.sender];
+        uint256 team = teams[tokenAddress];
+        uint256 depositAmount = depositsByPlayer[tokenAddress][msg.sender];
 
         uint256 toBurnPerc =
             team == war.attackerTeam
                 ? war.percAttackerLosses
                 : war.percDefenderLosses;
 
+        uint256 amountToSave = 0;
+
+        if (_unit.getTroopImproveFactor() > 0) {
+            if (collectibles.balanceOf(msg.sender, nfts[3]) > 0) {
+                amountToSave = amountToSave.add(TEN_PERCENT * 2 + FIVE_PERCENT);
+            }
+        } else {
+            if (collectibles.balanceOf(msg.sender, nfts[0]) > 0) {
+                amountToSave = amountToSave.add(TEN_PERCENT);
+            }
+
+            if (collectibles.balanceOf(msg.sender, nfts[1]) > 0) {
+                amountToSave = amountToSave.add(TEN_PERCENT + FIVE_PERCENT);
+            }
+
+            if (collectibles.balanceOf(msg.sender, nfts[2]) > 0) {
+                amountToSave = amountToSave.add(TEN_PERCENT * 2 + FIVE_PERCENT);
+            }
+        }
+
+        uint256 originalToBurnPerc = toBurnPerc;
+
+        if (amountToSave > toBurnPerc) {
+            toBurnPerc = 0;
+        } else {
+            toBurnPerc = toBurnPerc.sub(amountToSave);
+        }
+
         uint256 amountToBurn =
             depositAmount.mul(toBurnPerc).div(ONE_HUNDRED_PERCENT);
         uint256 net = depositAmount - amountToBurn;
 
-        _unit.burn(amountToBurn);
+        _unit.transfer(address(burnManager), amountToBurn);
+        burnManager.burn(address(_unit));
 
-        //avoinding rounding erros to the last user
+        //avoinding rounding errors to the last user
         if (_unit.balanceOf(address(this)) < net) {
             _unit.transfer(msg.sender, _unit.balanceOf(address(this)));
         } else {
             _unit.transfer(msg.sender, net);
         }
 
+        withdrawn[msg.sender][address(_unit)] = true;
+
         emit Withdraw(
-            _warId,
             msg.sender,
             tokenAddress,
             depositAmount,
+            originalToBurnPerc,
+            amountToSave,
             amountToBurn,
             net
         );
@@ -997,10 +946,9 @@ contract APWarsWarMachine is Ownable, ReentrancyGuard {
 
     /**
      * @notice It returns the total prize locked when the war was finished.
-     * @param _warId War id.
      */
-    function getTotalPrize(uint256 _warId) public view returns (uint256) {
-        return totalPrize[_warId];
+    function getTotalPrize() public view returns (uint256) {
+        return totalPrize;
     }
 
     //TODO: Check if the user can run this method
@@ -1009,39 +957,40 @@ contract APWarsWarMachine is Ownable, ReentrancyGuard {
      *         The total prize is the token prize total balance when the war is finisehd.
      *         The user share corresponds to the proportion of user total power and the the team
      *         total power.
-     * @param _warId War id.
      */
-    function withdrawPrize(uint256 _warId) public nonReentrant {
-        WarInfo storage war = wars[_warId];
-        address tokenAddress = tokenPrize[_warId];
+    function withdrawPrize() public nonReentrant {
+        address tokenAddress = tokenPrize;
         IAPWarsBaseToken token = IAPWarsBaseToken(tokenAddress);
 
         require(
-            warStage[_warId] == WarStage.FINISHED,
+            !withdrawn[msg.sender][address(tokenAddress)],
+            "War:ALREADY_WITHDRAWN"
+        );
+
+        require(
+            warStage == WarStage.FINISHED,
             "War:INVALID_WAR_STAGE_TO_WITHDRAL_PRIZE"
         );
 
         bool isAttacker = war.attackerTeam == war.winner;
         uint256 teamTotalPower =
-            isAttacker
-                ? attackPower[_warId][war.winner]
-                : defensePower[_warId][war.winner];
+            isAttacker ? attackPower[war.winner] : defensePower[war.winner];
         uint256 userTotalPower =
             isAttacker
-                ? attackPowerByAddress[_warId][war.winner][msg.sender]
-                : defensePowerByAddress[_warId][war.winner][msg.sender];
+                ? attackPowerByAddress[war.winner][msg.sender]
+                : defensePowerByAddress[war.winner][msg.sender];
 
         uint256 userShare =
             userTotalPower.mul(ONE_HUNDRED_PERCENT).div(teamTotalPower);
-        uint256 userPrize =
-            totalPrize[_warId].mul(userShare).div(ONE_HUNDRED_PERCENT);
+        uint256 userPrize = totalPrize.mul(userShare).div(ONE_HUNDRED_PERCENT);
         uint256 amountToBurn =
-            userPrize
-                .mul(secondRoundRandomParameters[_warId].unlockedPrize)
-                .div(ONE_HUNDRED_PERCENT);
+            userPrize.mul(secondRoundRandomParameters.unlockedPrize).div(
+                ONE_HUNDRED_PERCENT
+            );
         uint256 net = userPrize - amountToBurn;
 
-        token.burn(amountToBurn);
+        token.transfer(address(burnManager), amountToBurn);
+        burnManager.burn(address(token));
 
         //avoinding rounding errors to the last user
         if (token.balanceOf(address(this)) < net) {
@@ -1050,8 +999,9 @@ contract APWarsWarMachine is Ownable, ReentrancyGuard {
             token.transfer(msg.sender, net);
         }
 
+        withdrawn[msg.sender][address(tokenAddress)] = true;
+
         emit PrizeWithdraw(
-            _warId,
             msg.sender,
             tokenAddress,
             teamTotalPower,
@@ -1080,24 +1030,20 @@ contract APWarsWarMachine is Ownable, ReentrancyGuard {
      * @dev The externalRandomSource parameter is the original value. The hash of this value must be set when
      *      the war is created. To help this process you can user the hashExternalRandomSource function. It is a public
      *      function to help aditors verify the generated random numbers at the end of a war stage.
-     * @param _warId War id.
      * @param _externalRandomSource The original external random source.
      * @param _salt A salt to generate random numbers using the same external random source.
      * @param _maxNumber The max number to be generated, used to create a range of random number.
      * @return Then computed pseudo random number.
      */
     function random(
-        uint256 _warId,
         bytes32 _externalRandomSource,
         uint256 _salt,
         uint256 _maxNumber
     ) public view returns (uint256) {
-        WarInfo storage war = wars[_warId];
-
         bytes32 hash = hashExternalRandomSource(_externalRandomSource);
 
         require(
-            hash == war.externalRandomSourceHash,
+            hash == externalRandomSourceHashes,
             "War:INVALID_EXTERNAL_RANDOM_SOURCE"
         );
 
@@ -1106,13 +1052,7 @@ contract APWarsWarMachine is Ownable, ReentrancyGuard {
 
         bytes32 _structHash =
             keccak256(
-                abi.encode(
-                    _blockhash,
-                    gasLeft,
-                    wars.length,
-                    _salt,
-                    _externalRandomSource
-                )
+                abi.encode(_blockhash, gasLeft, _salt, _externalRandomSource)
             );
         uint256 _randomNumber = uint256(_structHash);
 
