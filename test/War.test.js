@@ -3,7 +3,7 @@ const Collectibles = artifacts.require('APWarsCollectibles');
 const BurnManager = artifacts.require('APWarsBurnManagerV2');
 const UnitToken = artifacts.require('APWarsUnitToken');
 
-contract.only('WarMachine', accounts => {
+contract('WarMachine', accounts => {
   const externalRandomSource = '0x019f7d857c47a36ffce885e3978b815ae7b7b5b6f52fff6dae164a3845ad7eff';
   const UNIT_DEFAULT_SUPPLY = 10000000;
   const MULT = 10 ** 18;
@@ -19,7 +19,7 @@ contract.only('WarMachine', accounts => {
   let gold = null;
 
   it('should create unit tokens and define teams', async () => {
-    const instance = await War.deployed();
+    const instance = await War.new();
 
     gold = await UnitToken.new('Gold', 'A:GOLD', 0, 0, 0);
 
@@ -85,7 +85,7 @@ contract.only('WarMachine', accounts => {
   });
 
   it('should allow war contract to run transferFrom', async () => {
-    const instance = await War.deployed();
+    const instance = await War.new();
 
     teamAArcher.approve(instance.address, await teamAArcher.balanceOf(accounts[1]), { from: accounts[1] });
     teamAArcher.approve(instance.address, await teamAArcher.balanceOf(accounts[2]), { from: accounts[2] });
@@ -122,7 +122,7 @@ contract.only('WarMachine', accounts => {
   });
 
   it('should deposit units in the war contract', async () => {
-    const instance = await War.deployed();
+    const instance = await War.new();
     const burnManager = await BurnManager.new(accounts[0]);
     const collectibles = await Collectibles.new(burnManager.address, "");
 
@@ -131,14 +131,12 @@ contract.only('WarMachine', accounts => {
     await instance.createWar('War#1', externalRandomSourceHash);
 
     await instance.setup(
-      0,
       gold.address,
+      burnManager.address,
       [teamAArcher.address, teamAWarrior.address, teamACavalry.address, teamANoble.address],
       [teamBArcher.address, teamBWarior.address, teamBCavalry.address, teamBNoble.address],
       collectibles.address,
-      [0, 0, 0],
-      0,
-      0
+      [0, 0, 0, 0, 0],
     );
 
     const depositAndCheck = async (accList, unit) => {
@@ -149,7 +147,7 @@ contract.only('WarMachine', accounts => {
         const balanceOf = (await unit.balanceOf(account)).toString();
         await instance.deposit(unit.address, balanceOf, { from:  account});
 
-        expect((await instance.getPlayerInfo(0, unit.address, account)).depositAmount.toString()).to.be.equal(balanceOf, `#${i} fail to check ${account}`);
+        expect((await instance.getPlayerInfo([unit.address], account)).depositAmount.toString()).to.be.equal(balanceOf, `#${i} fail to check ${account}`);
         expect((await unit.balanceOf(account)).toString()).to.be.equal('0', `#${i} fail to check balanceOf ${account}`);
       }
     }
@@ -166,14 +164,14 @@ contract.only('WarMachine', accounts => {
   });
 
   it('should finish war', async () => {
-    const instance = await War.deployed();
+    const instance = await War.new();
 
-    await instance.finishFirstRound(0, externalRandomSource);
-    await instance.finishSecondRound(0, externalRandomSource);
+    await instance.finishFirstRound(externalRandomSource);
+    await instance.finishSecondRound(externalRandomSource);
 
-    const war = await instance.wars(0);
-    const teamAInfo = await instance.getWarInfo(0, 1, []);
-    const teamBInfo = await instance.getWarInfo(0, 2, []);
+    const war = await instance.war();
+    const teamAInfo = await instance.getWarInfo(1, []);
+    const teamBInfo = await instance.getWarInfo(2, []);
     const attackPowerTeamA = teamAInfo.totalAttackPower;
     const attackPowerTeamB = teamAInfo.totalAttackPower;
     const defensePowerTeamA = teamBInfo.totalDefensePower;
@@ -186,7 +184,7 @@ contract.only('WarMachine', accounts => {
       defensePowerTeamB: defensePowerTeamB.toString(),
     });
 
-    await instance.withdraw(0, teamAArcher.address, {from: accounts[1]});
+    await instance.withdraw(teamAArcher.address, {from: accounts[1]});
     
     console.log('name', war.name);
     console.log('attackerTeam', war.attackerTeam.toString());
@@ -205,7 +203,7 @@ contract.only('WarMachine', accounts => {
   });
 });
 
-contract.only('A war with just one side (A)', accounts => {
+contract('A war with just one side (A)', accounts => {
   const externalRandomSource = '0x019f7d857c47a36ffce885e3978b815ae7b7b5b6f52fff6dae164a3845ad7eff';
   const UNIT_DEFAULT_SUPPLY = 10000000;
   const MULT = 10 ** 18;
@@ -221,7 +219,7 @@ contract.only('A war with just one side (A)', accounts => {
   let gold = null;
 
   it('should create unit tokens and define teams', async () => {
-    const instance = await War.deployed();
+    const instance = await War.new();
 
     gold = await UnitToken.new('Gold', 'A:GOLD', 0, 0, 0);
 
@@ -248,7 +246,7 @@ contract.only('A war with just one side (A)', accounts => {
 });
 
   it('should allow war contract to run transferFrom', async () => {
-    const instance = await War.deployed();
+    const instance = await War.new();
 
     teamAArcher.approve(instance.address, await teamAArcher.balanceOf(accounts[1]), { from: accounts[1] });
     teamAArcher.approve(instance.address, await teamAArcher.balanceOf(accounts[2]), { from: accounts[2] });
@@ -260,7 +258,7 @@ contract.only('A war with just one side (A)', accounts => {
   });
 
   it('should deposit units in the war contract', async () => {
-    const instance = await War.deployed();
+    const instance = await War.new();
     const burnManager = await BurnManager.new(accounts[0]);
     const collectibles = await Collectibles.new(burnManager.address, "");
 
@@ -271,14 +269,12 @@ contract.only('A war with just one side (A)', accounts => {
     await gold.transfer(instance.address, await gold.balanceOf(accounts[0]));
     
     await instance.setup(
-      0,
       gold.address,
+      burnManager.address,
       [teamAArcher.address],
       [teamAArcher.address],
       collectibles.address,
-      [0, 0, 0],
-      0,
-      0
+      [0, 0, 0, 0, 0]
     );
 
     const depositAndCheck = async (accList, unit) => {
@@ -289,7 +285,7 @@ contract.only('A war with just one side (A)', accounts => {
         const balanceOf = (await unit.balanceOf(account)).toString();
         await instance.deposit(unit.address, balanceOf, { from:  account});
 
-        expect((await instance.getPlayerInfo(0, unit.address, account)).depositAmount.toString()).to.be.equal(balanceOf, `#${i} fail to check ${account}`);
+        expect((await instance.getPlayerInfo([unit.address], account)).depositAmount.toString()).to.be.equal(balanceOf, `#${i} fail to check ${account}`);
         expect((await unit.balanceOf(account)).toString()).to.be.equal('0', `#${i} fail to check balanceOf ${account}`);
       }
     }
@@ -298,14 +294,14 @@ contract.only('A war with just one side (A)', accounts => {
   });
 
   it('should finish war', async () => {
-    const instance = await War.deployed();
+    const instance = await War.new();
 
-    await instance.finishFirstRound(0, externalRandomSource);
-    await instance.finishSecondRound(0, externalRandomSource);
+    await instance.finishFirstRound(externalRandomSource);
+    await instance.finishSecondRound(externalRandomSource);
 
-    const war = await instance.wars(0);
-    const teamAInfo = await instance.getWarInfo(0, 1, []);
-    const teamBInfo = await instance.getWarInfo(0, 2, []);
+    const war = await instance.war();
+    const teamAInfo = await instance.getWarInfo(1, []);
+    const teamBInfo = await instance.getWarInfo(2, []);
     const attackPowerTeamA = teamAInfo.totalAttackPower;
     const attackPowerTeamB = teamAInfo.totalAttackPower;
     const defensePowerTeamA = teamBInfo.totalDefensePower;
@@ -318,7 +314,7 @@ contract.only('A war with just one side (A)', accounts => {
       defensePowerTeamB: defensePowerTeamB.toString(),
     });
 
-    await instance.withdraw(0, teamAArcher.address, {from: accounts[1]});
+    await instance.withdraw(teamAArcher.address, {from: accounts[1]});
     
     console.log('name', war.name);
     console.log('attackerTeam', war.attackerTeam.toString());
@@ -337,8 +333,7 @@ contract.only('A war with just one side (A)', accounts => {
   });
 });
 
-
-contract.only('A war with just one side (B)', accounts => {
+contract('A war with just one side (B)', accounts => {
   const externalRandomSource = '0x019f7d857c47a36ffce885e3978b815ae7b7b5b6f52fff6dae164a3845ad7eff';
   const UNIT_DEFAULT_SUPPLY = 10000000;
   const MULT = 10 ** 18;
@@ -352,9 +347,10 @@ contract.only('A war with just one side (B)', accounts => {
   let teamBCavalry = null;
   let teamBNoble = null;
   let gold = null;
+  let instance = null;
 
   it('should create unit tokens and define teams', async () => {
-    const instance = await War.deployed();
+    instance = await War.new();
 
     gold = await UnitToken.new('Gold', 'A:GOLD', 0, 0, 0);
 
@@ -383,8 +379,6 @@ contract.only('A war with just one side (B)', accounts => {
   });
 
   it('should allow war contract to run transferFrom', async () => {
-    const instance = await War.deployed();
-
     teamAArcher.approve(instance.address, await teamAArcher.balanceOf(accounts[1]), { from: accounts[1] });
     teamAArcher.approve(instance.address, await teamAArcher.balanceOf(accounts[2]), { from: accounts[2] });
     teamAArcher.approve(instance.address, await teamAArcher.balanceOf(accounts[3]), { from: accounts[3] });
@@ -395,7 +389,6 @@ contract.only('A war with just one side (B)', accounts => {
   });
 
   it('should deposit units in the war contract', async () => {
-    const instance = await War.deployed();
     const burnManager = await BurnManager.new(accounts[0]);
     const collectibles = await Collectibles.new(burnManager.address, "");
 
@@ -406,14 +399,12 @@ contract.only('A war with just one side (B)', accounts => {
     await gold.transfer(instance.address, await gold.balanceOf(accounts[0]));
     
     await instance.setup(
-      0,
       gold.address,
+      burnManager.address,
       [teamAArcher.address],
       [teamAArcher.address],
       collectibles.address,
-      [0, 0, 0],
-      0,
-      0
+      [0, 0, 0, 0, 0],
     );
 
     const depositAndCheck = async (accList, unit) => {
@@ -424,7 +415,7 @@ contract.only('A war with just one side (B)', accounts => {
         const balanceOf = (await unit.balanceOf(account)).toString();
         await instance.deposit(unit.address, balanceOf, { from:  account});
 
-        expect((await instance.getPlayerInfo(0, unit.address, account)).depositAmount.toString()).to.be.equal(balanceOf, `#${i} fail to check ${account}`);
+        expect((await instance.getPlayerInfo([unit.address], account)).depositAmount.toString()).to.be.equal(balanceOf, `#${i} fail to check ${account}`);
         expect((await unit.balanceOf(account)).toString()).to.be.equal('0', `#${i} fail to check balanceOf ${account}`);
       }
     }
@@ -434,14 +425,12 @@ contract.only('A war with just one side (B)', accounts => {
   });
 
   it('should finish war', async () => {
-    const instance = await War.deployed();
+    await instance.finishFirstRound(externalRandomSource);
+    await instance.finishSecondRound(externalRandomSource);
 
-    await instance.finishFirstRound(0, externalRandomSource);
-    await instance.finishSecondRound(0, externalRandomSource);
-
-    const war = await instance.wars(0);
-    const teamAInfo = await instance.getWarInfo(0, 1, []);
-    const teamBInfo = await instance.getWarInfo(0, 2, []);
+    const war = await instance.war();
+    const teamAInfo = await instance.getWarInfo(1, []);
+    const teamBInfo = await instance.getWarInfo(2, []);
     const attackPowerTeamA = teamAInfo.totalAttackPower;
     const attackPowerTeamB = teamAInfo.totalAttackPower;
     const defensePowerTeamA = teamBInfo.totalDefensePower;
@@ -454,7 +443,7 @@ contract.only('A war with just one side (B)', accounts => {
       defensePowerTeamB: defensePowerTeamB.toString(),
     });
 
-    await instance.withdraw(0, teamAArcher.address, {from: accounts[4]});
+    await instance.withdraw(teamAArcher.address, {from: accounts[4]});
     
     console.log('name', war.name);
     console.log('attackerTeam', war.attackerTeam.toString());
@@ -473,7 +462,7 @@ contract.only('A war with just one side (B)', accounts => {
   });
 });
 
-contract.only('Simple War (without nfts)', accounts => {
+contract('Simple War (without nfts)', accounts => {
   const externalRandomSource = '0x019f7d857c47a36ffce885e3978b815ae7b7b5b6f52fff6dae164a3845ad7eff';
   const UNIT_DEFAULT_SUPPLY = 10000000;
   const MULT = 10 ** 18;
@@ -483,7 +472,7 @@ contract.only('Simple War (without nfts)', accounts => {
   let teamB = null;
 
   it('should prepare war', async () => {
-    const instance = await War.deployed();
+    const instance = await War.new();
     const burnManager = await BurnManager.new(accounts[0]);
     const collectibles = await Collectibles.new(burnManager.address, "");
 
@@ -511,55 +500,45 @@ contract.only('Simple War (without nfts)', accounts => {
     await instance.createWar('War#1', externalRandomSourceHash);
 
     await instance.setup(
-      0,
       gold.address,
+      burnManager.address,
       [teamA.address],
       [teamB.address],
       collectibles.address,
-      [0, 0, 0],
-      0,
-      0
+      [0, 0, 0, 0, 0],
     );
     
     await instance.deposit(teamA.address, totalSupply, { from: accounts[1] });
     await instance.deposit(teamB.address, totalSupply, { from: accounts[2] });
 
-    await instance.finishFirstRound(0, externalRandomSource);
-    await instance.finishSecondRound(0, externalRandomSource);
+    await instance.finishFirstRound(externalRandomSource);
+    await instance.finishSecondRound(externalRandomSource);
 
-    const war = await instance.wars(0);
+    const war = await instance.war();
     const winnerAccount = accounts[war.winner];
     
-    const totalPrize = await instance.getTotalPrize(0);
+    const totalPrize = await instance.getTotalPrize();
     let goldContractBalance = await gold.balanceOf(instance.address);
 
     expect(totalPrize.toString()).to.be.equal(goldContractBalance.toString(), 'Fail to check contract balance vs total prize');
     
-    await instance.withdrawPrize(0, { from: winnerAccount });
+    await instance.withdrawPrize({ from: winnerAccount });
 
     goldContractBalance = await gold.balanceOf(instance.address);
     expect(goldContractBalance.toString()).to.be.equal('0', 'Fail to check contract balance after withdraw');
 
 
-    await instance.withdraw(0, teamA.address, { from: accounts[1] });
+    await instance.withdraw(teamA.address, { from: accounts[1] });
     
     let teamABalance = await teamA.balanceOf(instance.address);
     let teamBBalance = await teamB.balanceOf(instance.address);
 
     expect(teamABalance.toString()).to.be.equal('0', 'Fail to check team A contract balance after user withdrawal');
     expect(teamBBalance.toString()).to.be.equal(totalSupply, 'Fail to check team B contract balance after user withdrawal');
-
-    await instance.closeWar(0);
-
-    teamABalance = await teamA.balanceOf(instance.address);
-    teamBBalance = await teamB.balanceOf(instance.address);
-
-    expect(teamABalance.toString()).to.be.equal('0', 'Fail to check team a contract balance');
-    expect(teamBBalance.toString()).to.be.equal('0', 'Fail to check team bcontract balance');
   });
 });
 
-contract.only('Simple War (with nfts)', accounts => {
+contract('Simple War (with nfts)', accounts => {
   const externalRandomSource = '0x019f7d857c47a36ffce885e3978b815ae7b7b5b6f52fff6dae164a3845ad7eff';
   const UNIT_DEFAULT_SUPPLY = 10000000;
   const MULT = 10 ** 18;
@@ -569,7 +548,7 @@ contract.only('Simple War (with nfts)', accounts => {
   let teamB = null;
 
   it('should prepare war', async () => {
-    const instance = await War.deployed();
+    const instance = await War.new();
     const burnManager = await BurnManager.new(accounts[0]);
     const collectibles = await Collectibles.new(burnManager.address, "");
 
@@ -600,53 +579,43 @@ contract.only('Simple War (with nfts)', accounts => {
 
     const externalRandomSourceHash = await instance.hashExternalRandomSource(externalRandomSource);
     await instance.createWar('War#1', externalRandomSourceHash);
-
+      
     await instance.setup(
-      0,
       gold.address,
+      burnManager.address,
       [teamA.address],
       [teamB.address],
       collectibles.address,
-      [1, 2, 3],
-      0,
-      4
+      [1, 2, 3, 0, 4],
     );
     
     await instance.deposit(teamA.address, totalSupply, { from: accounts[1] });
     await instance.deposit(teamB.address, totalSupply, { from: accounts[2] });
 
-    await instance.finishFirstRound(0, externalRandomSource);
-    await instance.finishSecondRound(0, externalRandomSource);
 
-    const war = await instance.wars(0);
+    await instance.finishFirstRound(externalRandomSource);
+    await instance.finishSecondRound(externalRandomSource);
+    const war = await instance.war();
     const winnerAccount = accounts[war.winner];
     
-    const totalPrize = await instance.getTotalPrize(0);
+    const totalPrize = await instance.getTotalPrize();
     let goldContractBalance = await gold.balanceOf(instance.address);
 
     expect(totalPrize.toString()).to.be.equal(goldContractBalance.toString(), 'Fail to check contract balance vs total prize');
     
-    await instance.withdrawPrize(0, { from: winnerAccount });
+    await instance.withdrawPrize({ from: winnerAccount });
 
     goldContractBalance = await gold.balanceOf(instance.address);
     expect(goldContractBalance.toString()).to.be.equal('0', 'Fail to check contract balance after withdraw');
 
 
-    await instance.withdraw(0, teamA.address, { from: accounts[1] });
-    await instance.withdraw(0, teamB.address, { from: accounts[2] });
+    await instance.withdraw(teamA.address, { from: accounts[1] });
+    await instance.withdraw(teamB.address, { from: accounts[2] });
     
     let teamABalance = await teamA.balanceOf(instance.address);
     let teamBBalance = await teamB.balanceOf(instance.address);
 
     expect(teamABalance.toString()).to.be.equal('0', 'Fail to check team A contract balance after user withdrawal');
     expect(teamBBalance.toString()).to.be.equal('0', 'Fail to check team B contract balance after user withdrawal');
-
-    await instance.closeWar(0);
-
-    teamABalance = await teamA.balanceOf(instance.address);
-    teamBBalance = await teamB.balanceOf(instance.address);
-
-    expect(teamABalance.toString()).to.be.equal('0', 'Fail to check team a contract balance');
-    expect(teamBBalance.toString()).to.be.equal('0', 'Fail to check team bcontract balance');
   });
 });
