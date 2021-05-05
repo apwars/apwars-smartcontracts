@@ -3,7 +3,7 @@ const Collectibles = artifacts.require('APWarsCollectibles');
 const BurnManager = artifacts.require('APWarsBurnManagerV2');
 const UnitToken = artifacts.require('APWarsUnitToken');
 
-contract('WarMachine', accounts => {
+contract.only('WarMachine', accounts => {
   const externalRandomSource = '0x019f7d857c47a36ffce885e3978b815ae7b7b5b6f52fff6dae164a3845ad7eff';
   const UNIT_DEFAULT_SUPPLY = 10000000;
   const MULT = 10 ** 18;
@@ -17,9 +17,10 @@ contract('WarMachine', accounts => {
   let teamBCavalry = null;
   let teamBNoble = null;
   let gold = null;
+  let instance = null;
 
   it('should create unit tokens and define teams', async () => {
-    const instance = await War.new();
+    instance = await War.new();
 
     gold = await UnitToken.new('Gold', 'A:GOLD', 0, 0, 0);
 
@@ -85,8 +86,6 @@ contract('WarMachine', accounts => {
   });
 
   it('should allow war contract to run transferFrom', async () => {
-    const instance = await War.new();
-
     teamAArcher.approve(instance.address, await teamAArcher.balanceOf(accounts[1]), { from: accounts[1] });
     teamAArcher.approve(instance.address, await teamAArcher.balanceOf(accounts[2]), { from: accounts[2] });
     teamAArcher.approve(instance.address, await teamAArcher.balanceOf(accounts[3]), { from: accounts[3] });
@@ -122,7 +121,6 @@ contract('WarMachine', accounts => {
   });
 
   it('should deposit units in the war contract', async () => {
-    const instance = await War.new();
     const burnManager = await BurnManager.new(accounts[0]);
     const collectibles = await Collectibles.new(burnManager.address, "");
 
@@ -164,8 +162,6 @@ contract('WarMachine', accounts => {
   });
 
   it('should finish war', async () => {
-    const instance = await War.new();
-
     await instance.finishFirstRound(externalRandomSource);
     await instance.finishSecondRound(externalRandomSource);
 
@@ -203,7 +199,7 @@ contract('WarMachine', accounts => {
   });
 });
 
-contract('A war with just one side (A)', accounts => {
+contract.only('A war with just one side (A)', accounts => {
   const externalRandomSource = '0x019f7d857c47a36ffce885e3978b815ae7b7b5b6f52fff6dae164a3845ad7eff';
   const UNIT_DEFAULT_SUPPLY = 10000000;
   const MULT = 10 ** 18;
@@ -217,9 +213,10 @@ contract('A war with just one side (A)', accounts => {
   let teamBCavalry = null;
   let teamBNoble = null;
   let gold = null;
+  let instance = null;
 
   it('should create unit tokens and define teams', async () => {
-    const instance = await War.new();
+    instance = await War.new();
 
     gold = await UnitToken.new('Gold', 'A:GOLD', 0, 0, 0);
 
@@ -246,8 +243,6 @@ contract('A war with just one side (A)', accounts => {
 });
 
   it('should allow war contract to run transferFrom', async () => {
-    const instance = await War.new();
-
     teamAArcher.approve(instance.address, await teamAArcher.balanceOf(accounts[1]), { from: accounts[1] });
     teamAArcher.approve(instance.address, await teamAArcher.balanceOf(accounts[2]), { from: accounts[2] });
     teamAArcher.approve(instance.address, await teamAArcher.balanceOf(accounts[3]), { from: accounts[3] });
@@ -258,7 +253,6 @@ contract('A war with just one side (A)', accounts => {
   });
 
   it('should deposit units in the war contract', async () => {
-    const instance = await War.new();
     const burnManager = await BurnManager.new(accounts[0]);
     const collectibles = await Collectibles.new(burnManager.address, "");
 
@@ -294,8 +288,6 @@ contract('A war with just one side (A)', accounts => {
   });
 
   it('should finish war', async () => {
-    const instance = await War.new();
-
     await instance.finishFirstRound(externalRandomSource);
     await instance.finishSecondRound(externalRandomSource);
 
@@ -333,7 +325,7 @@ contract('A war with just one side (A)', accounts => {
   });
 });
 
-contract('A war with just one side (B)', accounts => {
+contract.only('A war with just one side (B)', accounts => {
   const externalRandomSource = '0x019f7d857c47a36ffce885e3978b815ae7b7b5b6f52fff6dae164a3845ad7eff';
   const UNIT_DEFAULT_SUPPLY = 10000000;
   const MULT = 10 ** 18;
@@ -462,7 +454,7 @@ contract('A war with just one side (B)', accounts => {
   });
 });
 
-contract('Simple War (without nfts)', accounts => {
+contract.only('Simple War (without nfts)', accounts => {
   const externalRandomSource = '0x019f7d857c47a36ffce885e3978b815ae7b7b5b6f52fff6dae164a3845ad7eff';
   const UNIT_DEFAULT_SUPPLY = 10000000;
   const MULT = 10 ** 18;
@@ -538,7 +530,7 @@ contract('Simple War (without nfts)', accounts => {
   });
 });
 
-contract('Simple War (with nfts)', accounts => {
+contract.only('Simple War (with nfts)', accounts => {
   const externalRandomSource = '0x019f7d857c47a36ffce885e3978b815ae7b7b5b6f52fff6dae164a3845ad7eff';
   const UNIT_DEFAULT_SUPPLY = 10000000;
   const MULT = 10 ** 18;
@@ -617,5 +609,11 @@ contract('Simple War (with nfts)', accounts => {
 
     expect(teamABalance.toString()).to.be.equal('0', 'Fail to check team A contract balance after user withdrawal');
     expect(teamBBalance.toString()).to.be.equal('0', 'Fail to check team B contract balance after user withdrawal');
+
+    const player1 = await instance.getPlayerAddress(0);
+    const player2 = await instance.getPlayerAddress(1);
+
+    expect(player1).to.be.equal(accounts[1]);
+    expect(player2).to.be.equal(accounts[2]);
   });
 });
