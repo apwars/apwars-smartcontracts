@@ -1018,9 +1018,13 @@ contract APWarsWarMachine is Ownable, ReentrancyGuard {
             userTotalPower.mul(ONE_HUNDRED_PERCENT).div(teamTotalPower);
         uint256 userPrize = totalPrize.mul(userShare).div(ONE_HUNDRED_PERCENT);
         uint256 amountToBurn =
-            userPrize.mul(secondRoundRandomParameters.unlockedPrize).div(
-                ONE_HUNDRED_PERCENT
-            );
+            userPrize
+                .mul(
+                ONE_HUNDRED_PERCENT.sub(
+                    secondRoundRandomParameters.unlockedPrize
+                )
+            )
+                .div(ONE_HUNDRED_PERCENT);
         uint256 net = userPrize - amountToBurn;
 
         token.transfer(address(burnManager), amountToBurn);
