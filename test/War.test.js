@@ -3,7 +3,7 @@ const Collectibles = artifacts.require('APWarsCollectibles');
 const BurnManager = artifacts.require('APWarsBurnManagerV2');
 const UnitToken = artifacts.require('APWarsUnitToken');
 
-contract.only('WarMachine', accounts => {
+contract('WarMachine', accounts => {
   const externalRandomSource = '0x019f7d857c47a36ffce885e3978b815ae7b7b5b6f52fff6dae164a3845ad7eff';
   const UNIT_DEFAULT_SUPPLY = 10000000;
   const MULT = 10 ** 18;
@@ -199,7 +199,7 @@ contract.only('WarMachine', accounts => {
   });
 });
 
-contract.only('A war with just one side (A)', accounts => {
+contract('A war with just one side (A)', accounts => {
   const externalRandomSource = '0x019f7d857c47a36ffce885e3978b815ae7b7b5b6f52fff6dae164a3845ad7eff';
   const UNIT_DEFAULT_SUPPLY = 10000000;
   const MULT = 10 ** 18;
@@ -325,7 +325,7 @@ contract.only('A war with just one side (A)', accounts => {
   });
 });
 
-contract.only('A war with just one side (B)', accounts => {
+contract('A war with just one side (B)', accounts => {
   const externalRandomSource = '0x019f7d857c47a36ffce885e3978b815ae7b7b5b6f52fff6dae164a3845ad7eff';
   const UNIT_DEFAULT_SUPPLY = 10000000;
   const MULT = 10 ** 18;
@@ -454,7 +454,7 @@ contract.only('A war with just one side (B)', accounts => {
   });
 });
 
-contract.only('Simple War (without nfts)', accounts => {
+contract('Simple War (without nfts)', accounts => {
   const externalRandomSource = '0x019f7d857c47a36ffce885e3978b815ae7b7b5b6f52fff6dae164a3845ad7eff';
   const UNIT_DEFAULT_SUPPLY = 10000000;
   const MULT = 10 ** 18;
@@ -530,7 +530,7 @@ contract.only('Simple War (without nfts)', accounts => {
   });
 });
 
-contract.only('Simple War (with nfts)', accounts => {
+contract('Simple War (with nfts)', accounts => {
   const externalRandomSource = '0x019f7d857c47a36ffce885e3978b815ae7b7b5b6f52fff6dae164a3845ad7eff';
   const UNIT_DEFAULT_SUPPLY = 10000000;
   const MULT = 10 ** 18;

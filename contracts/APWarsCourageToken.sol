@@ -17,13 +17,18 @@ contract APWarsCourageToken is
     string public SYMBOL;
     string public NAME;
     uint8 public DECIMALS = 18;
-    uint256 public INITIAL_SUPPLY = 100000000 * 10**18;
 
     constructor(string memory name, string memory symbol) ERC20(name, symbol) {
         NAME = name;
         SYMBOL = symbol;
+    }
 
-        _mint(msg.sender, INITIAL_SUPPLY);
+    function mint(uint256 _amount) public onlyRole(MINTER_ROLE) {
+        _mint(msg.sender, _amount);
+    }
+
+    function mint(address _to, uint256 _amount) public onlyRole(MINTER_ROLE) {
+        _mint(_to, _amount);
     }
 
     function snapshot() public onlyRole(SNAPSHOT_MANAGER) {

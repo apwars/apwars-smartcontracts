@@ -217,6 +217,7 @@ library SafeMath {
 
 // File: @openzeppelin/contracts/utils/Context.sol
 
+
 pragma solidity >=0.6.0 <0.8.0;
 
 /*
@@ -241,6 +242,7 @@ abstract contract Context {
 }
 
 // File: @openzeppelin/contracts/access/Ownable.sol
+
 
 pragma solidity >=0.6.0 <0.8.0;
 
@@ -309,6 +311,7 @@ abstract contract Ownable is Context {
 }
 
 // File: @openzeppelin/contracts/utils/ReentrancyGuard.sol
+
 
 pragma solidity >=0.6.0 <0.8.0;
 
@@ -3117,14 +3120,14 @@ contract APWarsWarMachine is Ownable, ReentrancyGuard {
                     .div(ONE_HUNDRED_PERCENT)
                     .mul(balance.div(ONE));
 
-                attackPower[TEAM_A] = attackImprovement;
+                attackPower[TEAM_A] = attackPower[TEAM_A].add(attackImprovement);
 
                 defenseImprovement = defensePower[TEAM_A]
                     .mul(unit.getTroopImproveFactor())
                     .div(ONE_HUNDRED_PERCENT)
                     .mul(balance.div(ONE));
 
-                defensePower[TEAM_A] = defenseImprovement;
+                defensePower[TEAM_A] = defensePower[TEAM_A].add(defenseImprovement);
             }
         }
 
@@ -3153,14 +3156,14 @@ contract APWarsWarMachine is Ownable, ReentrancyGuard {
                     .div(ONE_HUNDRED_PERCENT)
                     .mul(balance.div(ONE));
 
-                attackPower[TEAM_B] = attackImprovement;
+                attackPower[TEAM_B] = attackPower[TEAM_B].add(attackImprovement);
 
                 defenseImprovement = defensePower[TEAM_B]
                     .mul(unit.getTroopImproveFactor())
                     .div(ONE_HUNDRED_PERCENT)
                     .mul(balance.div(ONE));
 
-                defensePower[TEAM_B] = defenseImprovement;
+                defensePower[TEAM_B] = defensePower[TEAM_B].add(defenseImprovement);
             }
         }
 
