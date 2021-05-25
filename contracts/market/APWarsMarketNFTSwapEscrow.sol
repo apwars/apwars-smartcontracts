@@ -58,6 +58,8 @@ contract APWarsMarketNFTSwapEscrow is APWarsMarketAccessControl, ERC1155Holder {
     event OrderCanceled(uint256 id, address indexed sender);
 
     OrderInfo[] private orders;
+    OrderInfo[] private sellOrders;
+    OrderInfo[] private buyOrders;
     mapping(address => mapping(address => mapping(uint256 => uint256[]))) ordersMapping;
 
     address feeAddress;
@@ -183,6 +185,8 @@ contract APWarsMarketNFTSwapEscrow is APWarsMarketAccessControl, ERC1155Holder {
                 1,
                 DEFAULT_MESSAGE
             );
+
+            sellOrders.push(orderInfo);
         } else {
             require(
                 tokenPrice.transferFrom(
@@ -192,9 +196,13 @@ contract APWarsMarketNFTSwapEscrow is APWarsMarketAccessControl, ERC1155Holder {
                 ),
                 "APWarsMarketNFTSwapEscrow:FAIL_TO_WITHDRAW"
             );
+            buyOrders.push(orderInfo);
         }
 
         orders.push(orderInfo);
+
+        ordersMapping[msg.sender][orderInfo.tokenAddress][orderInfo.tokenId]
+            .push(orderId);
 
         emit NewOrder(
             orderId,
@@ -209,9 +217,6 @@ contract APWarsMarketNFTSwapEscrow is APWarsMarketAccessControl, ERC1155Holder {
             orderInfo.amount
         );
 
-        ordersMapping[msg.sender][orderInfo.tokenAddress][orderInfo.tokenId]
-            .push(orderId);
-
         return orderId;
     }
 
@@ -219,7 +224,15 @@ contract APWarsMarketNFTSwapEscrow is APWarsMarketAccessControl, ERC1155Holder {
         return orders.length;
     }
 
-    function getOrderId(
+    function getBuyOrdersLength() public view returns (uint256) {
+        return buyOrders.length;
+    }
+
+    function getSellOrdersLength() public view returns (uint256) {
+        return sellOrders.length;
+    }
+
+    function getOrderIds(
         address _sender,
         address _tokenAddress,
         uint256 _tokenId
@@ -227,7 +240,7 @@ contract APWarsMarketNFTSwapEscrow is APWarsMarketAccessControl, ERC1155Holder {
         return ordersMapping[_sender][_tokenAddress][_tokenId];
     }
 
-    function getOrderInfo(uint256 _orderId)
+    function getOrderInfo(uint256 _orderId, OrderType _orderType)
         public
         view
         returns (
@@ -242,7 +255,13 @@ contract APWarsMarketNFTSwapEscrow is APWarsMarketAccessControl, ERC1155Holder {
             uint256 amount
         )
     {
-        OrderInfo storage orderInfo = orders[_orderId];
+        OrderInfo storage orderInfo;
+
+        if (_orderType == OrderType.SELL) {
+            orderInfo = sellOrders[_orderId];
+        } else {
+            orderInfo = buyOrders[_orderId];
+        }
 
         sender = orderInfo.sender;
         buyer = orderInfo.buyer;
