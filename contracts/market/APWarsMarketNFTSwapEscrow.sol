@@ -164,11 +164,6 @@ contract APWarsMarketNFTSwapEscrow is APWarsMarketAccessControl, ERC1155Holder {
             "APWarsMarketNFTSwapEscrow:INVALID_TOKEN_PRICE_ADDRESS"
         );
 
-        require(
-            token.isApprovedForAll(msg.sender, address(this)),
-            "APWarsMarketNFTSwapEscrow:ERC1155_NOT_APPROVED"
-        );
-
         OrderInfo memory orderInfo =
             OrderInfo(
                 msg.sender,
