@@ -162,16 +162,11 @@ contract APWarsMarketNFTSwapEscrow is APWarsMarketAccessControl, ERC1155Holder {
             "APWarsMarketNFTSwapEscrow:INVALID_TOKEN_PRICE_ADDRESS"
         );
 
-        require(
-            token.isApprovedForAll(msg.sender, address(this)),
-            "APWarsMarketNFTSwapEscrow:ERC1155_NOT_APPROVED"
-        );
-
         OrderInfo memory orderInfo =
             OrderInfo(
                 msg.sender,
-                _orderType == OrderType.SELL ? msg.sender : address(0),
                 _orderType == OrderType.BUY ? msg.sender : address(0),
+                _orderType == OrderType.SELL ? msg.sender : address(0),
                 _orderType,
                 OrderStatus.OPEN,
                 _tokenAddress,
@@ -228,7 +223,7 @@ contract APWarsMarketNFTSwapEscrow is APWarsMarketAccessControl, ERC1155Holder {
         address _sender,
         address _tokenAddress,
         uint256 _tokenId
-    ) public view returns (uint256[]) {
+    ) public view returns (uint256[] memory) {
         return ordersMapping[_sender][_tokenAddress][_tokenId];
     }
 
@@ -299,8 +294,7 @@ contract APWarsMarketNFTSwapEscrow is APWarsMarketAccessControl, ERC1155Holder {
             getOrderAmountInfo(orderInfo.amount);
 
         require(
-            tokenPrice.transferFrom(
-                tokenWalletOwner,
+            tokenPrice.transfer(
                 tokenBeneficiary,
                 netAmount
             ),
@@ -308,7 +302,7 @@ contract APWarsMarketNFTSwapEscrow is APWarsMarketAccessControl, ERC1155Holder {
         );
 
         require(
-            tokenPrice.transferFrom(tokenWalletOwner, feeAddress, feeAmount),
+            tokenPrice.transfer(feeAddress, feeAmount),
             "APWarsMarketNFTSwapEscrow:FAIL_TO_TRANSFER_FEE_AMOUNT"
         );
 
