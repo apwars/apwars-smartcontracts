@@ -48,15 +48,23 @@ contract('APWarsMarketNFTSwapEscrow', accounts => {
     await collectibles.setApprovalForAll(escrow.address, true, {from: accounts[1]});
     await escrow.createOrder(1, collectibles.address, 7, wGOLD.address, web3.utils.toWei('10', 'ether'), {from: accounts[1]});
 
-    const orderId = await escrow.getOrderId(accounts[1], collectibles.address, 1);
+    console.log(accounts[1], collectibles.address, 0);
+    
+    const ordersId = await escrow.getOrderIds(accounts[1], collectibles.address, 0);
 
-    const orderInfo = await escrow.getOrderInfo(orderId);
+    console.log({ ordersId });
+
+    const orderInfo = await escrow.getOrderInfo(ordersId[0], 1);
 
     expect(orderInfo.tokenType.toString()).to.be.equal('0', 'fail to check tokenType');
     expect(auctionInfo.tokenType.toString()).to.be.equal('0', 'fail to check tokenType');
     expect(auctionInfo.tokenType.toString()).to.be.equal('0', 'fail to check tokenType');
     expect(auctionInfo.tokenType.toString()).to.be.equal('0', 'fail to check tokenType');
     expect(auctionInfo.tokenType.toString()).to.be.equal('0', 'fail to check tokenType');
+
+    expect((await escrow.getSellOrdersLength()).toString()).to.be.equal('0', 'fail to check getSellOrdersLength');
+    expect((await escrow.getBuyOrdersLength()).toString()).to.be.equal('1', 'fail to check getBuyOrdersLength');
+
 
     console.log({ orderInfo });
   });
