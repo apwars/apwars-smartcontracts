@@ -30,38 +30,20 @@ contract APWarsMarketNFTSwapEscrow is APWarsMarketAccessControl, ERC1155Holder {
         uint256 amount;
     }
 
-    event NewOrder(
-        uint256 id,
-        address indexed sender,
-        address buyer,
-        address seller,
-        OrderType orderType,
-        OrderStatus orderStatus,
-        address indexed tokenAddress,
-        uint256 indexed tokenId,
-        IERC20 tokenPriceAddress,
-        uint256 amount
-    );
+    event NewOrder(address indexed sender, uint256 indexed id);
 
-    event OrderExecuted(
-        uint256 id,
-        address indexed sender,
-        address tokenWalletOwner,
-        address tokenBeneficiary,
-        address nftWalletOwner,
-        address nftBeneficiary,
-        uint256 amount,
-        uint256 netAmount,
-        uint256 feeAmount
-    );
+    event OrderExecuted(address indexed sender, uint256 indexed id);
 
-    event OrderCanceled(uint256 id, address indexed sender);
+    event OrderCanceled(address indexed sender, uint256 id);
 
     OrderInfo[] private orders;
     OrderInfo[] private sellOrders;
     OrderInfo[] private buyOrders;
     mapping(address => mapping(address => mapping(uint256 => uint256[]))) ordersMapping;
 
+    address feeAddress;
+    address defaultTokenAddress;
+    address defaultTokenPriceAddress;
     address feeAddress;
     uint256 swapFeeRate;
     IERC20[] private allowedTokens;
@@ -91,6 +73,8 @@ contract APWarsMarketNFTSwapEscrow is APWarsMarketAccessControl, ERC1155Holder {
 
     function setup(
         address _feeAddress,
+        address _defaultTokenAddress,
+        address _defaultTokenPriceAddress,
         uint256 _swapFeeRate,
         IERC20[] memory _allowedTokens
     ) public onlyRole(CONFIGURATOR_ROLE) {
@@ -100,6 +84,8 @@ contract APWarsMarketNFTSwapEscrow is APWarsMarketAccessControl, ERC1155Holder {
         );
 
         feeAddress = _feeAddress;
+        defaultTokenPriceAddress = _defaultTokenPriceAddress;
+        defaultTokenAddress = _defaultTokenAddress;
         swapFeeRate = _swapFeeRate;
 
         for (uint256 i = 0; i < allowedTokens.length; i++) {
@@ -148,16 +134,45 @@ contract APWarsMarketNFTSwapEscrow is APWarsMarketAccessControl, ERC1155Holder {
         emit NFTSwapEscrowSetup(feeAddress, swapFeeRate, allowedTokens);
     }
 
+    function createDefaultBuyOrder(uint256 _tokenId, uint256 _amount)
+        public
+        returns (uint256)
+    {
+        return
+            createOrder(
+                OrderType.BUY,
+                defaultTokenAddress,
+                _tokenId,
+                defaultTokenPriceAddress,
+                _amount,
+                1
+            );
+    }
+
+    function createDefaultSellOrder(uint256 _tokenId, uint256 _amount)
+        public
+        returns (uint256)
+    {
+        return
+            createOrder(
+                OrderType.SELL,
+                defaultTokenAddress,
+                _tokenId,
+                defaultTokenPriceAddress,
+                _amount,
+                1
+            );
+    }
+
     function createOrder(
         OrderType _orderType,
         address _tokenAddress,
         uint256 _tokenId,
         IERC20 _tokenPriceAddress,
-        uint256 _amount
+        uint256 _amount,
+        uint256 _quantity
     ) public returns (uint256) {
         uint256 orderId = orders.length;
-        IERC1155 token = IERC1155(_tokenAddress);
-        IERC20 tokenPrice = IERC20(_tokenPriceAddress);
 
         require(
             allowedTokensMapping[_tokenPriceAddress],
@@ -178,6 +193,7 @@ contract APWarsMarketNFTSwapEscrow is APWarsMarketAccessControl, ERC1155Holder {
             );
 
         if (_orderType == OrderType.SELL) {
+            IERC1155 token = IERC1155(_tokenAddress);
             token.safeTransferFrom(
                 msg.sender,
                 address(this),
@@ -188,6 +204,7 @@ contract APWarsMarketNFTSwapEscrow is APWarsMarketAccessControl, ERC1155Holder {
 
             sellOrders.push(orderInfo);
         } else {
+            IERC20 tokenPrice = IERC20(_tokenPriceAddress);
             require(
                 tokenPrice.transferFrom(
                     msg.sender,
@@ -204,18 +221,7 @@ contract APWarsMarketNFTSwapEscrow is APWarsMarketAccessControl, ERC1155Holder {
         ordersMapping[msg.sender][orderInfo.tokenAddress][orderInfo.tokenId]
             .push(orderId);
 
-        emit NewOrder(
-            orderId,
-            orderInfo.sender,
-            orderInfo.buyer,
-            orderInfo.seller,
-            orderInfo.orderType,
-            orderInfo.orderStatus,
-            orderInfo.tokenAddress,
-            orderInfo.tokenId,
-            orderInfo.tokenPriceAddress,
-            orderInfo.amount
-        );
+        emit NewOrder(orderInfo.sender, orderId);
 
         return orderId;
     }
@@ -274,7 +280,7 @@ contract APWarsMarketNFTSwapEscrow is APWarsMarketAccessControl, ERC1155Holder {
         amount = orderInfo.amount;
     }
 
-    function executeOrder(uint256 _orderId) public {
+    function executeOrder(uint256 _orderId, uint256 _quantity) public {
         OrderInfo storage orderInfo = orders[_orderId];
 
         IERC20 tokenPrice = IERC20(orderInfo.tokenPriceAddress);
@@ -328,17 +334,7 @@ contract APWarsMarketNFTSwapEscrow is APWarsMarketAccessControl, ERC1155Holder {
 
         orderInfo.orderStatus = OrderStatus.EXECUTED;
 
-        emit OrderExecuted(
-            _orderId,
-            msg.sender,
-            tokenWalletOwner,
-            tokenBeneficiary,
-            nftWalletOwner,
-            nftBeneficiary,
-            orderInfo.amount,
-            netAmount,
-            feeAmount
-        );
+        emit OrderExecuted(msg.sender, _orderId);
     }
 
     function cancel(uint256 _orderId) public {
@@ -374,7 +370,7 @@ contract APWarsMarketNFTSwapEscrow is APWarsMarketAccessControl, ERC1155Holder {
 
         orderInfo.orderStatus = OrderStatus.CANCELED;
 
-        emit OrderCanceled(_orderId, msg.sender);
+        emit OrderCanceled(msg.sender, _orderId);
     }
 
     function getFeeAndNetAmount(uint256 _amount, uint256 fee)
