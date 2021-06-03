@@ -7,19 +7,10 @@ const APWarsMarketNFTSwapEscrow = artifacts.require(
 module.exports = async (deployer, network, accounts) => {
   const collectibles = await APWarsCollectibles.deployed();
 
-  try {
-    await collectibles.mint(accounts[0], 14, 5, "0x0");
-    console.log("\n MINT 14");
-    await collectibles.mint(accounts[1], 15, 5, "0x0");
-    console.log("\n MINT 15");
-    await collectibles.mint(accounts[2], 16, 5, "0x0");
-    console.log("\n MINT 16");
-    await collectibles.mint(accounts[3], 17, 5, "0x0");
-    console.log("\n MINT 17");
-  } catch (error) {
-    console.log(error.toString());
-  }
-
+  await collectibles.mint(accounts[0], 14, 50, "0x0");
+  await collectibles.mint(accounts[1], 15, 50, "0x0");
+  await collectibles.mint(accounts[2], 16, 50, "0x0");
+  await collectibles.mint(accounts[3], 17, 50, "0x0");
   await deployer.deploy(APWarsMarketNFTSwapEscrow);
   escrow = await APWarsMarketNFTSwapEscrow.deployed();
 
@@ -28,6 +19,7 @@ module.exports = async (deployer, network, accounts) => {
   await wGOLD.transfer(accounts[1], web3.utils.toWei("5000", "ether"));
   await wGOLD.transfer(accounts[2], web3.utils.toWei("5000", "ether"));
   await wGOLD.transfer(accounts[3], web3.utils.toWei("5000", "ether"));
+  await wGOLD.transfer(accounts[7], web3.utils.toWei("5000", "ether"));
 
   await escrow.setup(accounts[9], 250, [wGOLD.address]);
 
@@ -57,6 +49,20 @@ module.exports = async (deployer, network, accounts) => {
     from: accounts[3],
   });
 
+  // send account 7
+  collectibles.safeTransferFrom(accounts[0], accounts[7], 14, 10, "0x0", {
+    from: accounts[0],
+  });
+  collectibles.safeTransferFrom(accounts[1], accounts[7], 15, 10, "0x0", {
+    from: accounts[1],
+  });
+  collectibles.safeTransferFrom(accounts[2], accounts[7], 16, 10, "0x0", {
+    from: accounts[2],
+  });
+  collectibles.safeTransferFrom(accounts[3], accounts[7], 17, 10, "0x0", {
+    from: accounts[3],
+  });
+
   // create order BUY and execute
   await escrow.createOrder(
     0,
@@ -64,9 +70,10 @@ module.exports = async (deployer, network, accounts) => {
     14,
     wGOLD.address,
     web3.utils.toWei("200", "ether"),
+    1,
     { from: accounts[1] }
   );
-  await escrow.executeOrder(0, { from: accounts[0] });
+  // await escrow.executeOrder(0, { from: accounts[0] });
   // create orderns BUY
 
   await escrow.createOrder(
@@ -75,6 +82,7 @@ module.exports = async (deployer, network, accounts) => {
     14,
     wGOLD.address,
     web3.utils.toWei("700", "ether"),
+    1,
     { from: accounts[1] }
   );
 
@@ -84,6 +92,7 @@ module.exports = async (deployer, network, accounts) => {
     17,
     wGOLD.address,
     web3.utils.toWei("2000", "ether"),
+    1,
     { from: accounts[2] }
   );
 
@@ -93,6 +102,7 @@ module.exports = async (deployer, network, accounts) => {
     15,
     wGOLD.address,
     web3.utils.toWei("1000", "ether"),
+    1,
     { from: accounts[0] }
   );
 
@@ -103,9 +113,10 @@ module.exports = async (deployer, network, accounts) => {
     16,
     wGOLD.address,
     web3.utils.toWei("1500", "ether"),
+    1,
     { from: accounts[2] }
   );
-  await escrow.executeOrder(1, { from: accounts[1] });
+  // await escrow.executeOrder(4, { from: accounts[1] });
 
   // create orderns SELL
 
@@ -115,6 +126,7 @@ module.exports = async (deployer, network, accounts) => {
     14,
     wGOLD.address,
     web3.utils.toWei("700", "ether"),
+    1,
     { from: accounts[0] }
   );
 
@@ -124,6 +136,7 @@ module.exports = async (deployer, network, accounts) => {
     16,
     wGOLD.address,
     web3.utils.toWei("2000", "ether"),
+    1,
     { from: accounts[2] }
   );
 
@@ -133,6 +146,7 @@ module.exports = async (deployer, network, accounts) => {
     17,
     wGOLD.address,
     web3.utils.toWei("1000", "ether"),
+    1,
     { from: accounts[3] }
   );
 
