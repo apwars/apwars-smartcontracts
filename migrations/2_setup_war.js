@@ -35,8 +35,11 @@ module.exports = async (deployer, network, accounts) => {
   await deployer.deploy(APWarsWarMachine);
   const warMachine = await APWarsWarMachine.new();
 
-  const burnManager = await BurnManager.new(accounts[0]);
-  const collectibles = await Collectibles.new(burnManager.address, "");
+  await deployer.deploy(BurnManager, accounts[0]);
+  const burnManager = await BurnManager.deployed();
+
+  await deployer.deploy(Collectibles, burnManager.address, "");
+  const collectibles = await Collectibles.deployed();
 
   const externalRandomSourceHash = await warMachine.hashExternalRandomSource(externalRandomSource);
   await warMachine.setup(
@@ -62,17 +65,17 @@ module.exports = async (deployer, network, accounts) => {
 
   await warMachine.createWar('War#1', externalRandomSourceHash);
 
-  await wGOLD.mint('10000000000000000000000');
-  await wWARRIOR.mint('10000000000000000000000');
-  await wARCHER.mint('10000000000000000000000');
-  await wARMOUREDWARRIOR.mint('10000000000000000000000');
-  await wCROSSBOWMAN.mint('10000000000000000000000');
-  await wWIZARD.mint('10000000000000000000000');
-  await wGRUNT.mint('10000000000000000000000');
-  await wORCARCHER.mint('10000000000000000000000');
-  await wPIKEORC.mint('10000000000000000000000');
-  await wARMOUREDGRUNT.mint('10000000000000000000000');
-  await wSHAMAN.mint('10000000000000000000000');
+  await wGOLD.mint('100000000000000000000000');
+  await wWARRIOR.mint('100000000000000000000000');
+  await wARCHER.mint('100000000000000000000000');
+  await wARMOUREDWARRIOR.mint('100000000000000000000000');
+  await wCROSSBOWMAN.mint('100000000000000000000000');
+  await wWIZARD.mint('100000000000000000000000');
+  await wGRUNT.mint('100000000000000000000000');
+  await wORCARCHER.mint('100000000000000000000000');
+  await wPIKEORC.mint('100000000000000000000000');
+  await wARMOUREDGRUNT.mint('100000000000000000000000');
+  await wSHAMAN.mint('100000000000000000000000');
 
   console.log('Base contracts:');
   console.log('_______________________________');
