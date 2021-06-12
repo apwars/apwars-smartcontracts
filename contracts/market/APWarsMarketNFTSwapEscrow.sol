@@ -30,7 +30,6 @@ contract APWarsMarketNFTSwapEscrow is APWarsMarketAccessControl, ERC1155Holder {
         uint256 quantity;
         uint256 remaining;
         uint256 feeAmount;
-        uint256 index;
     }
 
     event NewOrder(address indexed sender, uint256 indexed id);
@@ -160,8 +159,7 @@ contract APWarsMarketNFTSwapEscrow is APWarsMarketAccessControl, ERC1155Holder {
                 _amount,
                 _quantity,
                 _quantity,
-                feeAmount,
-                0
+                feeAmount
             );
 
         if (_orderType == OrderType.SELL) {
@@ -173,7 +171,6 @@ contract APWarsMarketNFTSwapEscrow is APWarsMarketAccessControl, ERC1155Holder {
                 _quantity,
                 DEFAULT_MESSAGE
             );
-            orderInfo.index = sellOrders.length;
             sellOrders.push(orderInfo.orderId);
         } else {
             IERC20 tokenPrice = IERC20(_tokenPriceAddress);
@@ -185,7 +182,6 @@ contract APWarsMarketNFTSwapEscrow is APWarsMarketAccessControl, ERC1155Holder {
                 ),
                 "APWarsMarketNFTSwapEscrow:FAIL_TO_WITHDRAW"
             );
-            orderInfo.index = buyOrders.length;
             buyOrders.push(orderInfo.orderId);
         }
 
@@ -246,20 +242,6 @@ contract APWarsMarketNFTSwapEscrow is APWarsMarketAccessControl, ERC1155Holder {
 
     function getSellOrderId(uint256 _orderIndex) public view returns (uint256) {
         return sellOrders[_orderIndex];
-    }
-
-    function removeFromArray(OrderInfo memory orderInfo) internal {
-        if (orderInfo.orderStatus != OrderStatus.OPEN) {
-            if (orderInfo.orderType == OrderType.BUY) {
-                buyOrders[orderInfo.index] = buyOrders[buyOrders.length - 1];
-                buyOrders.pop();
-            } else {
-                sellOrders[orderInfo.index] = sellOrders[sellOrders.length - 1];
-                sellOrders.pop();
-            }
-
-            OrderRemoved(msg.sender, orderInfo.orderId);
-        }
     }
 
     function executeOrder(uint256 _orderId, uint256 _quantity) public {
@@ -332,7 +314,6 @@ contract APWarsMarketNFTSwapEscrow is APWarsMarketAccessControl, ERC1155Holder {
             ? OrderStatus.EXECUTED
             : orderInfo.orderStatus;
 
-        removeFromArray(orderInfo);
         emit OrderExecuted(msg.sender, _orderId);
     }
 
@@ -374,7 +355,6 @@ contract APWarsMarketNFTSwapEscrow is APWarsMarketAccessControl, ERC1155Holder {
         }
 
         orderInfo.orderStatus = OrderStatus.CANCELED;
-        removeFromArray(orderInfo);
 
         emit OrderCanceled(orderInfo.sender, _orderId);
     }
