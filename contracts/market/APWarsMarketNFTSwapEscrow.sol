@@ -248,7 +248,7 @@ contract APWarsMarketNFTSwapEscrow is APWarsMarketAccessControl, ERC1155Holder {
         return sellOrders[_orderIndex];
     }
 
-    function removeFromArray(OrderInfo memory orderInfo) private {
+    function removeFromArray(OrderInfo memory orderInfo) internal {
         if (orderInfo.orderStatus != OrderStatus.OPEN) {
             if (orderInfo.orderType == OrderType.BUY) {
                 buyOrders[orderInfo.index] = buyOrders[buyOrders.length - 1];
@@ -354,7 +354,7 @@ contract APWarsMarketNFTSwapEscrow is APWarsMarketAccessControl, ERC1155Holder {
 
             token.safeTransferFrom(
                 address(this),
-                msg.sender,
+                orderInfo.sender,
                 orderInfo.tokenId,
                 orderInfo.quantity,
                 DEFAULT_MESSAGE
@@ -368,7 +368,7 @@ contract APWarsMarketNFTSwapEscrow is APWarsMarketAccessControl, ERC1155Holder {
                 );
 
             require(
-                tokenPrice.transfer(msg.sender, totalAmount),
+                tokenPrice.transfer(orderInfo.sender, totalAmount),
                 "APWarsMarketNFTSwapEscrow:FAIL_TO_WITHDRAW"
             );
         }
@@ -376,7 +376,7 @@ contract APWarsMarketNFTSwapEscrow is APWarsMarketAccessControl, ERC1155Holder {
         orderInfo.orderStatus = OrderStatus.CANCELED;
         removeFromArray(orderInfo);
 
-        emit OrderCanceled(msg.sender, _orderId);
+        emit OrderCanceled(orderInfo.sender, _orderId);
     }
 
     function getOrderAmountInfo(uint256 _amount)

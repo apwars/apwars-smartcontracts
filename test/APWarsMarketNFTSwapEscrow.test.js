@@ -19,7 +19,7 @@ contract.only('APWarsMarketNFTSwapEscrow', accounts => {
     await wGOLD.mint(accounts[0], web3.utils.toWei('100', 'ether'));
     await wGOLD.mint(accounts[2], web3.utils.toWei('100', 'ether'));
 
-    await collectibles.mint(accounts[1], 7, 6, '0x0');
+    await collectibles.mint(accounts[1], 7, 20, '0x0');
     await collectibles.mint(accounts[2], 10, 1, '0x0');
     await collectibles.mint(accounts[3], 11, 1, '0x0');
 
@@ -118,5 +118,38 @@ contract.only('APWarsMarketNFTSwapEscrow', accounts => {
     orderInfo = await escrow.getOrderInfo(1);
     expect(orderInfo.orderStatus.toString()).to.be.equal('1', 'fail to check orderStatus #3');
     expect((await escrow.getBuyOrdersLength()).toString()).to.be.equal('0', 'fail to check getBuyOrdersLength #3');
+  });
+
+  it('should cancel orders and remove them from array', async () => {
+    for (let i = 0; i < 10; i++) {
+      await escrow.createOrder(1, collectibles.address, 7, wGOLD.address, web3.utils.toWei('10', 'ether'), 1, { from: accounts[1] });
+    }
+
+    for (let i = 0; i < 10; i++) {
+      await escrow.createOrder(0, collectibles.address, 7, wGOLD.address, web3.utils.toWei('1', 'ether'), 1, { from: accounts[2] });
+    }
+
+    for (let i = parseInt((await escrow.getSellOrdersLength()).toString()); i > 0; i--) {
+      console.log(`Getting sell order id by index ${i - 1}`);
+
+      const orderId = await escrow.getSellOrderId(i - 1);
+      const length = await escrow.getSellOrdersLength();
+
+      console.log(`Canceling sell order id ${orderId.toString()} - current length ${length.toString()}`);
+      await escrow.cancelOrder(orderId, { from: accounts[1] });
+    }
+
+    for (let i = parseInt((await escrow.getBuyOrdersLength()).toString()); i > 0; i--) {
+      console.log(`Getting buy order id by index ${i - 1}`);
+
+      const orderId = await escrow.getBuyOrderId(i - 1);
+      const length = await escrow.getBuyOrdersLength();
+
+      console.log(`Canceling buy order id ${orderId.toString()} - current length ${length.toString()}`);
+      await escrow.cancelOrder(orderId, { from: accounts[2] });
+    }
+
+    expect((await escrow.getSellOrdersLength()).toString()).to.be.equal('0', 'fail to check getSellOrdersLength');
+    expect((await escrow.getBuyOrdersLength()).toString()).to.be.equal('0', 'fail to check getBuyOrdersLength');
   });
 });
