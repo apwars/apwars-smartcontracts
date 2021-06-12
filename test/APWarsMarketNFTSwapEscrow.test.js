@@ -74,12 +74,14 @@ contract.only('APWarsMarketNFTSwapEscrow', accounts => {
     orderInfo = await escrow.getOrderInfo(0);
     expect(orderInfo.quantity.toString()).to.be.equal('2', 'fail to check quantity #2');
     expect(orderInfo.orderStatus.toString()).to.be.equal('0', 'fail to check orderStatus #2');
+    expect((await escrow.getSellOrdersLength()).toString()).to.be.equal('1', 'fail to check getSellOrdersLength #2');
 
     await escrow.executeOrder(0, 2, { from: accounts[2] });
 
     orderInfo = await escrow.getOrderInfo(0);
     expect(orderInfo.quantity.toString()).to.be.equal('0', 'fail to check quantity #3');
     expect(orderInfo.orderStatus.toString()).to.be.equal('2', 'fail to check orderStatus #3');
+    expect((await escrow.getSellOrdersLength()).toString()).to.be.equal('0', 'fail to check getSellOrdersLength #3');
   });
 
   it('should create a buy order', async () => {
@@ -101,7 +103,7 @@ contract.only('APWarsMarketNFTSwapEscrow', accounts => {
     expect(orderInfo.feeAmount.toString()).to.be.equal(web3.utils.toWei('0.25', 'ether'), 'fail to check feeAmount');
     expect(orderInfo.totalAmount.toString()).to.be.equal(web3.utils.toWei('10.25', 'ether'), 'fail to check totalAmount');
 
-    expect((await escrow.getSellOrdersLength()).toString()).to.be.equal('1', 'fail to check getSellOrdersLength');
+    expect((await escrow.getSellOrdersLength()).toString()).to.be.equal('0', 'fail to check getSellOrdersLength');
     expect((await escrow.getBuyOrdersLength()).toString()).to.be.equal('1', 'fail to check getBuyOrdersLength');
 
     await escrow.executeOrder(1, 2, { from: accounts[1] });
@@ -109,10 +111,12 @@ contract.only('APWarsMarketNFTSwapEscrow', accounts => {
     orderInfo = await escrow.getOrderInfo(1);
     expect(orderInfo.orderStatus.toString()).to.be.equal('0', 'fail to check orderStatus #2');
     expect(orderInfo.quantity.toString()).to.be.equal('1', 'fail to check quantity #2');
+    expect((await escrow.getBuyOrdersLength()).toString()).to.be.equal('1', 'fail to check getBuyOrdersLength #2');
 
     await escrow.cancelOrder(1, { from: accounts[2] });
 
     orderInfo = await escrow.getOrderInfo(1);
     expect(orderInfo.orderStatus.toString()).to.be.equal('1', 'fail to check orderStatus #3');
+    expect((await escrow.getBuyOrdersLength()).toString()).to.be.equal('0', 'fail to check getBuyOrdersLength #3');
   });
 });

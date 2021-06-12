@@ -6,7 +6,7 @@ const APWarsNFTTransporter = artifacts.require('APWarsNFTTransporter');
 
 var sleep = require('sleep');
 
-contract.only('APWarsNFTTransporter', accounts => {
+contract('APWarsNFTTransporter', accounts => {
   let burnManager = null;
   let wGOLD = null;
   let collectibles = null;
