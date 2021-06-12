@@ -6,7 +6,7 @@ const APWarsNFTTransporter = artifacts.require('APWarsNFTTransporter');
 
 var sleep = require('sleep');
 
-contract('APWarsNFTTransporter', accounts => {
+contract.only('APWarsNFTTransporter', accounts => {
   let burnManager = null;
   let wGOLD = null;
   let collectibles = null;
@@ -41,10 +41,13 @@ contract('APWarsNFTTransporter', accounts => {
   });
 
   it('should setup system transporter', async () => {
-    await transporter.setup(accounts[9], web3.utils.toWei('10', 'ether'), wGOLD.address);
+    await transporter.setup(accounts[9], web3.utils.toWei('10', 'ether'), wGOLD.address, collectibles.address, [], []);
+
+    const result = await transporter.getFeeAmount(accounts[0]);
 
     expect(await transporter.getFeeAddress()).to.be.equal(accounts[9]);
-    expect((await transporter.getFeeAmount()).toString()).to.be.equal('10000000000000000000');
+    expect(result.currentFeeAmount.toString()).to.be.equal('10000000000000000000');
+    expect(result.nftId.toString()).to.be.equal('0');
     expect((await transporter.getFeeTokenAddress()).toString()).to.be.equal(wGOLD.address);
 
   });

@@ -5,7 +5,7 @@ const APWarsMarketNFTSwapEscrow = artifacts.require('APWarsMarketNFTSwapEscrow')
 
 var sleep = require('sleep');
 
-contract.only('APWarsMarketNFTSwapEscrow', accounts => {
+contract('APWarsMarketNFTSwapEscrow', accounts => {
   let burnManager = null;
   let wGOLD = null;
   let collectibles = null;
