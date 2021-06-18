@@ -44,7 +44,6 @@ contract APWarsNFTTransporter is APWarsMarketAccessControl, ERC1155Holder {
             ) {
                 currentFeeAmount = priceByNFT[allowedNFTsForFee[i]];
                 nftId = allowedNFTsForFee[i];
-
                 break;
             }
         }
@@ -65,7 +64,12 @@ contract APWarsNFTTransporter is APWarsMarketAccessControl, ERC1155Holder {
         feeAddress = _feeAddress;
         feeAmount = _feeAmount;
         feeTokenAddress = _feeTokenAddress;
-        collectiblesAddress = collectiblesAddress;
+        collectiblesAddress = _collectiblesAddress;
+
+        require(
+            _pricesByNFT.length == _allowedNFTsForFee.length,
+            "APWarsNFTTransporter:FAIL_LENGTH_PRICE_AND_ALLOWEDFEE"
+        );
 
         for (uint256 i = 0; i < allowedNFTsForFee.length; i++) {
             priceByNFT[allowedNFTsForFee[i]] = 0;
@@ -74,7 +78,11 @@ contract APWarsNFTTransporter is APWarsMarketAccessControl, ERC1155Holder {
         allowedNFTsForFee = _allowedNFTsForFee;
 
         for (uint256 i = 0; i < _allowedNFTsForFee.length; i++) {
-            priceByNFT[_pricesByNFT[i]] = _pricesByNFT[i];
+            require(
+                feeAmount > _pricesByNFT[i],
+                "APWarsNFTTransporter:FAIL_PRICE_GREATER_THAN_FEEAMOUNT"
+            );
+            priceByNFT[allowedNFTsForFee[i]] = _pricesByNFT[i];
         }
 
         emit NFTTransporterSetup(feeAddress, feeAmount, feeTokenAddress);
