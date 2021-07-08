@@ -17,12 +17,12 @@ https://www.apwars.farm Feel free to read the code. More details coming soon.
 - wCROSSBOWMAN: https://bscscan.com/token/0xA0ecF9c7114eFFB43440B95D54e09A2a67331236
 - wARMORED-GRUNT: https://bscscan.com/token/0x56c09E954690d80C5728194f7eAf473737Dc2180
 - wPIKE-ORC: https://bscscan.com/token/0x491c739efd076655f7D8D0DB545b7fb09DdF517f
-- wWIZARD: https://bscscan.com/address/0x1225C7999483544c7859fE5A23c9Be70d14d5378
-- wSHAMAN: https://bscscan.com/address/0x10eAAC888b70aBE542a50b787ABe7f94b8989CB7
-- wSKELETON-WARRIOR: https://bscscan.com/address/0xb5d488dc4DE64A6a968D8f317DB8DE2cDBF52828
-- wHOUND: https://bscscan.com/address/0x4D21177Bf8a0F9cfAca6d0f568Ff3e79a121B106
-- wUNDEAD-ARCHER: https://bscscan.com/address/0xd048cDf2e870E60D46527463a14aEFC0377D754c
-- wUNDEAD-PIKEMAN: https://bscscan.com/address/0x8b394cfAeBA9812801C92388570C95208Ad1300D
+- wWIZARD: https://bscscan.com/token/0x1225C7999483544c7859fE5A23c9Be70d14d5378
+- wSHAMAN: https://bscscan.com/token/0x10eAAC888b70aBE542a50b787ABe7f94b8989CB7
+- wSKELETON-WARRIOR: https://bscscan.com/token/0xb5d488dc4DE64A6a968D8f317DB8DE2cDBF52828
+- wHOUND: https://bscscan.com/token/0x4D21177Bf8a0F9cfAca6d0f568Ff3e79a121B106
+- wUNDEAD-ARCHER: https://bscscan.com/token/0xd048cDf2e870E60D46527463a14aEFC0377D754c
+- wUNDEAD-PIKEMAN: https://bscscan.com/token/0x8b394cfAeBA9812801C92388570C95208Ad1300D
 
 
 ------------
