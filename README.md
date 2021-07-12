@@ -23,7 +23,7 @@ https://www.apwars.farm Feel free to read the code. More details coming soon.
 - wHOUND: https://bscscan.com/token/0x4D21177Bf8a0F9cfAca6d0f568Ff3e79a121B106
 - wUNDEAD-ARCHER: https://bscscan.com/token/0xd048cDf2e870E60D46527463a14aEFC0377D754c
 - wUNDEAD-PIKEMAN: https://bscscan.com/token/0x8b394cfAeBA9812801C92388570C95208Ad1300D
-
+- wWITCH: https://bscscan.com/token/0x2a63DDDD2c0ba10F465080a06563aF3acb5d1d3c
 
 ------------
 
@@ -45,3 +45,4 @@ https://www.apwars.farm Feel free to read the code. More details coming soon.
 - wHOUND Farm Manager (MasterChef) - https://bscscan.com/address/0x90Dd6771273eB5F1b1e2852D4871482Dfb9B009f
 - wUNDEAD-ARCHER Farm Manager (MasterChef) - https://bscscan.com/address/0x550a370BDb1342Ea1024Ec7F67534f64EE4b35c3
 - wUNDEAD-PIKEMAN Farm Manager (MasterChef) - https://bscscan.com/address/0x4Fb3fD5c747d900Cf8Ef9846D9898D4542521B44
+- wWITCH Farm Manager (MasterChef) - https://bscscan.com/address/0xbaCA24eDAB5A5c4028edbCdc7ba855E5FFD091dE
