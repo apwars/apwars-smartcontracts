@@ -8,12 +8,12 @@ module.exports = async (deployer, network, accounts) => {
   // const FEE_ADDRESS = accounts[9];
   const TOKEN_PER_BLOCK = web3.utils.toWei("0", "ether");
   const START_BLOCK = 0;
-  const ALLOC_POINT = 10000; // 1x
+  const ALLOC_POINT = 100; // 1x = 100
   const wGOLD = "0x7Ab6eedd9443e0e98E5Ea93667CA5B250b8ddA51";
   const wCOURAGE = "0x5f51a3ce7f2233777328866f477e86a91ca9ddec";
-  const LP_TOKEN = wGOLD;
+  const LP_TOKEN = wCOURAGE;
   const BURN_MANAGER = "0xBeC25BD8b102761ab70bd821181A4F679C6EdC58";
-  const WITH_UPDATE = false;
+  const WITH_UPDATE = true;
 
   const troops = [
     // {
@@ -46,16 +46,16 @@ module.exports = async (deployer, network, accounts) => {
     //   tokenPerBlock: TOKEN_PER_BLOCK,
     //   startBlock: START_BLOCK,
     // },
-    {
-      name: "wUNDEAD-PIKEMAN",
-      strength: 22,
-      defense: 22,
-      improvement: 0,
-      unitToken: {},
-      farmManagerV3: {},
-      tokenPerBlock: TOKEN_PER_BLOCK,
-      startBlock: START_BLOCK,
-    },
+    // {
+    //   name: "wUNDEAD-PIKEMAN",
+    //   strength: 22,
+    //   defense: 22,
+    //   improvement: 0,
+    //   unitToken: {},
+    //   farmManagerV3: {},
+    //   tokenPerBlock: TOKEN_PER_BLOCK,
+    //   startBlock: START_BLOCK,
+    // },
     // {
     //   name: "wWITCH",
     //   strength: 70,
@@ -67,9 +67,9 @@ module.exports = async (deployer, network, accounts) => {
     //   startBlock: START_BLOCK,
     // },
     // {
-    //   name: "wDEATHK-NIGHT",
-    //   strength: 70,
-    //   defense: 20,
+    //   name: "wDEATH-KNIGHT",
+    //   strength: 150,
+    //   defense: 50,
     //   improvement: 0,
     //   unitToken: {},
     //   farmManagerV3: {},
@@ -100,10 +100,9 @@ module.exports = async (deployer, network, accounts) => {
 
   const print = () => {
     troops.map(trooper => {
-      console.log('Trooper contracts:');
-      console.log(`${trooper.name}: ${trooper.unitToken.address}`);
-      console.log('FarmManagerV3 contracts:');
-      console.log(`${trooper.name}: ${trooper.farmManagerV3.address}`);
+      console.log(`[${trooper.name}] Contracts:`);
+      console.log(`Token: ${trooper.unitToken.address}`);
+      console.log(`FarmManagerV3: ${trooper.farmManagerV3.address}`);
       console.log('');
     })
   };
