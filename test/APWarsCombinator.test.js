@@ -2,43 +2,59 @@ const APWarsBurnManager = artifacts.require('APWarsBurnManagerV2');
 const APWarsBaseToken = artifacts.require('APWarsBaseToken');
 const APWarsCollectibles = artifacts.require('APWarsCollectibles');
 const APWarsCombinator = artifacts.require('APWarsCombinator');
+const APWarsCombinatorManager = artifacts.require('APWarsCombinatorManager');
+const APWarsCourageToken = artifacts.require('APWarsCourageToken');
 
 var sleep = require('sleep');
 
-contract('APWarsCombinator', accounts => {
-  let burnManager = null;
-  let wGOLD = null;
-  let wWARRIOR = null;
-  let collectibles = null;
-  let combinator = null;
+let burnManager = null;
+let wGOLD = null;
+let wWARRIOR = null;
+let collectibles = null;
+let combinator = null;
+let combinatorManager = null;
 
+
+const deployContracts = async (accounts) => {
+  burnManager = await APWarsBurnManager.new(accounts[2]);
+  wGOLD = await APWarsBaseToken.new('wGOLD', 'wGOLD');
+  wWARRIOR = await APWarsBaseToken.new('wWARRIOR', 'wWARRIOR');
+  collectibles = await APWarsCollectibles.new(burnManager.address, 'URI');
+  combinator = await APWarsCombinator.new();
+  combinatorManager = await APWarsCombinatorManager.new();
+  wCOURAGE = await APWarsCourageToken.new("wCOURAGE", "wCOURAGE");
+
+  await wGOLD.mint(accounts[0], web3.utils.toWei('1000000', 'ether'));
+  await wWARRIOR.mint(accounts[0], web3.utils.toWei('20000000000000', 'ether'));
+
+  await collectibles.mint(combinator.address, 10, 100, '0x0');
+
+  await combinator.setup(accounts[8], burnManager.address, combinatorManager.address);
+  wCOURAGE.grantRole(await wCOURAGE.MINTER_ROLE(), combinator.address);
+}
+
+contract('APWarsCombinator > Token A + Token B -> Game Item C', accounts => {
   it('should deploy the contracts', async () => {
-    burnManager = await APWarsBurnManager.new(accounts[2]);
-    wGOLD = await APWarsBaseToken.new('wGOLD', 'wGOLD');
-    wWARRIOR = await APWarsBaseToken.new('wWARRIOR', 'wWARRIOR');
-    collectibles = await APWarsCollectibles.new(burnManager.address, 'URI');
-    combinator = await APWarsCombinator.new();
-
-    await wGOLD.mint(accounts[0], web3.utils.toWei('1000000000', 'ether'));
-    await wWARRIOR.mint(accounts[0], web3.utils.toWei('100000000', 'ether'));
-
-    await collectibles.mint(combinator.address, 10, 100, '0x0');
+    await deployContracts(accounts);
   });
 
   it('should setup a combinator', async () => {
-    await combinator.setupCombinator(1, 3, 2, true);
-    await combinator.setupTokens(
+    await combinatorManager.setupCombinator(1, 3, 2, true);
+    await combinatorManager.setupTokenA(
       1,
       wGOLD.address,
       web3.utils.toWei('100', 'ether'),
       0,
       0,
+    );
+    await combinatorManager.setupTokenB(
+      1,
       wWARRIOR.address,
       web3.utils.toWei('1000', 'ether'),
       0,
       0
     );
-    await combinator.setupGameItem(
+    await combinatorManager.setupGameItemC(
       1,
       collectibles.address,
       10,
@@ -46,14 +62,20 @@ contract('APWarsCombinator', accounts => {
     );
   });
 
-  it('should put a combinator on the schedule and fail to claim', async () => {
+  it('should put a combinator on the schedule', async () => {
     await wGOLD.approve(combinator.address, await wGOLD.balanceOf(accounts[0]));
     await wWARRIOR.approve(combinator.address, await wWARRIOR.balanceOf(accounts[0]));
 
-    await combinator.combine(1, 2);
+    expect((await wGOLD.balanceOf(combinator.address)).toString()).to.be.equal('0', 'fail to check wGOLD balance #1');
+    expect((await wWARRIOR.balanceOf(combinator.address)).toString()).to.be.equal('0', 'fail to check wWARRIOR balance #1');
+
+    await combinator.combineTokens(1, 2);
+
+    expect((await wGOLD.balanceOf(combinator.address)).toString()).to.be.equal(web3.utils.toWei('200', 'ether'), 'fail to check wGOLD balance');
+    expect((await wWARRIOR.balanceOf(combinator.address)).toString()).to.be.equal(web3.utils.toWei('2000', 'ether'), 'fail to check wWARRIOR balance');
 
     try {
-      await combinator.claim(accounts[0], 1);
+      await combinator.claimGameItemFromTokens(1);
       throw {};
     } catch (e) {
       expect(e.reason).to.be.equal("APWarsCombinator:INVALID_BLOCK");
@@ -63,6 +85,100 @@ contract('APWarsCombinator', accounts => {
     await wGOLD.approve(combinator.address, await wGOLD.balanceOf(accounts[0]));
     await wGOLD.approve(combinator.address, await wGOLD.balanceOf(accounts[0]));
 
-    await combinator.claim(accounts[0], 1);
+    try {
+      await combinator.claimTokenFromTokens(1);
+      throw {};
+    } catch (e) {
+      expect(e.reason).to.be.equal("APWarsCombinatorManager:INVALID_ID_C");
+    }
+
+    await combinator.claimGameItemFromTokens(1);
+
+    expect((await wGOLD.balanceOf(combinator.address)).toString()).to.be.equal('0', 'fail to check wGOLD balance #3');
+    expect((await wWARRIOR.balanceOf(combinator.address)).toString()).to.be.equal('0', 'fail to check wWARRIOR balance #3');
+
+    try {
+      await combinator.claimGameItemFromTokens(1);
+      throw {};
+    } catch (e) {
+      expect(e.reason).to.be.equal("APWarsCombinator:ALREADY_CLAIMED");
+    }
+  });
+});
+
+
+contract('APWarsCombinator > Token A + Token B -> Token C', accounts => {
+  it('should deploy the contracts', async () => {
+    await deployContracts(accounts);
+  });
+
+  it('should setup a combinator', async () => {
+    await combinatorManager.setupCombinator(1, 3, 2, true);
+    await combinatorManager.setupTokenA(
+      1,
+      wGOLD.address,
+      web3.utils.toWei('100', 'ether'),
+      0,
+      0,
+    );
+    await combinatorManager.setupTokenB(
+      1,
+      wWARRIOR.address,
+      web3.utils.toWei('1000', 'ether'),
+      0,
+      0
+    );
+    await combinatorManager.setupTokenC(
+      1,
+      wCOURAGE.address,
+      web3.utils.toWei('10', 'ether'),
+      0,
+      0
+    );
+  });
+
+  it('should put a combinator on the schedule', async () => {
+    await wGOLD.approve(combinator.address, await wGOLD.balanceOf(accounts[0]));
+    await wWARRIOR.approve(combinator.address, await wWARRIOR.balanceOf(accounts[0]));
+
+    expect((await wGOLD.balanceOf(combinator.address)).toString()).to.be.equal('0', 'fail to check wGOLD balance #1');
+    expect((await wWARRIOR.balanceOf(combinator.address)).toString()).to.be.equal('0', 'fail to check wWARRIOR balance #1');
+    expect((await wCOURAGE.balanceOf(accounts[0])).toString()).to.be.equal('0', 'fail to check wCOURAGE balance #1');
+
+    await combinator.combineTokens(1, 2);
+
+    expect((await wGOLD.balanceOf(combinator.address)).toString()).to.be.equal(web3.utils.toWei('200', 'ether'), 'fail to check wGOLD balance');
+    expect((await wWARRIOR.balanceOf(combinator.address)).toString()).to.be.equal(web3.utils.toWei('2000', 'ether'), 'fail to check wWARRIOR balance');
+
+    try {
+      await combinator.claimTokenFromTokens(1);
+      throw {};
+    } catch (e) {
+      expect(e.reason).to.be.equal("APWarsCombinator:INVALID_BLOCK");
+    }
+
+    //moving 2 blocks forward
+    await wGOLD.approve(combinator.address, await wGOLD.balanceOf(accounts[0]));
+    await wGOLD.approve(combinator.address, await wGOLD.balanceOf(accounts[0]));
+
+    try {
+      await combinator.claimGameItemFromTokens(1);
+      throw {};
+    } catch (e) {
+      expect(e.reason).to.be.equal("APWarsCombinatorManager:INVALID_ID_GC");
+    }
+
+    await combinator.claimTokenFromTokens(1);
+
+    expect((await wGOLD.balanceOf(combinator.address)).toString()).to.be.equal('0', 'fail to check wGOLD balance #3');
+    expect((await wWARRIOR.balanceOf(combinator.address)).toString()).to.be.equal('0', 'fail to check wWARRIOR balance #3');
+    expect((await wCOURAGE.balanceOf(accounts[0])).toString()).to.be.equal(web3.utils.toWei('20', 'ether'), 'fail to check wCOURAGE balance #3');
+
+    try {
+      await combinator.claimGameItemFromTokens(1);
+      throw {};
+    } catch (e) {
+      expect(e.reason).to.be.equal("APWarsCombinator:ALREADY_CLAIMED");
+    }
   });
 });

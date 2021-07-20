@@ -11,6 +11,9 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 
 import "../utils/IAPWarsBurnManager.sol";
 
+import "./IAPWarsCombinatorManager.sol";
+import "./IAPWarsMintableToken.sol";
+
 contract APWarsCombinator is AccessControl, ERC1155Holder {
     bytes32 public constant CONFIGURATOR_ROLE = keccak256("CONFIGURATOR_ROLE");
     using SafeMath for uint256;
@@ -18,40 +21,17 @@ contract APWarsCombinator is AccessControl, ERC1155Holder {
     uint256 private constant ONE_HUNDRED_PERCENT = 10**4;
     bytes private DEFAULT_MESSAGE;
 
-    struct Config {
-        uint256 blocks;
-        uint256 maxMultiple;
-        bool isEnabled;
-    }
-
-    struct GameItemConfig {
-        address collectibles;
-        uint256 id;
-        uint256 amount;
-    }
-
-    struct TokenConfig {
-        address tokenAddress;
-        uint256 amount;
-        uint256 burningRate;
-        uint256 feeRate;
-    }
-
     struct Claimable {
         uint256 combinatorId;
-        uint256 allowedBlock;
+        uint256 startBlock;
         uint256 multiple;
         bool isClaimed;
     }
 
-    mapping(uint256 => Config) public generalConfig;
-    mapping(uint256 => TokenConfig) public tokenAConfig;
-    mapping(uint256 => TokenConfig) public tokenBConfig;
-    mapping(uint256 => GameItemConfig) public gameItemConfig;
-
     mapping(uint256 => mapping(address => Claimable)) combinators;
     address feeAddress;
     address burnManagerAddress;
+    address combinatorManagerAddress;
 
     modifier onlyRole(bytes32 role) {
         require(hasRole(role, _msgSender()), "APWarsCombinator:INVALID_ROLE");
@@ -63,56 +43,24 @@ contract APWarsCombinator is AccessControl, ERC1155Holder {
         _setupRole(CONFIGURATOR_ROLE, _msgSender());
     }
 
-    function setupCombinator(
-        uint256 _id,
-        uint256 _blocks,
-        uint256 _maxMultiple,
-        bool isEnabled
+    function setup(
+        address _feeAddress,
+        address _burnManagerAddress,
+        address _combinatorManagerAddress
     ) public onlyRole(CONFIGURATOR_ROLE) {
-        require(_id > 0, "APWarsCombinator:INVALID_ID");
-        generalConfig[_id] = Config(_blocks, _maxMultiple, isEnabled);
+        feeAddress = _feeAddress;
+        burnManagerAddress = _burnManagerAddress;
+        combinatorManagerAddress = _combinatorManagerAddress;
     }
 
-    function setupGameItem(
-        uint256 _combinatorId,
-        address _collectibles,
-        uint256 _gamteItemId,
-        uint256 _gameItemAmount
-    ) public onlyRole(CONFIGURATOR_ROLE) {
-        gameItemConfig[_combinatorId] = GameItemConfig(
-            _collectibles,
-            _gamteItemId,
-            _gameItemAmount
+    function combineTokens(uint256 _combinatorId, uint256 _multiple) public {
+        IAPWarsCombinatorManager manager = IAPWarsCombinatorManager(
+            combinatorManagerAddress
         );
-    }
+        (uint256 blocks, uint256 maxMultiple, bool isEnabled) = manager
+        .getGeneralConfig(msg.sender, address(this), _combinatorId);
 
-    function setupTokens(
-        uint256 _combinatorId,
-        address _tokenA,
-        uint256 _tokenAAmount,
-        uint256 _tokenABurningRate,
-        uint256 _tokenAFeeRate,
-        address _tokenB,
-        uint256 _tokenBAmount,
-        uint256 _tokenBBurningRate,
-        uint256 _tokenBFeeRate
-    ) public onlyRole(CONFIGURATOR_ROLE) {
-        tokenAConfig[_combinatorId] = TokenConfig(
-            _tokenA,
-            _tokenAAmount,
-            _tokenABurningRate,
-            _tokenAFeeRate
-        );
-        tokenBConfig[_combinatorId] = TokenConfig(
-            _tokenB,
-            _tokenBAmount,
-            _tokenBBurningRate,
-            _tokenBFeeRate
-        );
-    }
-
-    function combine(uint256 _combinatorId, uint256 _multiple) public {
-        Config storage config = generalConfig[_combinatorId];
+        require(isEnabled, "APWarsCombinator:DISABLED_COMBINATOR");
 
         require(
             combinators[_combinatorId][msg.sender].combinatorId == 0,
@@ -120,34 +68,44 @@ contract APWarsCombinator is AccessControl, ERC1155Holder {
         );
 
         require(
-            _multiple > 0 && _multiple <= config.maxMultiple,
+            _multiple > 0 && _multiple <= maxMultiple,
             "APWarsCombinator:INVALID_MULTIPLE"
         );
 
-        IERC20 tokenA = IERC20(tokenAConfig[_combinatorId].tokenAddress);
-        IERC20 tokenB = IERC20(tokenBConfig[_combinatorId].tokenAddress);
+        address tokenAddress;
+        uint256 tokenAmount;
+        uint256 burningRate;
+        uint256 feeRate;
+
+        (tokenAddress, tokenAmount, burningRate, feeRate) = manager
+        .getTokenAConfig(msg.sender, address(this), _combinatorId);
+        IERC20 tokenA = IERC20(tokenAddress);
 
         require(
             tokenA.transferFrom(
                 msg.sender,
                 address(this),
-                tokenAConfig[_combinatorId].amount.mul(_multiple)
+                tokenAmount.mul(_multiple)
             ),
             "APWarsCombinator:FAIL_TO_STAKE_TOKEN_A"
         );
+
+        (tokenAddress, tokenAmount, burningRate, feeRate) = manager
+        .getTokenBConfig(msg.sender, address(this), _combinatorId);
+        IERC20 tokenB = IERC20(tokenAddress);
 
         require(
             tokenB.transferFrom(
                 msg.sender,
                 address(this),
-                tokenBConfig[_combinatorId].amount.mul(_multiple)
+                tokenAmount.mul(_multiple)
             ),
-            "APWarsCombinator:FAIL_TO_STAKE_TOKEN_A"
+            "APWarsCombinator:FAIL_TO_STAKE_TOKEN_B"
         );
 
         combinators[_combinatorId][msg.sender] = Claimable(
             _combinatorId,
-            block.number + config.blocks,
+            block.number,
             _multiple,
             false
         );
@@ -159,12 +117,20 @@ contract APWarsCombinator is AccessControl, ERC1155Holder {
         uint256 _amount,
         uint256 _multiple,
         uint256 _burningRate,
-        uint256 _feeRate
+        uint256 _feeRate,
+        bool mint
     ) internal {
         IERC20 token = IERC20(_tokenAddress);
         uint256 totalAmount = _amount * _multiple;
         uint256 burnAmount = 0;
         uint256 feeAmount = 0;
+
+        if (mint) {
+            IAPWarsMintableToken mintableToken = IAPWarsMintableToken(
+                _tokenAddress
+            );
+            mintableToken.mint(totalAmount);
+        }
 
         if (_burningRate > 0) {
             burnAmount = totalAmount.mul(_burningRate).div(ONE_HUNDRED_PERCENT);
@@ -190,50 +156,111 @@ contract APWarsCombinator is AccessControl, ERC1155Holder {
             );
         }
 
-        uint256 netAmout = totalAmount.sub(burnAmount).sub(feeAmount);
+        uint256 netAmount = totalAmount.sub(burnAmount).sub(feeAmount);
 
         require(
-            token.transfer(_player, netAmout),
+            token.transfer(_player, netAmount),
             "APWarsCombinator:FAIL_TO_UNSTAKE_AMOUNT"
         );
     }
 
-    function claim(address _player, uint256 _combinatorId) public {
-        Config storage config = generalConfig[_combinatorId];
+    function _processTokensTransfers(address _player, uint256 _combinatorId)
+        internal
+    {
+        IAPWarsCombinatorManager manager = IAPWarsCombinatorManager(
+            combinatorManagerAddress
+        );
+        (uint256 blocks, , ) = manager.getGeneralConfig(
+            msg.sender,
+            address(this),
+            _combinatorId
+        );
         Claimable storage claimable = combinators[_combinatorId][_player];
 
         require(claimable.combinatorId > 0, "APWarsCombinator:INVALID_CONFIG");
-        require(!claimable.isClaimed, "APWarsCombinator:IS_CLAIMED");
+        require(!claimable.isClaimed, "APWarsCombinator:ALREADY_CLAIMED");
         require(
-            claimable.allowedBlock < block.number,
+            block.number.sub(claimable.startBlock) >= blocks,
             "APWarsCombinator:INVALID_BLOCK"
         );
 
+        (
+            address tokenAddress,
+            uint256 tokenAmount,
+            uint256 burningRate,
+            uint256 feeRate
+        ) = manager.getTokenAConfig(_player, address(this), _combinatorId);
         _transfer(
             _player,
-            tokenAConfig[_combinatorId].tokenAddress,
-            tokenAConfig[_combinatorId].amount,
+            tokenAddress,
+            tokenAmount,
             claimable.multiple,
-            tokenAConfig[_combinatorId].burningRate,
-            tokenAConfig[_combinatorId].feeRate
-        );
-        _transfer(
-            _player,
-            tokenBConfig[_combinatorId].tokenAddress,
-            tokenBConfig[_combinatorId].amount,
-            claimable.multiple,
-            tokenBConfig[_combinatorId].burningRate,
-            tokenBConfig[_combinatorId].feeRate
+            burningRate,
+            feeRate,
+            false
         );
 
-        IERC1155 token = IERC1155(gameItemConfig[_combinatorId].collectibles);
+        (tokenAddress, tokenAmount, burningRate, feeRate) = manager
+        .getTokenBConfig(_player, address(this), _combinatorId);
+        _transfer(
+            _player,
+            tokenAddress,
+            tokenAmount,
+            claimable.multiple,
+            burningRate,
+            feeRate,
+            false
+        );
+    }
+
+    function claimGameItemFromTokens(uint256 _combinatorId) public {
+        Claimable storage claimable = combinators[_combinatorId][msg.sender];
+        IAPWarsCombinatorManager manager = IAPWarsCombinatorManager(
+            combinatorManagerAddress
+        );
+
+        _processTokensTransfers(msg.sender, _combinatorId);
+
+        (address collectibles, uint256 id, uint256 amount) = manager
+        .getGameItemCConfig(msg.sender, address(this), _combinatorId);
+
+        IERC1155 token = IERC1155(collectibles);
 
         token.safeTransferFrom(
             address(this),
-            _player,
-            gameItemConfig[_combinatorId].id,
-            gameItemConfig[_combinatorId].amount.mul(claimable.multiple),
+            msg.sender,
+            id,
+            amount.mul(claimable.multiple),
             DEFAULT_MESSAGE
         );
+
+        claimable.isClaimed = true;
+    }
+
+    function claimTokenFromTokens(uint256 _combinatorId) public {
+        Claimable storage claimable = combinators[_combinatorId][msg.sender];
+        IAPWarsCombinatorManager manager = IAPWarsCombinatorManager(
+            combinatorManagerAddress
+        );
+
+        _processTokensTransfers(msg.sender, _combinatorId);
+
+        (
+            address tokenAddress,
+            uint256 tokenAmount,
+            uint256 burningRate,
+            uint256 feeRate
+        ) = manager.getTokenCConfig(msg.sender, address(this), _combinatorId);
+        _transfer(
+            msg.sender,
+            tokenAddress,
+            tokenAmount,
+            claimable.multiple,
+            burningRate,
+            feeRate,
+            true
+        );
+
+        claimable.isClaimed = true;
     }
 }
