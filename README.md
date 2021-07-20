@@ -9,6 +9,7 @@ https://www.apwars.farm Feel free to read the code. More details coming soon.
 ### Tokens:
 
 - wGOLD: https://bscscan.com/token/0x7Ab6eedd9443e0e98E5Ea93667CA5B250b8ddA51
+- wCOURAGE: https://bscscan.com/token/0x5F51A3ce7f2233777328866F477E86a91CA9DdeC
 - wWARRIOR: https://bscscan.com/token/0x54f653f539a78d3db0e0d3b166cf32c4f6cc5fb6
 - wARCHER: https://bscscan.com/token/0xAA2E03E7838148ce9FAd6Ce4C00275D89127A03e
 - wGRUNT: https://bscscan.com/token/0xd7544Fe7668f3dfb7AD21F9E02D7A51e116b6D75
