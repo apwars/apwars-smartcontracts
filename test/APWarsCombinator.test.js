@@ -107,7 +107,7 @@ contract('APWarsCombinator > Token A + Token B -> Game Item C', accounts => {
 });
 
 
-contract('APWarsCombinator > Token A + Token B -> Token C', accounts => {
+contract.only('APWarsCombinator > Token A + Token B -> Token C', accounts => {
   it('should deploy the contracts', async () => {
     await deployContracts(accounts);
   });
@@ -118,22 +118,22 @@ contract('APWarsCombinator > Token A + Token B -> Token C', accounts => {
       1,
       wGOLD.address,
       web3.utils.toWei('100', 'ether'),
-      0,
-      0,
+      Math.pow(10, 2),
+      Math.pow(10, 3),
     );
     await combinatorManager.setupTokenB(
       1,
       wWARRIOR.address,
       web3.utils.toWei('1000', 'ether'),
       0,
-      0
+      Math.pow(10, 2)
     );
     await combinatorManager.setupTokenC(
       1,
       wCOURAGE.address,
       web3.utils.toWei('10', 'ether'),
       0,
-      0
+      Math.pow(10, 3),
     );
   });
 
@@ -170,9 +170,12 @@ contract('APWarsCombinator > Token A + Token B -> Token C', accounts => {
 
     await combinator.claimTokenFromTokens(1);
 
+    expect((await wGOLD.balanceOf(accounts[8])).toString()).to.be.equal(web3.utils.toWei('20', 'ether'), 'fail to check wGOLD balance accounts[8] #3');
+    expect((await burnManager.getBurnedAmount(wGOLD.address)).toString()).to.be.equal(web3.utils.toWei('2', 'ether'), 'fail to check wGOLD burned #3');
     expect((await wGOLD.balanceOf(combinator.address)).toString()).to.be.equal('0', 'fail to check wGOLD balance #3');
     expect((await wWARRIOR.balanceOf(combinator.address)).toString()).to.be.equal('0', 'fail to check wWARRIOR balance #3');
-    expect((await wCOURAGE.balanceOf(accounts[0])).toString()).to.be.equal(web3.utils.toWei('20', 'ether'), 'fail to check wCOURAGE balance #3');
+    expect((await wCOURAGE.balanceOf(accounts[0])).toString()).to.be.equal(web3.utils.toWei('18', 'ether'), 'fail to check wCOURAGE accounts[0] balance #3');
+    expect((await wCOURAGE.balanceOf(accounts[8])).toString()).to.be.equal(web3.utils.toWei('2', 'ether'), 'fail to check wCOURAGE accounts[8] balance #3');
 
     try {
       await combinator.claimGameItemFromTokens(1);
