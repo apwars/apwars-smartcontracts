@@ -28,10 +28,11 @@ contract APWarsCombinator is AccessControl, ERC1155Holder {
         bool isClaimed;
     }
 
-    mapping(uint256 => mapping(address => Claimable)) combinators;
-    address feeAddress;
-    address burnManagerAddress;
-    address combinatorManagerAddress;
+    mapping(uint256 => mapping(address => Claimable)) public combinators;
+    mapping(uint256 => uint256) public combinatorsCount;
+    address public feeAddress;
+    address public burnManagerAddress;
+    address public combinatorManagerAddress;
 
     modifier onlyRole(bytes32 role) {
         require(hasRole(role, _msgSender()), "APWarsCombinator:INVALID_ROLE");
