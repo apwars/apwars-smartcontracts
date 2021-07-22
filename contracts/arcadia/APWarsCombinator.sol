@@ -25,7 +25,6 @@ contract APWarsCombinator is AccessControl, ERC1155Holder {
         uint256 combinatorId;
         uint256 startBlock;
         uint256 multiple;
-        bool isClaimed;
     }
 
     mapping(uint256 => mapping(address => Claimable)) public combinators;
@@ -132,8 +131,7 @@ contract APWarsCombinator is AccessControl, ERC1155Holder {
         combinators[_combinatorId][msg.sender] = Claimable(
             _combinatorId,
             block.number,
-            _multiple,
-            false
+            _multiple
         );
 
         emit NewCombinator(msg.sender, _combinatorId, _multiple);
@@ -206,7 +204,6 @@ contract APWarsCombinator is AccessControl, ERC1155Holder {
         Claimable storage claimable = combinators[_combinatorId][_player];
 
         require(claimable.combinatorId > 0, "APWarsCombinator:INVALID_CONFIG");
-        require(!claimable.isClaimed, "APWarsCombinator:ALREADY_CLAIMED");
         require(
             block.number.sub(claimable.startBlock) >= blocks,
             "APWarsCombinator:INVALID_BLOCK"
@@ -241,6 +238,13 @@ contract APWarsCombinator is AccessControl, ERC1155Holder {
         );
     }
 
+    function _clearCombinator(address _player, uint256 _combinatorId) internal {
+        combinators[_combinatorId][_player].combinatorId = 0;
+        combinatorsCount[_combinatorId] = combinatorsCount[_combinatorId].add(
+            1
+        );
+    }
+
     function claimGameItemFromTokens(uint256 _combinatorId) public {
         Claimable storage claimable = combinators[_combinatorId][msg.sender];
         IAPWarsCombinatorManager manager = IAPWarsCombinatorManager(
@@ -262,10 +266,7 @@ contract APWarsCombinator is AccessControl, ERC1155Holder {
             DEFAULT_MESSAGE
         );
 
-        claimable.isClaimed = true;
-        combinatorsCount[_combinatorId] = combinatorsCount[_combinatorId].add(
-            1
-        );
+        _clearCombinator(msg.sender, _combinatorId);
 
         emit NewGameItemClaim(msg.sender, _combinatorId);
     }
@@ -294,10 +295,7 @@ contract APWarsCombinator is AccessControl, ERC1155Holder {
             true
         );
 
-        claimable.isClaimed = true;
-        combinatorsCount[_combinatorId] = combinatorsCount[_combinatorId].add(
-            1
-        );
+        _clearCombinator(msg.sender, _combinatorId);
 
         emit NewTokenClaim(msg.sender, _combinatorId);
     }
