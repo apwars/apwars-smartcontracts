@@ -34,6 +34,25 @@ contract APWarsCombinator is AccessControl, ERC1155Holder {
     address public burnManagerAddress;
     address public combinatorManagerAddress;
 
+    event NewCombinator(
+        address indexed sender,
+        uint256 indexed combinatorId,
+        uint256 multiple
+    );
+
+    event NewSetup(
+        address feeAddress,
+        address burnManagerAddress,
+        address combinatorManagerAddress
+    );
+
+    event NewTokenClaim(address indexed sender, uint256 indexed combinatorId);
+
+    event NewGameItemClaim(
+        address indexed sender,
+        uint256 indexed combinatorId
+    );
+
     modifier onlyRole(bytes32 role) {
         require(hasRole(role, _msgSender()), "APWarsCombinator:INVALID_ROLE");
         _;
@@ -52,6 +71,12 @@ contract APWarsCombinator is AccessControl, ERC1155Holder {
         feeAddress = _feeAddress;
         burnManagerAddress = _burnManagerAddress;
         combinatorManagerAddress = _combinatorManagerAddress;
+
+        emit NewSetup(
+            _feeAddress,
+            _burnManagerAddress,
+            _combinatorManagerAddress
+        );
     }
 
     function combineTokens(uint256 _combinatorId, uint256 _multiple) public {
@@ -110,6 +135,8 @@ contract APWarsCombinator is AccessControl, ERC1155Holder {
             _multiple,
             false
         );
+
+        emit NewCombinator(msg.sender, _combinatorId, _multiple);
     }
 
     function _transfer(
@@ -236,6 +263,11 @@ contract APWarsCombinator is AccessControl, ERC1155Holder {
         );
 
         claimable.isClaimed = true;
+        combinatorsCount[_combinatorId] = combinatorsCount[_combinatorId].add(
+            1
+        );
+
+        emit NewGameItemClaim(msg.sender, _combinatorId);
     }
 
     function claimTokenFromTokens(uint256 _combinatorId) public {
@@ -263,5 +295,10 @@ contract APWarsCombinator is AccessControl, ERC1155Holder {
         );
 
         claimable.isClaimed = true;
+        combinatorsCount[_combinatorId] = combinatorsCount[_combinatorId].add(
+            1
+        );
+
+        emit NewTokenClaim(msg.sender, _combinatorId);
     }
 }

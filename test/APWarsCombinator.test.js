@@ -141,6 +141,9 @@ contract.only('APWarsCombinator > Token A + Token B -> Token C', accounts => {
     await wGOLD.approve(combinator.address, await wGOLD.balanceOf(accounts[0]));
     await wWARRIOR.approve(combinator.address, await wWARRIOR.balanceOf(accounts[0]));
 
+    expect((await combinator.combinatorsCount(1)).toString()).to.be.equal('0', 'fail to count');
+
+
     expect((await wGOLD.balanceOf(combinator.address)).toString()).to.be.equal('0', 'fail to check wGOLD balance #1');
     expect((await wWARRIOR.balanceOf(combinator.address)).toString()).to.be.equal('0', 'fail to check wWARRIOR balance #1');
     expect((await wCOURAGE.balanceOf(accounts[0])).toString()).to.be.equal('0', 'fail to check wCOURAGE balance #1');
@@ -169,6 +172,8 @@ contract.only('APWarsCombinator > Token A + Token B -> Token C', accounts => {
     }
 
     await combinator.claimTokenFromTokens(1);
+
+    expect((await combinator.combinatorsCount(1)).toString()).to.be.equal('1', 'fail to count');
 
     expect((await wGOLD.balanceOf(accounts[8])).toString()).to.be.equal(web3.utils.toWei('20', 'ether'), 'fail to check wGOLD balance accounts[8] #3');
     expect((await burnManager.getBurnedAmount(wGOLD.address)).toString()).to.be.equal(web3.utils.toWei('2', 'ether'), 'fail to check wGOLD burned #3');
