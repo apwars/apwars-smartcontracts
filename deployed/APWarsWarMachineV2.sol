@@ -2632,8 +2632,8 @@ contract APWarsWarMachineV2 is Ownable, ReentrancyGuard {
     uint256 private constant TEAM_B = 2;
 
 
-    mapping(uint256 => uint256) private initialAttackPower;
-    mapping(uint256 => uint256) private initialDefensePower;
+    mapping(uint256 => uint256) public initialAttackPower;
+    mapping(uint256 => uint256) public initialDefensePower;
 
     mapping(uint256 => address[]) private allowedTeamTokenAddresses;
 
