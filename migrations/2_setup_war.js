@@ -80,9 +80,13 @@ module.exports = async (deployer, network, accounts) => {
   console.log('Base contracts:');
   console.log('_______________________________');
   console.log('wGOLD:', wGOLD.address);
+<<<<<<< HEAD
   console.log('WarMachine:', warMachine.address);
   console.log('BurnManager:', burnManager.address);
   console.log('Collectibles:', collectibles.address);
+=======
+  console.log('WarMachine:', wGOLD.address);
+>>>>>>> parent of 559e557... setup
 
   console.log("\nHumans:");
   console.log('_______________________________');
