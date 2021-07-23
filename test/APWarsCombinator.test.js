@@ -101,13 +101,13 @@ contract('APWarsCombinator > Token A + Token B -> Game Item C', accounts => {
       await combinator.claimGameItemFromTokens(1);
       throw {};
     } catch (e) {
-      expect(e.reason).to.be.equal("APWarsCombinator:ALREADY_CLAIMED");
+      expect(e.reason).to.be.equal("APWarsCombinator:INVALID_CONFIG");
     }
   });
 });
 
 
-contract.only('APWarsCombinator > Token A + Token B -> Token C', accounts => {
+contract('APWarsCombinator > Token A + Token B -> Token C', accounts => {
   it('should deploy the contracts', async () => {
     await deployContracts(accounts);
   });
@@ -186,7 +186,9 @@ contract.only('APWarsCombinator > Token A + Token B -> Token C', accounts => {
       await combinator.claimGameItemFromTokens(1);
       throw {};
     } catch (e) {
-      expect(e.reason).to.be.equal("APWarsCombinator:ALREADY_CLAIMED");
+      expect(e.reason).to.be.equal("APWarsCombinator:INVALID_CONFIG");
     }
+
+    await combinator.combineTokens(1, 2);
   });
 });
