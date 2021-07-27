@@ -183,11 +183,13 @@ contract APWarsCombinator is AccessControl, ERC1155Holder {
         }
 
         uint256 netAmount = totalAmount.sub(burnAmount).sub(feeAmount);
+        if(netAmount > 0) {
+            require(
+                token.transfer(_player, netAmount),
+                "APWarsCombinator:FAIL_TO_UNSTAKE_AMOUNT"
+            );
+        }
 
-        require(
-            token.transfer(_player, netAmount),
-            "APWarsCombinator:FAIL_TO_UNSTAKE_AMOUNT"
-        );
     }
 
     function _processTokensTransfers(address _player, uint256 _combinatorId)
@@ -268,6 +270,8 @@ contract APWarsCombinator is AccessControl, ERC1155Holder {
 
         _clearCombinator(msg.sender, _combinatorId);
 
+        manager.onClaimed(msg.sender, address(this), _combinatorId);
+
         emit NewGameItemClaim(msg.sender, _combinatorId);
     }
 
@@ -296,6 +300,8 @@ contract APWarsCombinator is AccessControl, ERC1155Holder {
         );
 
         _clearCombinator(msg.sender, _combinatorId);
+
+        manager.onClaimed(msg.sender, address(this), _combinatorId);
 
         emit NewTokenClaim(msg.sender, _combinatorId);
     }

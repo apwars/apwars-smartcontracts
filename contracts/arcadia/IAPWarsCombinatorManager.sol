@@ -71,4 +71,12 @@ interface IAPWarsCombinatorManager {
             uint256 id,
             uint256 amount
         );
+
+    function onClaimed(
+        address _player,
+        address _source,
+        uint256 _combinatorId
+    )
+        external;
+    
 }

@@ -98,14 +98,14 @@ contract APWarsCombinatorManager is IAPWarsCombinatorManager, AccessControl {
 
     function setupTokenA(
         uint256 _combinatorId,
-        address _tokenAddres,
+        address _tokenAddress,
         uint256 _amount,
         uint256 _burningRate,
         uint256 _feeRate
     ) public onlyRole(CONFIGURATOR_ROLE) {
         tokenAConfig[_combinatorId] = TokenConfig(
             _combinatorId,
-            _tokenAddres,
+            _tokenAddress,
             _amount,
             _burningRate,
             _feeRate
@@ -113,7 +113,7 @@ contract APWarsCombinatorManager is IAPWarsCombinatorManager, AccessControl {
 
         emit NewTokenConfiguration(
             "A",
-            _tokenAddres,
+            _tokenAddress,
             _amount,
             _burningRate,
             _feeRate
@@ -122,14 +122,14 @@ contract APWarsCombinatorManager is IAPWarsCombinatorManager, AccessControl {
 
     function setupTokenB(
         uint256 _combinatorId,
-        address _tokenAddres,
+        address _tokenAddress,
         uint256 _amount,
         uint256 _burningRate,
         uint256 _feeRate
     ) public onlyRole(CONFIGURATOR_ROLE) {
         tokenBConfig[_combinatorId] = TokenConfig(
             _combinatorId,
-            _tokenAddres,
+            _tokenAddress,
             _amount,
             _burningRate,
             _feeRate
@@ -137,7 +137,7 @@ contract APWarsCombinatorManager is IAPWarsCombinatorManager, AccessControl {
 
         emit NewTokenConfiguration(
             "B",
-            _tokenAddres,
+            _tokenAddress,
             _amount,
             _burningRate,
             _feeRate
@@ -146,14 +146,14 @@ contract APWarsCombinatorManager is IAPWarsCombinatorManager, AccessControl {
 
     function setupTokenC(
         uint256 _combinatorId,
-        address _tokenAddres,
+        address _tokenAddress,
         uint256 _amount,
         uint256 _burningRate,
         uint256 _feeRate
     ) public onlyRole(CONFIGURATOR_ROLE) {
         tokenCConfig[_combinatorId] = TokenConfig(
             _combinatorId,
-            _tokenAddres,
+            _tokenAddress,
             _amount,
             _burningRate,
             _feeRate
@@ -161,7 +161,7 @@ contract APWarsCombinatorManager is IAPWarsCombinatorManager, AccessControl {
 
         emit NewTokenConfiguration(
             "C",
-            _tokenAddres,
+            _tokenAddress,
             _amount,
             _burningRate,
             _feeRate
@@ -288,4 +288,16 @@ contract APWarsCombinatorManager is IAPWarsCombinatorManager, AccessControl {
         id = gameItemCConfig[_combinatorId].id;
         amount = gameItemCConfig[_combinatorId].amount;
     }
+
+    function onClaimed(
+        address _player,
+        address _source,
+        uint256 _combinatorId
+    )         
+        public
+        view
+        override
+        {
+
+        }
 }
