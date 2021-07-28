@@ -59,6 +59,36 @@ interface IAPWarsCombinatorManager {
             uint256 feeRate
         );
 
+    function getGameItemAConfig(
+        address _player,
+        address _source,
+        uint256 _combinatorId
+    )
+        external
+        view
+        returns (
+            address collectibles,
+            uint256 id,
+            uint256 amount,
+            uint256 burningRate,
+            uint256 feeRate
+        );
+
+    function getGameItemBConfig(
+        address _player,
+        address _source,
+        uint256 _combinatorId
+    )
+        external
+        view
+        returns (
+            address collectibles,
+            uint256 id,
+            uint256 amount,
+            uint256 burningRate,
+            uint256 feeRate
+        );
+
     function getGameItemCConfig(
         address _player,
         address _source,
@@ -69,14 +99,14 @@ interface IAPWarsCombinatorManager {
         returns (
             address collectibles,
             uint256 id,
-            uint256 amount
+            uint256 amount,
+            uint256 burningRate,
+            uint256 feeRate
         );
 
     function onClaimed(
         address _player,
         address _source,
         uint256 _combinatorId
-    )
-        external;
-    
+    ) external;
 }

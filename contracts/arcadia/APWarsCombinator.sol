@@ -19,6 +19,7 @@ contract APWarsCombinator is AccessControl, ERC1155Holder {
     using SafeMath for uint256;
 
     uint256 private constant ONE_HUNDRED_PERCENT = 10**4;
+    uint256 private constant DEV_PERCENTAGE = 10;
     bytes private DEFAULT_MESSAGE;
 
     struct Claimable {
@@ -83,7 +84,7 @@ contract APWarsCombinator is AccessControl, ERC1155Holder {
             combinatorManagerAddress
         );
         (uint256 blocks, uint256 maxMultiple, bool isEnabled) = manager
-        .getGeneralConfig(msg.sender, address(this), _combinatorId);
+            .getGeneralConfig(msg.sender, address(this), _combinatorId);
 
         require(isEnabled, "APWarsCombinator:DISABLED_COMBINATOR");
 
@@ -103,7 +104,7 @@ contract APWarsCombinator is AccessControl, ERC1155Holder {
         uint256 feeRate;
 
         (tokenAddress, tokenAmount, burningRate, feeRate) = manager
-        .getTokenAConfig(msg.sender, address(this), _combinatorId);
+            .getTokenAConfig(msg.sender, address(this), _combinatorId);
         IERC20 tokenA = IERC20(tokenAddress);
 
         require(
@@ -116,7 +117,7 @@ contract APWarsCombinator is AccessControl, ERC1155Holder {
         );
 
         (tokenAddress, tokenAmount, burningRate, feeRate) = manager
-        .getTokenBConfig(msg.sender, address(this), _combinatorId);
+            .getTokenBConfig(msg.sender, address(this), _combinatorId);
         IERC20 tokenB = IERC20(tokenAddress);
 
         require(
@@ -144,7 +145,8 @@ contract APWarsCombinator is AccessControl, ERC1155Holder {
         uint256 _multiple,
         uint256 _burningRate,
         uint256 _feeRate,
-        bool mint
+        bool mint,
+        bool mintToDev
     ) internal {
         IERC20 token = IERC20(_tokenAddress);
         uint256 totalAmount = _amount * _multiple;
@@ -152,10 +154,10 @@ contract APWarsCombinator is AccessControl, ERC1155Holder {
         uint256 feeAmount = 0;
 
         if (mint) {
-            IAPWarsMintableToken mintableToken = IAPWarsMintableToken(
-                _tokenAddress
+            IAPWarsMintableToken(_tokenAddress).mint(
+                address(this),
+                totalAmount
             );
-            mintableToken.mint(totalAmount);
         }
 
         if (_burningRate > 0) {
@@ -183,13 +185,20 @@ contract APWarsCombinator is AccessControl, ERC1155Holder {
         }
 
         uint256 netAmount = totalAmount.sub(burnAmount).sub(feeAmount);
-        if(netAmount > 0) {
+        if (netAmount > 0) {
             require(
                 token.transfer(_player, netAmount),
                 "APWarsCombinator:FAIL_TO_UNSTAKE_AMOUNT"
             );
         }
 
+        if (mintToDev) {
+            uint256 devAmount = totalAmount / DEV_PERCENTAGE;
+
+            if (devAmount > 0) {
+                IAPWarsMintableToken(_tokenAddress).mint(feeAddress, devAmount);
+            }
+        }
     }
 
     function _processTokensTransfers(address _player, uint256 _combinatorId)
@@ -224,11 +233,12 @@ contract APWarsCombinator is AccessControl, ERC1155Holder {
             claimable.multiple,
             burningRate,
             feeRate,
+            false,
             false
         );
 
         (tokenAddress, tokenAmount, burningRate, feeRate) = manager
-        .getTokenBConfig(_player, address(this), _combinatorId);
+            .getTokenBConfig(_player, address(this), _combinatorId);
         _transfer(
             _player,
             tokenAddress,
@@ -236,6 +246,7 @@ contract APWarsCombinator is AccessControl, ERC1155Holder {
             claimable.multiple,
             burningRate,
             feeRate,
+            false,
             false
         );
     }
@@ -255,8 +266,8 @@ contract APWarsCombinator is AccessControl, ERC1155Holder {
 
         _processTokensTransfers(msg.sender, _combinatorId);
 
-        (address collectibles, uint256 id, uint256 amount) = manager
-        .getGameItemCConfig(msg.sender, address(this), _combinatorId);
+        (address collectibles, uint256 id, uint256 amount, , ) = manager
+            .getGameItemCConfig(msg.sender, address(this), _combinatorId);
 
         IERC1155 token = IERC1155(collectibles);
 
@@ -265,6 +276,14 @@ contract APWarsCombinator is AccessControl, ERC1155Holder {
             msg.sender,
             id,
             amount.mul(claimable.multiple),
+            DEFAULT_MESSAGE
+        );
+
+        token.safeTransferFrom(
+            address(this),
+            feeAddress,
+            id,
+            amount.mul(claimable.multiple) / DEV_PERCENTAGE,
             DEFAULT_MESSAGE
         );
 
@@ -296,6 +315,7 @@ contract APWarsCombinator is AccessControl, ERC1155Holder {
             claimable.multiple,
             burningRate,
             feeRate,
+            true,
             true
         );
 

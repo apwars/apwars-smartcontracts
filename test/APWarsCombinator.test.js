@@ -58,7 +58,9 @@ contract('APWarsCombinator > Token A + Token B -> Game Item C', accounts => {
       1,
       collectibles.address,
       10,
-      1
+      10,
+      0,
+      0
     );
   });
 
@@ -97,6 +99,9 @@ contract('APWarsCombinator > Token A + Token B -> Game Item C', accounts => {
     expect((await wGOLD.balanceOf(combinator.address)).toString()).to.be.equal('0', 'fail to check wGOLD balance #3');
     expect((await wWARRIOR.balanceOf(combinator.address)).toString()).to.be.equal('0', 'fail to check wWARRIOR balance #3');
 
+    expect((await collectibles.balanceOf(accounts[0], 10)).toString()).to.be.equal('20', 'fail to check collectibles balance accounts[0] #3');
+    expect((await collectibles.balanceOf(accounts[8], 10)).toString()).to.be.equal('2', 'fail to check collectibles balance accounts[8] #3');
+
     try {
       await combinator.claimGameItemFromTokens(1);
       throw {};
@@ -133,7 +138,7 @@ contract('APWarsCombinator > Token A + Token B -> Token C', accounts => {
       wCOURAGE.address,
       web3.utils.toWei('10', 'ether'),
       0,
-      Math.pow(10, 3),
+      0,
     );
   });
 
@@ -142,7 +147,6 @@ contract('APWarsCombinator > Token A + Token B -> Token C', accounts => {
     await wWARRIOR.approve(combinator.address, await wWARRIOR.balanceOf(accounts[0]));
 
     expect((await combinator.combinatorsCount(1)).toString()).to.be.equal('0', 'fail to count');
-
 
     expect((await wGOLD.balanceOf(combinator.address)).toString()).to.be.equal('0', 'fail to check wGOLD balance #1');
     expect((await wWARRIOR.balanceOf(combinator.address)).toString()).to.be.equal('0', 'fail to check wWARRIOR balance #1');
@@ -168,7 +172,7 @@ contract('APWarsCombinator > Token A + Token B -> Token C', accounts => {
       await combinator.claimGameItemFromTokens(1);
       throw {};
     } catch (e) {
-      expect(e.reason).to.be.equal("APWarsCombinatorManager:INVALID_ID_GC");
+      expect(e.reason).to.be.equal("APWarsCombinatorManager:INVALID_ID_GC_3");
     }
 
     await combinator.claimTokenFromTokens(1);
@@ -179,7 +183,7 @@ contract('APWarsCombinator > Token A + Token B -> Token C', accounts => {
     expect((await burnManager.getBurnedAmount(wGOLD.address)).toString()).to.be.equal(web3.utils.toWei('2', 'ether'), 'fail to check wGOLD burned #3');
     expect((await wGOLD.balanceOf(combinator.address)).toString()).to.be.equal('0', 'fail to check wGOLD balance #3');
     expect((await wWARRIOR.balanceOf(combinator.address)).toString()).to.be.equal('0', 'fail to check wWARRIOR balance #3');
-    expect((await wCOURAGE.balanceOf(accounts[0])).toString()).to.be.equal(web3.utils.toWei('18', 'ether'), 'fail to check wCOURAGE accounts[0] balance #3');
+    expect((await wCOURAGE.balanceOf(accounts[0])).toString()).to.be.equal(web3.utils.toWei('20', 'ether'), 'fail to check wCOURAGE accounts[0] balance #3');
     expect((await wCOURAGE.balanceOf(accounts[8])).toString()).to.be.equal(web3.utils.toWei('2', 'ether'), 'fail to check wCOURAGE accounts[8] balance #3');
 
     try {

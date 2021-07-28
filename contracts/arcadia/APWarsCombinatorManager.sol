@@ -21,6 +21,8 @@ contract APWarsCombinatorManager is IAPWarsCombinatorManager, AccessControl {
         address collectibles;
         uint256 id;
         uint256 amount;
+        uint256 burningRate;
+        uint256 feeRate;
     }
 
     struct TokenConfig {
@@ -35,6 +37,8 @@ contract APWarsCombinatorManager is IAPWarsCombinatorManager, AccessControl {
     mapping(uint256 => TokenConfig) public tokenAConfig;
     mapping(uint256 => TokenConfig) public tokenBConfig;
     mapping(uint256 => TokenConfig) public tokenCConfig;
+    mapping(uint256 => GameItemConfig) public gameItemAConfig;
+    mapping(uint256 => GameItemConfig) public gameItemBConfig;
     mapping(uint256 => GameItemConfig) public gameItemCConfig;
 
     event NewTokenConfiguration(
@@ -75,17 +79,71 @@ contract APWarsCombinatorManager is IAPWarsCombinatorManager, AccessControl {
         generalConfig[_id] = Config(_blocks, _maxMultiple, isEnabled);
     }
 
+    function setupGameItemA(
+        uint256 _combinatorId,
+        address _collectibles,
+        uint256 _gamteItemId,
+        uint256 _gameItemAmount,
+        uint256 _burningRate,
+        uint256 _feeRate
+    ) public onlyRole(CONFIGURATOR_ROLE) {
+        gameItemAConfig[_combinatorId] = GameItemConfig(
+            _combinatorId,
+            _collectibles,
+            _gamteItemId,
+            _gameItemAmount,
+            _burningRate,
+            _feeRate
+        );
+
+        emit NewGameItemConfiguration(
+            "A",
+            _collectibles,
+            _gamteItemId,
+            _gameItemAmount
+        );
+    }
+
+    function setupGameItemB(
+        uint256 _combinatorId,
+        address _collectibles,
+        uint256 _gamteItemId,
+        uint256 _gameItemAmount,
+        uint256 _burningRate,
+        uint256 _feeRate
+    ) public onlyRole(CONFIGURATOR_ROLE) {
+        gameItemBConfig[_combinatorId] = GameItemConfig(
+            _combinatorId,
+            _collectibles,
+            _gamteItemId,
+            _gameItemAmount,
+            _burningRate,
+            _feeRate
+        );
+
+        emit NewGameItemConfiguration(
+            "B",
+            _collectibles,
+            _gamteItemId,
+            _gameItemAmount
+        );
+    }
+
     function setupGameItemC(
         uint256 _combinatorId,
         address _collectibles,
         uint256 _gamteItemId,
-        uint256 _gameItemAmount
+        uint256 _gameItemAmount,
+        uint256 _burningRate,
+        uint256 _feeRate
     ) public onlyRole(CONFIGURATOR_ROLE) {
         gameItemCConfig[_combinatorId] = GameItemConfig(
             _combinatorId,
             _collectibles,
             _gamteItemId,
-            _gameItemAmount
+            _gameItemAmount,
+            _burningRate,
+            _feeRate
         );
 
         emit NewGameItemConfiguration(
@@ -265,6 +323,62 @@ contract APWarsCombinatorManager is IAPWarsCombinatorManager, AccessControl {
         feeRate = tokenCConfig[_combinatorId].feeRate;
     }
 
+    function getGameItemAConfig(
+        address _player,
+        address _source,
+        uint256 _combinatorId
+    )
+        public
+        view
+        override
+        returns (
+            address collectibles,
+            uint256 id,
+            uint256 amount,
+            uint256 burningRate,
+            uint256 feeRate
+        )
+    {
+        require(
+            gameItemAConfig[_combinatorId].combinatorId == _combinatorId,
+            "APWarsCombinatorManager:INVALID_ID_GC_1"
+        );
+
+        collectibles = gameItemAConfig[_combinatorId].collectibles;
+        id = gameItemAConfig[_combinatorId].id;
+        amount = gameItemAConfig[_combinatorId].amount;
+        burningRate = gameItemAConfig[_combinatorId].burningRate;
+        feeRate = gameItemAConfig[_combinatorId].feeRate;
+    }
+
+    function getGameItemBConfig(
+        address _player,
+        address _source,
+        uint256 _combinatorId
+    )
+        public
+        view
+        override
+        returns (
+            address collectibles,
+            uint256 id,
+            uint256 amount,
+            uint256 burningRate,
+            uint256 feeRate
+        )
+    {
+        require(
+            gameItemBConfig[_combinatorId].combinatorId == _combinatorId,
+            "APWarsCombinatorManager:INVALID_ID_GC_2"
+        );
+
+        collectibles = gameItemBConfig[_combinatorId].collectibles;
+        id = gameItemBConfig[_combinatorId].id;
+        amount = gameItemBConfig[_combinatorId].amount;
+        burningRate = gameItemBConfig[_combinatorId].burningRate;
+        feeRate = gameItemBConfig[_combinatorId].feeRate;
+    }
+
     function getGameItemCConfig(
         address _player,
         address _source,
@@ -276,28 +390,26 @@ contract APWarsCombinatorManager is IAPWarsCombinatorManager, AccessControl {
         returns (
             address collectibles,
             uint256 id,
-            uint256 amount
+            uint256 amount,
+            uint256 burningRate,
+            uint256 feeRate
         )
     {
         require(
             gameItemCConfig[_combinatorId].combinatorId == _combinatorId,
-            "APWarsCombinatorManager:INVALID_ID_GC"
+            "APWarsCombinatorManager:INVALID_ID_GC_3"
         );
 
         collectibles = gameItemCConfig[_combinatorId].collectibles;
         id = gameItemCConfig[_combinatorId].id;
         amount = gameItemCConfig[_combinatorId].amount;
+        burningRate = gameItemCConfig[_combinatorId].burningRate;
+        feeRate = gameItemCConfig[_combinatorId].feeRate;
     }
 
     function onClaimed(
         address _player,
         address _source,
         uint256 _combinatorId
-    )         
-        public
-        view
-        override
-        {
-
-        }
+    ) public view override {}
 }

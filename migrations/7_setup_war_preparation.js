@@ -4,6 +4,10 @@ const Collectibles = artifacts.require('APWarsCollectibles');
 const contracts = require('../data/contracts');
 
 module.exports = async (deployer, network, accounts) => {
+  if (process.env.SKIP_MIGRATION === 'true') {
+    return;
+  }
+  
   const getContracts = contracts(network);
   const contractCollectibles = getContracts.APWarsCollectiblesTest;
   const collectibles = await Collectibles.at(contractCollectibles);

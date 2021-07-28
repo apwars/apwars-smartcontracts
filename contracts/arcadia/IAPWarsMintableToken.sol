@@ -4,5 +4,5 @@ pragma solidity >=0.6.0;
 import "../IAPWarsBaseToken.sol";
 
 interface IAPWarsMintableToken {
-    function mint(uint256 _amount) external;
+    function mint(address _to, uint256 _amount) external;
 }
