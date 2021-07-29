@@ -135,6 +135,8 @@ contract APWarsCombinator is AccessControl, ERC1155Holder {
             _multiple
         );
 
+        _processTokensTransfers(msg.sender, _combinatorId);
+
         emit NewCombinator(msg.sender, _combinatorId, _multiple);
     }
 
@@ -215,10 +217,6 @@ contract APWarsCombinator is AccessControl, ERC1155Holder {
         Claimable storage claimable = combinators[_combinatorId][_player];
 
         require(claimable.combinatorId > 0, "APWarsCombinator:INVALID_CONFIG");
-        require(
-            block.number.sub(claimable.startBlock) >= blocks,
-            "APWarsCombinator:INVALID_BLOCK"
-        );
 
         (
             address tokenAddress,
@@ -264,7 +262,17 @@ contract APWarsCombinator is AccessControl, ERC1155Holder {
             combinatorManagerAddress
         );
 
-        _processTokensTransfers(msg.sender, _combinatorId);
+        (uint256 blocks, , ) = manager.getGeneralConfig(
+            msg.sender,
+            address(this),
+            _combinatorId
+        );
+
+        require(
+            block.number.sub(claimable.startBlock) >= blocks,
+            "APWarsCombinator:INVALID_BLOCK"
+        );
+        require(claimable.combinatorId > 0, "APWarsCombinator:INVALID_CONFIG");
 
         (address collectibles, uint256 id, uint256 amount, , ) = manager
             .getGameItemCConfig(msg.sender, address(this), _combinatorId);
@@ -300,7 +308,17 @@ contract APWarsCombinator is AccessControl, ERC1155Holder {
             combinatorManagerAddress
         );
 
-        _processTokensTransfers(msg.sender, _combinatorId);
+        (uint256 blocks, , ) = manager.getGeneralConfig(
+            msg.sender,
+            address(this),
+            _combinatorId
+        );
+
+        require(
+            block.number.sub(claimable.startBlock) >= blocks,
+            "APWarsCombinator:INVALID_BLOCK"
+        );
+        require(claimable.combinatorId > 0, "APWarsCombinator:INVALID_CONFIG");
 
         (
             address tokenAddress,
