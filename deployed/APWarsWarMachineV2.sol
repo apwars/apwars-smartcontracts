@@ -3612,26 +3612,7 @@ contract APWarsWarMachineV2 is Ownable, ReentrancyGuard {
             "War:INVALID_WAR_STAGE_TO_WITHDRAL_PRIZE"
         );
 
-        bool isAttacker = war.attackerTeam == war.winner;
-        uint256 teamTotalPower =
-            isAttacker ? initialAttackPower[war.winner] : initialDefensePower[war.winner];
-        uint256 userTotalPower =
-            isAttacker
-                ? attackPowerByAddress[war.winner][msg.sender]
-                : defensePowerByAddress[war.winner][msg.sender];
-
-        uint256 userShare =
-            userTotalPower.mul(ONE_HUNDRED_PERCENT).div(teamTotalPower);
-        uint256 userPrize = totalPrize.mul(userShare).div(ONE_HUNDRED_PERCENT);
-        uint256 amountToBurn =
-            userPrize
-                .mul(
-                ONE_HUNDRED_PERCENT.sub(
-                    secondRoundRandomParameters.unlockedPrize
-                )
-            )
-                .div(ONE_HUNDRED_PERCENT);
-        uint256 net = userPrize - amountToBurn;
+        (uint256 net, uint256 amountToBurn, uint256 userPrize, uint256 userTotalPower, uint256 teamTotalPower, uint256 userShare) = getWithdrawPrize(msg.sender);
 
         token.transfer(address(burnManager), amountToBurn);
         burnManager.burn(address(token));
@@ -3654,6 +3635,31 @@ contract APWarsWarMachineV2 is Ownable, ReentrancyGuard {
             amountToBurn,
             net
         );
+    }
+
+    function getWithdrawPrize(address _player) public view returns (uint256 net, uint256 amountToBurn, uint256 userPrize, uint256 userTotalPower, uint256 teamTotalPower, uint256 userShare) {
+        address tokenAddress = tokenPrize;
+        IAPWarsBaseToken token = IAPWarsBaseToken(tokenAddress);
+        bool isAttacker = war.attackerTeam == war.winner;
+        teamTotalPower =
+            isAttacker ? initialAttackPower[war.winner] : initialDefensePower[war.winner];
+        userTotalPower =
+            isAttacker
+                ? attackPowerByAddress[war.winner][_player]
+                : defensePowerByAddress[war.winner][_player];
+
+        userShare =
+            userTotalPower.mul(ONE_HUNDRED_PERCENT).div(teamTotalPower);
+        userPrize = totalPrize.mul(userShare).div(ONE_HUNDRED_PERCENT);
+        amountToBurn =
+            userPrize
+                .mul(
+                ONE_HUNDRED_PERCENT.sub(
+                    secondRoundRandomParameters.unlockedPrize
+                )
+            )
+                .div(ONE_HUNDRED_PERCENT);
+        net = userPrize - amountToBurn;
     }
 
     function emergencyWithdraw(IAPWarsBaseToken _token, uint256 _amount)

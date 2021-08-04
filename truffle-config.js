@@ -39,9 +39,9 @@ module.exports = {
 
     bsc: {
       provider: () => new HDWalletProvider(mnemonic56, rpcUrl56),
-      gasPrice: '7000000000',
+      gasPrice: '8000000000',
       network_id: 56,       // Ropsten's id
-      gas: 20000000,        
+      gas: 6000000,        
       confirmations: 1,    
       timeoutBlocks: 200,  // # of blocks before a deployment times out  (minimum/default: 50)
       skipDryRun: true     // Skip dry run before migrations? (default: false for public nets )
@@ -49,9 +49,9 @@ module.exports = {
 
     bsctestnet: {
       provider: () => new HDWalletProvider(mnemonic97, rpcUrl97),
-      gasPrice: '11000000000',
+      gasPrice: '12000000000',
       network_id: 97,       
-      gas: 10000000,       
+      gas: 6000000,
       confirmations: 1,    // # of confs to wait between deployments. (default: 0)
       timeoutBlocks: 2000,  // # of blocks before a deployment times out  (minimum/default: 50)
       skipDryRun: true     // Skip dry run before migrations? (default: false for public nets ),

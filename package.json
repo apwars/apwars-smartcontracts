@@ -12,7 +12,7 @@
   },
   "devDependencies": {},
   "scripts": {
-    "test": "truffle test --show-events"
+    "test": "SKIP_MIGRATION=true truffle test --show-events"
   },
   "repository": {
     "type": "git",
