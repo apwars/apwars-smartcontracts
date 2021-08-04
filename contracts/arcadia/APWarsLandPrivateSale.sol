@@ -14,6 +14,8 @@ contract APWarsLandPrivateSale is AccessControl, ERC1155Holder {
     using SafeMath for uint256;
 
     uint256 private constant VESTING = 9;
+    uint256 private constant MAX_WORLD_TICKETS = 2;
+    uint256 private constant MAX_CLAN_TICKETS = 50;
 
     uint256 private constant ONE_HUNDRED_PERCENT = 10**4;
     uint256 private constant DEV_PERCENTAGE = 10;
@@ -21,6 +23,8 @@ contract APWarsLandPrivateSale is AccessControl, ERC1155Holder {
     uint256 public constant FIRST_PACKAGE_TARGET = 0;
     uint256 public constant SECOND_PACKAGE_TARGET = 500000 * 10**18;
     uint256 public constant THIRD_PACKAGE_TARGET = 1000000 * 10**18;
+    uint256 public constant CLAN_TICKET_PRICE = 3900 * 10**18;
+    uint256 public constant WORLD_TICKET_PRICE = 39000 * 10**18;
     uint256 public constant MAX_SUPPLY =
         FIRST_PACKAGE_TARGET + SECOND_PACKAGE_TARGET + THIRD_PACKAGE_TARGET;
 
@@ -44,15 +48,28 @@ contract APWarsLandPrivateSale is AccessControl, ERC1155Holder {
     mapping(address => bool) public whitelist;
     mapping(address => InvestedAmountInfo) public shares;
     address[] public buyers;
+    address public collectibles;
     address public wLAND;
     address public busd;
     address public dev;
-    uint256 cliffStartBlock = 0;
-    uint256 nextBlockToClaim = 0;
-    uint256 vestingIntervalInBlocks = 0;
-    uint256 investedAmount = 0;
+    uint256 public cliffStartBlock = 0;
+    uint256 public worldTicketId = 0;
+    uint256 public clanTicketId = 0;
+    uint256 public nextBlockToClaim = 0;
+    uint256 public vestingIntervalInBlocks = 0;
+    uint256 public investedAmount = 0;
+    mapping(address => uint256) public worldTicketOwners;
+    mapping(address => bool) public worldTicketOwnersClaims;
+    uint256 public worldTicketsCount;
+    mapping(address => uint256) public clanTicketOwners;
+    mapping(address => bool) public clanTicketOwnersClaims;
+    uint256 public clanTicketsCount;
 
     event NewSell(address indexed sender, uint256 amount);
+    event NewWorldTicket(address indexed sender);
+    event NewWClanTicket(address indexed sender);
+    event NewWorldTicketClaim(address indexed sender, uint256 amount);
+    event NewClanTicketClaim(address indexed sender, uint256 amount);
     event NewClaim(
         address indexed sender,
         uint256 block,
@@ -69,6 +86,9 @@ contract APWarsLandPrivateSale is AccessControl, ERC1155Holder {
     constructor(
         address _wLAND,
         address _busd,
+        address _collectibles,
+        uint256 _worldTicketId,
+        uint256 _clanTicketId,
         address _dev,
         uint256 _cliffStartBlock,
         uint256 _vestingIntervalInBlocks
@@ -77,10 +97,13 @@ contract APWarsLandPrivateSale is AccessControl, ERC1155Holder {
         _setupRole(CONFIGURATOR_ROLE, _msgSender());
 
         wLAND = _wLAND;
+        collectibles = _collectibles;
         busd = _busd;
         dev = _dev;
         cliffStartBlock = _cliffStartBlock;
         vestingIntervalInBlocks = _vestingIntervalInBlocks;
+        worldTicketId = _worldTicketId;
+        clanTicketId = _clanTicketId;
     }
 
     function getBUSDwLANDPriceAmount(uint256 _wLANDSoldAmount, uint256 _amount)
@@ -132,6 +155,104 @@ contract APWarsLandPrivateSale is AccessControl, ERC1155Holder {
         for (uint256 i = 0; i < _whitelist.length; i++) {
             whitelist[_whitelist[i]] = _value;
         }
+    }
+
+    function buyClanTicket() public {
+        require(
+            whitelist[msg.sender],
+            "APWarsLandPrivateSale:SENDER_IS_NOT_WHITELISTED"
+        );
+
+        require(
+            IERC20(busd).transferFrom(msg.sender, dev, CLAN_TICKET_PRICE),
+            "APWarsLandPrivateSale:FAIL_TO_BUY_CLAN_TICKET"
+        );
+
+        require(
+            block.number <= cliffStartBlock,
+            "APWarsLandPrivateSale:PRIVATE_SALE_ENDED"
+        );
+
+        clanTicketOwners[msg.sender] = clanTicketOwners[msg.sender].add(1);
+        clanTicketsCount = clanTicketsCount.add(1);
+
+        emit NewWorldTicket(msg.sender);
+    }
+
+    function claimClanTicket() public {
+        require(
+            whitelist[msg.sender],
+            "APWarsLandPrivateSale:SENDER_IS_NOT_WHITELISTED"
+        );
+        require(
+            block.number > cliffStartBlock,
+            "APWarsLandPrivateSale:PRIVATE_SALE_NOT_ENDED"
+        );
+        require(
+            !clanTicketOwnersClaims[msg.sender],
+            "APWarsLandPrivateSale:CLAIMED"
+        );
+
+        clanTicketOwnersClaims[msg.sender] = true;
+
+        IERC1155(collectibles).safeTransferFrom(
+            address(this),
+            msg.sender,
+            clanTicketId,
+            clanTicketOwners[msg.sender],
+            DEFAULT_MESSAGE
+        );
+
+        emit NewClanTicketClaim(msg.sender, clanTicketOwners[msg.sender]);
+    }
+
+    function buyWorldTicket() public {
+        require(
+            whitelist[msg.sender],
+            "APWarsLandPrivateSale:SENDER_IS_NOT_WHITELISTED"
+        );
+
+        require(
+            IERC20(busd).transferFrom(msg.sender, dev, WORLD_TICKET_PRICE),
+            "APWarsLandPrivateSale:FAIL_TO_BUY_WORLD_TICKET"
+        );
+
+        require(
+            block.number <= cliffStartBlock,
+            "APWarsLandPrivateSale:PRIVATE_SALE_ENDED"
+        );
+
+        worldTicketOwners[msg.sender] = worldTicketOwners[msg.sender].add(1);
+        worldTicketsCount = worldTicketsCount.add(1);
+
+        emit NewWorldTicket(msg.sender);
+    }
+
+    function claimWorldTicket() public {
+        require(
+            whitelist[msg.sender],
+            "APWarsLandPrivateSale:SENDER_IS_NOT_WHITELISTED"
+        );
+        require(
+            block.number > cliffStartBlock,
+            "APWarsLandPrivateSale:PRIVATE_SALE_NOT_ENDED"
+        );
+        require(
+            !worldTicketOwnersClaims[msg.sender],
+            "APWarsLandPrivateSale:CLAIMED"
+        );
+
+        worldTicketOwnersClaims[msg.sender] = true;
+
+        IERC1155(collectibles).safeTransferFrom(
+            address(this),
+            msg.sender,
+            worldTicketId,
+            worldTicketOwners[msg.sender],
+            DEFAULT_MESSAGE
+        );
+
+        emit NewWorldTicketClaim(msg.sender, worldTicketOwners[msg.sender]);
     }
 
     function buywLAND(uint256 _amount) public {
