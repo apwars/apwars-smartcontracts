@@ -15,7 +15,7 @@ let privateSale = null;
 let blockNumber;
 let collectibles = null;
 
-const deployContracts = async (accounts) => {
+const deployContracts = async (accounts, priorityEndBlock) => {
   burnManager = await APWarsBurnManager.new(accounts[2]);
   collectibles = await APWarsCollectibles.new(burnManager.address, 'URI');
   blockNumber = await web3.eth.getBlockNumber();
@@ -31,8 +31,9 @@ const deployContracts = async (accounts) => {
     10,
     11,
     accounts[3],
-    blockNumber + 20,
-    5
+    blockNumber + 21,
+    5,
+    blockNumber + (priorityEndBlock || 0),
   );
 
   await busd.mint(accounts[1], web3.utils.toWei('1000000', 'ether'));
@@ -42,7 +43,7 @@ const deployContracts = async (accounts) => {
   await collectibles.mint(privateSale.address, 10, 2, '0x0');
   await collectibles.mint(privateSale.address, 11, 50, '0x0');
 
-  await privateSale.setupWhiteList([accounts[1], accounts[2]], true);
+  await privateSale.setupWhitelist([accounts[1], accounts[2]], [web3.utils.toWei('15000', 'ether'), 0], true);
 
   await busd.approve(privateSale.address, await busd.balanceOf(accounts[1]), { from: accounts[1] });
   await busd.approve(privateSale.address, await busd.balanceOf(accounts[2]), { from: accounts[2] });
@@ -50,7 +51,7 @@ const deployContracts = async (accounts) => {
   await wWISDOW.grantRole(await wWISDOW.MINTER_ROLE(), privateSale.address);
 }
 
-contract('APWarswLANDPrivateSale', accounts => {
+contract.only('APWarswLANDPrivateSale', accounts => {
   it('should deploy the contracts', async () => {
     await deployContracts(accounts);
   });
@@ -70,13 +71,12 @@ contract('APWarswLANDPrivateSale', accounts => {
   });
 
   it('should buy wLAND', async () => {
-
     await privateSale.buywLAND(web3.utils.toWei('300', 'ether'), { from: accounts[1] });
     await privateSale.buywLAND(web3.utils.toWei('300', 'ether'), { from: accounts[1] });
     await privateSale.buywLAND(web3.utils.toWei('300', 'ether'), { from: accounts[1] });
     await privateSale.buywLAND(web3.utils.toWei('1000', 'ether'), { from: accounts[2] });
 
-    //clan ticket +  world ticket + wLAND
+    //clan ticket + world ticket + wLAND
     expect((await busd.balanceOf(accounts[3])).toString()).to.be.equal(web3.utils.toWei((3900 + 39000 + 1900 * 0.5).toString(), 'ether'), "fail to test accounts[0] busd balance");
     
     let info = await privateSale.shares(accounts[1]);
@@ -86,7 +86,7 @@ contract('APWarswLANDPrivateSale', accounts => {
     expect(info.remainingAmount.toString()).to.be.equal(web3.utils.toWei('900', 'ether'));
     expect(info.claimedAmount.toString()).to.be.equal(web3.utils.toWei('0', 'ether'));
     expect(info.claims.toString()).to.be.equal('0');
-    expect(info.nextBlock.toString()).to.be.equal((blockNumber + 20).toString(), 'ether');
+    expect(info.nextBlock.toString()).to.be.equal((blockNumber + 21).toString(), 'ether');
     expect(info.added).to.be.equal(true);
 
     let currentBlockNumber = await web3.eth.getBlockNumber();
@@ -150,7 +150,7 @@ contract('APWarswLANDPrivateSale', accounts => {
   });
 });
 
-contract.only('APWarswLANDPrivateSale wWISDOW', accounts => {
+contract('APWarswLANDPrivateSale wWISDOW', accounts => {
   it('should deploy the contracts', async () => {
     await deployContracts(accounts);
   });
@@ -182,5 +182,23 @@ contract.only('APWarswLANDPrivateSale wWISDOW', accounts => {
     } catch (e) {
       expect(e.reason).to.be.equal("APWarsLandPrivateSale:NOTHING_TO_CLAIM", "fail to test NOTHING_TO_CLAIM");
     }
+  });
+});
+
+contract('APWarswLANDPrivateSale priority lock', accounts => {
+  it('should deploy the contracts', async () => {
+    await deployContracts(accounts, 20);
+  });
+
+  it('should buy only the specified amount in priority lock', async () => {
+    try {
+      await privateSale.buywLAND(web3.utils.toWei('100', 'ether'), { from: accounts[1] });
+      throw {};
+    } catch (e) {
+      expect(e.reason).to.be.equal("APWarsLandPrivateSale:PRIORITY_LEVEL", "fail to test PRIORITY_LEVEL");
+    }
+
+
+    await privateSale.buywLAND(web3.utils.toWei('15000', 'ether'), { from: accounts[1] });
   });
 });

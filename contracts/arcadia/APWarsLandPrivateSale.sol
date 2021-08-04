@@ -50,6 +50,7 @@ contract APWarsLandPrivateSale is AccessControl, ERC1155Holder {
 
     uint256 public wLANDSoldAmount;
     mapping(address => bool) public whitelist;
+    mapping(address => uint256) public whitelistAmount;
     mapping(address => InvestedAmountInfo) public shares;
     address[] public buyers;
     address public collectibles;
@@ -58,6 +59,7 @@ contract APWarsLandPrivateSale is AccessControl, ERC1155Holder {
     address public busd;
     address public dev;
     uint256 public cliffEndBlock = 0;
+    uint256 public priorityEndBlock = 0;
     uint256 public worldTicketId = 0;
     uint256 public clanTicketId = 0;
     uint256 public nextBlockToClaim = 0;
@@ -98,7 +100,8 @@ contract APWarsLandPrivateSale is AccessControl, ERC1155Holder {
         uint256 _clanTicketId,
         address _dev,
         uint256 _cliffEndBlock,
-        uint256 _vestingIntervalInBlocks
+        uint256 _vestingIntervalInBlocks,
+        uint256 _priorityEndBlock
     ) {
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
         _setupRole(CONFIGURATOR_ROLE, _msgSender());
@@ -112,6 +115,7 @@ contract APWarsLandPrivateSale is AccessControl, ERC1155Holder {
         vestingIntervalInBlocks = _vestingIntervalInBlocks;
         worldTicketId = _worldTicketId;
         clanTicketId = _clanTicketId;
+        priorityEndBlock = _priorityEndBlock;
     }
 
     function getBUSDwLANDPriceAmount(uint256 _wLANDSoldAmount, uint256 _amount)
@@ -156,12 +160,14 @@ contract APWarsLandPrivateSale is AccessControl, ERC1155Holder {
                 .div(ONE_HUNDRED_PERCENT);
     }
 
-    function setupWhiteList(address[] calldata _whitelist, bool _value)
-        public
-        onlyRole(CONFIGURATOR_ROLE)
-    {
+    function setupWhitelist(
+        address[] calldata _whitelist,
+        uint256[] calldata _amount,
+        bool _value
+    ) public onlyRole(CONFIGURATOR_ROLE) {
         for (uint256 i = 0; i < _whitelist.length; i++) {
             whitelist[_whitelist[i]] = _value;
+            whitelistAmount[_whitelist[i]] = _amount[i];
         }
     }
 
@@ -277,6 +283,13 @@ contract APWarsLandPrivateSale is AccessControl, ERC1155Holder {
         require(
             block.number <= cliffEndBlock,
             "APWarsLandPrivateSale:PRIVATE_SALE_ENDED"
+        );
+
+        require(
+            (block.number <= priorityEndBlock &&
+                whitelistAmount[msg.sender] == _amount) ||
+                block.number > priorityEndBlock,
+            "APWarsLandPrivateSale:PRIORITY_LEVEL"
         );
 
         uint256 busdAmount = getBUSDwLANDPriceAmount(wLANDSoldAmount, _amount);
