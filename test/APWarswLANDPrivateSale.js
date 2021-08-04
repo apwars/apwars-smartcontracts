@@ -1,5 +1,6 @@
 const APWarsBaseToken = artifacts.require('APWarsBaseToken');
 const APWarsLandToken = artifacts.require('APWarsLandToken');
+const APWarsWisdowToken = artifacts.require('APWarsWisdowToken');
 const APWarsLandPrivateSale = artifacts.require('APWarsLandPrivateSale');
 const APWarsBurnManager = artifacts.require('APWarsBurnManagerV2');
 const APWarsCollectibles = artifacts.require('APWarsCollectibles');
@@ -8,6 +9,7 @@ var sleep = require('sleep');
 
 let burnManager = null;
 let wLAND = null;
+let wWISDOW = null;
 let busd = null;
 let privateSale = null;
 let blockNumber;
@@ -19,9 +21,11 @@ const deployContracts = async (accounts) => {
   blockNumber = await web3.eth.getBlockNumber();
 
   wLAND = await APWarsLandToken.new('wLAND', 'wLAND');
+  wWISDOW = await APWarsWisdowToken.new('wWISDOW', 'wWISDOW');
   busd = await APWarsBaseToken.new('BUSD', 'BUSD');
   privateSale = await APWarsLandPrivateSale.new(
     wLAND.address,
+    wWISDOW.address,
     busd.address,
     collectibles.address,
     10,
@@ -42,6 +46,8 @@ const deployContracts = async (accounts) => {
 
   await busd.approve(privateSale.address, await busd.balanceOf(accounts[1]), { from: accounts[1] });
   await busd.approve(privateSale.address, await busd.balanceOf(accounts[2]), { from: accounts[2] });
+
+  await wWISDOW.grantRole(await wWISDOW.MINTER_ROLE(), privateSale.address);
 }
 
 contract('APWarswLANDPrivateSale', accounts => {
@@ -141,5 +147,40 @@ contract('APWarswLANDPrivateSale', accounts => {
     await privateSale.claimWorldTicket({ from: accounts[1] });
     expect((await collectibles.balanceOf(privateSale.address, 10)).toString()).to.be.equal('1', 'fail to check collectibles balance #2');
     expect((await collectibles.balanceOf(accounts[1], 10)).toString()).to.be.equal('1', 'fail to check collectibles balance #3');
+  });
+});
+
+contract.only('APWarswLANDPrivateSale wWISDOW', accounts => {
+  it('should deploy the contracts', async () => {
+    await deployContracts(accounts);
+  });
+
+  it('should buy less than soft cap and fail to claim', async () => {
+    await privateSale.buywLAND(web3.utils.toWei('100000', 'ether'), { from: accounts[1] });
+    
+    let info = await privateSale.shares(accounts[1]);
+
+    expect(info.wWISDOWToClaim.toString()).to.be.equal(web3.utils.toWei('10', 'ether'));
+
+    try {
+      await privateSale.claimwWISDOW({ from: accounts[1] });
+      throw {};
+    } catch (e) {
+      expect(e.reason).to.be.equal("APWarsLandPrivateSale:OPENED_SOFT_CAP", "fail to test OPENED_SOFT_CAP");
+    }
+    await privateSale.buywLAND(web3.utils.toWei('300000', 'ether'), { from: accounts[1] });
+    await privateSale.claimwWISDOW({ from: accounts[1] });
+
+    const result = await privateSale.investedAmount();
+    console.log({ result: result.toString() });
+
+    expect((await wWISDOW.balanceOf(accounts[1])).toString()).to.be.equal(web3.utils.toWei('40', 'ether'));
+
+    try {
+      await privateSale.claimwWISDOW({ from: accounts[1] });
+      throw {};
+    } catch (e) {
+      expect(e.reason).to.be.equal("APWarsLandPrivateSale:NOTHING_TO_CLAIM", "fail to test NOTHING_TO_CLAIM");
+    }
   });
 });
