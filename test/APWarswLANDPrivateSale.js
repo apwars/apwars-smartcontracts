@@ -31,7 +31,8 @@ const deployContracts = async (accounts, priorityEndBlock) => {
     10,
     11,
     accounts[3],
-    blockNumber + 21,
+    blockNumber + 60,
+    blockNumber + 30,
     5,
     blockNumber + (priorityEndBlock || 0),
   );
@@ -51,7 +52,7 @@ const deployContracts = async (accounts, priorityEndBlock) => {
   await wWISDOW.grantRole(await wWISDOW.MINTER_ROLE(), privateSale.address);
 }
 
-contract.only('APWarswLANDPrivateSale', accounts => {
+contract('APWarswLANDPrivateSale', accounts => {
   it('should deploy the contracts', async () => {
     await deployContracts(accounts);
   });
@@ -77,7 +78,7 @@ contract.only('APWarswLANDPrivateSale', accounts => {
     await privateSale.buywLAND(web3.utils.toWei('1000', 'ether'), { from: accounts[2] });
 
     //clan ticket + world ticket + wLAND
-    expect((await busd.balanceOf(accounts[3])).toString()).to.be.equal(web3.utils.toWei((3900 + 39000 + 1900 * 0.5).toString(), 'ether'), "fail to test accounts[0] busd balance");
+    expect((await busd.balanceOf(accounts[3])).toString()).to.be.equal(web3.utils.toWei((3999 + 39999 + 1900 * 0.5).toString(), 'ether'), "fail to test accounts[0] busd balance");
     
     let info = await privateSale.shares(accounts[1]);
 
@@ -86,7 +87,7 @@ contract.only('APWarswLANDPrivateSale', accounts => {
     expect(info.remainingAmount.toString()).to.be.equal(web3.utils.toWei('900', 'ether'));
     expect(info.claimedAmount.toString()).to.be.equal(web3.utils.toWei('0', 'ether'));
     expect(info.claims.toString()).to.be.equal('0');
-    expect(info.nextBlock.toString()).to.be.equal((blockNumber + 21).toString(), 'ether');
+    expect(info.nextBlock.toString()).to.be.equal((blockNumber + 60).toString(), 'ether');
     expect(info.added).to.be.equal(true);
 
     let currentBlockNumber = await web3.eth.getBlockNumber();
@@ -190,7 +191,7 @@ contract('APWarswLANDPrivateSale priority lock', accounts => {
     await deployContracts(accounts, 20);
   });
 
-  it('should buy only the specified amount in priority lock', async () => {
+  it('should buy only the specified amount in priority lock and wait to buy more', async () => {
     try {
       await privateSale.buywLAND(web3.utils.toWei('100', 'ether'), { from: accounts[1] });
       throw {};
@@ -198,7 +199,92 @@ contract('APWarswLANDPrivateSale priority lock', accounts => {
       expect(e.reason).to.be.equal("APWarsLandPrivateSale:PRIORITY_LEVEL", "fail to test PRIORITY_LEVEL");
     }
 
+    await privateSale.buywLAND(web3.utils.toWei('15000', 'ether'), { from: accounts[1] });
+
+    //trying to buy again and get the error
+    try {
+      await privateSale.buywLAND(web3.utils.toWei('15000', 'ether'), { from: accounts[1] });
+      throw {};
+    } catch (e) {
+      expect(e.reason).to.be.equal("APWarsLandPrivateSale:PRIORITY_LEVEL", "fail to test PRIORITY_LEVEL");
+    }
+
+    let currentBlockNumber = await web3.eth.getBlockNumber();
+    let nextBlock = parseInt((await privateSale.priorityEndBlock()).toString());
+
+    console.log({
+      currentBlockNumber,
+      nextBlock
+    });
+
+    for (var i = 0; i < nextBlock - currentBlockNumber; i++) {
+      await busd.approve(privateSale.address, await busd.balanceOf(accounts[1]), { from: accounts[1] });
+    }
 
     await privateSale.buywLAND(web3.utils.toWei('15000', 'ether'), { from: accounts[1] });
+  });
+});
+
+
+
+contract.only('APWarswLANDPrivateSale withdrawing remaining tokens', accounts => {
+  it('should deploy the contracts', async () => {
+    await deployContracts(accounts, 20);
+  });
+
+  it('should withdraw the remaining amount', async () => {
+    let currentBlockNumber = await web3.eth.getBlockNumber();
+    let nextBlock = parseInt((await privateSale.priorityEndBlock()).toString());
+
+    console.log({
+      currentBlockNumber,
+      nextBlock
+    });
+
+    for (var i = 0; i < nextBlock - currentBlockNumber; i++) {
+      await busd.approve(privateSale.address, await busd.balanceOf(accounts[1]), { from: accounts[1] });
+    }
+
+    await privateSale.buywLAND(web3.utils.toWei('1000000', 'ether'), { from: accounts[1] });
+
+    currentBlockNumber = await web3.eth.getBlockNumber();
+    nextBlock = parseInt((await privateSale.privateSaleEndBlock()).toString());
+    wLANDSoldAmount = parseInt((await privateSale.wLANDSoldAmount()).toString());
+
+    console.log({
+      currentBlockNumber,
+      nextBlock,
+      wLANDSoldAmount
+    });
+
+    for (var i = 0; i < nextBlock - currentBlockNumber; i++) {
+      await busd.approve(privateSale.address, await busd.balanceOf(accounts[1]), { from: accounts[1] });
+    }
+
+    await privateSale.withdrawRemainingwLand();
+
+    expect((await wLAND.balanceOf(accounts[0])).toString()).to.be.equal(web3.utils.toWei('500000', 'ether'));
+  });
+});
+
+contract.only('APWarswLANDPrivateSale exceptions', accounts => {
+  it('should deploy the contracts', async () => {
+    await deployContracts(accounts, 20);
+  });
+
+  it('should fail to buy more than available supply', async () => {
+    let currentBlockNumber = await web3.eth.getBlockNumber();
+    let nextBlock = parseInt((await privateSale.priorityEndBlock()).toString());
+
+    for (var i = 0; i < nextBlock - currentBlockNumber; i++) {
+      await busd.approve(privateSale.address, await busd.balanceOf(accounts[1]), { from: accounts[1] });
+    }
+
+    try {
+      await privateSale.buywLAND(web3.utils.toWei('1500000', 'ether'), { from: accounts[1] });
+      throw {};
+    } catch (e) {
+      expect(e.reason).to.be.equal("APWarsLandPrivateSale:MAX_AVAILABLE_SUPPLY", "fail to test APWarsLandPrivateSale:MAX_AVAILABLE_SUPPLY");
+    }
   });
 });
