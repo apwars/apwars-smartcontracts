@@ -4,8 +4,10 @@ module.exports = {
   APWarsCollectibles: '0x79ab3a6f3f1627535a8774fd2feed322d58f2d02',
   APWarsCollectiblesTest: '0x627Ee66670c897B3121954d44018A79f1FdC3320',
   FED: '0x012565296b11463C27012284947F8C0CfC001943',
+  busd: '0xe9e7cea3dedca5984780bafc599bd69add087d56',
   wGOLD: '0x7ab6eedd9443e0e98e5ea93667ca5b250b8dda51',
   feeAddress: '0x1f551309b66c16899d514b9c508786622829fc63',
+  devAddress: '0x63ada67b95de4fa6fedcbd5435cf40bdeeb55fb6',
   APWarsMarketNFTSwapEscrow: '0x8FCC46678541C07341b62A23A0efDE7A237D3A61',
   APWarsNFTTransporter: '0x31c6bba549586ca05f1ed5cdd845381b15179053',
   units: [
