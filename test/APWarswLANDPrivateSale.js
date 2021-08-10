@@ -15,7 +15,7 @@ let privateSale = null;
 let blockNumber;
 let collectibles = null;
 
-const deployContracts = async (accounts, priorityEndBlock) => {
+const deployContracts = async (accounts, priorityEndBlock, internal, cliff, privateSale) => {
   burnManager = await APWarsBurnManager.new(accounts[2]);
   collectibles = await APWarsCollectibles.new(burnManager.address, 'URI');
   blockNumber = await web3.eth.getBlockNumber();
@@ -31,9 +31,9 @@ const deployContracts = async (accounts, priorityEndBlock) => {
     10,
     11,
     accounts[3],
-    blockNumber + 60,
-    blockNumber + 30,
-    5,
+    blockNumber + (cliff || 60),
+    blockNumber + (privateSale || 30),
+    internal || 5,
     blockNumber + (priorityEndBlock || 0),
   );
 
@@ -50,7 +50,58 @@ const deployContracts = async (accounts, priorityEndBlock) => {
   await busd.approve(privateSale.address, await busd.balanceOf(accounts[2]), { from: accounts[2] });
 
   await wWISDOW.grantRole(await wWISDOW.MINTER_ROLE(), privateSale.address);
+
+  console.log('wLAND', wLAND.address);
+  console.log('busd', busd.address);
+  console.log('privateSale', privateSale.address);
 }
+
+contract.only('APWarswLANDPrivateSale deployment', accounts => {
+  it('should deploy the contracts', async () => {
+    await deployContracts(accounts, 20, 50, 200, 100);
+  });
+});
+
+contract('APWarswLANDPrivateSale deployment', accounts => {
+  it('should deploy the contracts', async () => {
+    await deployContracts(accounts, 0);
+  });
+
+  it('should test limits', async () => {
+    let r = await privateSale.getAvailableAmounts(web3.utils.toWei('0', 'ether'));
+
+    console.log(web3.utils.fromWei(r[0]));
+    console.log(web3.utils.fromWei(r[1]));
+    console.log(web3.utils.fromWei(r[2]));
+
+    r = await privateSale.getAvailableAmounts(web3.utils.toWei('568000', 'ether'));
+
+    console.log(web3.utils.fromWei(r[0]));
+    console.log(web3.utils.fromWei(r[1]));
+    console.log(web3.utils.fromWei(r[2]));
+
+
+    r = await privateSale.getAvailableAmounts(web3.utils.toWei('1329000', 'ether'));
+
+    console.log(web3.utils.fromWei(r[0]));
+    console.log(web3.utils.fromWei(r[1]));
+    console.log(web3.utils.fromWei(r[2]));
+
+
+    r = await privateSale.getAmountsByPackage(web3.utils.toWei('0', 'ether'), web3.utils.toWei('1000', 'ether'));
+
+    console.log(web3.utils.fromWei(r[0]));
+    console.log(web3.utils.fromWei(r[1]));
+    console.log(web3.utils.fromWei(r[2]));
+
+
+    r = web3.utils.fromWei(await privateSale.getBUSDwLANDPriceAmount(web3.utils.toWei('0', 'ether'), web3.utils.toWei('1000', 'ether')));
+    expect(r).to.be.equal('500');
+
+    r = web3.utils.fromWei(await privateSale.getBUSDwLANDPriceAmount(web3.utils.toWei('500000', 'ether'), web3.utils.toWei('1000', 'ether')));
+    expect(r).to.be.equal('750');
+  });
+});
 
 contract('APWarswLANDPrivateSale', accounts => {
   it('should deploy the contracts', async () => {
@@ -225,9 +276,7 @@ contract('APWarswLANDPrivateSale priority lock', accounts => {
   });
 });
 
-
-
-contract.only('APWarswLANDPrivateSale withdrawing remaining tokens', accounts => {
+contract('APWarswLANDPrivateSale withdrawing remaining tokens', accounts => {
   it('should deploy the contracts', async () => {
     await deployContracts(accounts, 20);
   });
@@ -267,7 +316,7 @@ contract.only('APWarswLANDPrivateSale withdrawing remaining tokens', accounts =>
   });
 });
 
-contract.only('APWarswLANDPrivateSale exceptions', accounts => {
+contract('APWarswLANDPrivateSale exceptions', accounts => {
   it('should deploy the contracts', async () => {
     await deployContracts(accounts, 20);
   });
