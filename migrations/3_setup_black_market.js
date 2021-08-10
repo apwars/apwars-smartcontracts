@@ -5,6 +5,10 @@ const APWarsMarketNFTSwapEscrow = artifacts.require(
 );
 
 module.exports = async (deployer, network, accounts) => {
+  if (process.env.SKIP_MIGRATION === 'true') {
+    return;
+  }
+  
   const collectibles = await APWarsCollectibles.deployed();
 
   await collectibles.mint(accounts[0], 14, 50, "0x0");

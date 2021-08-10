@@ -9,6 +9,8 @@ import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
+import "./IAPWarsMintableToken.sol";
+
 contract APWarsLandPrivateSale is AccessControl, ERC1155Holder {
     bytes32 public constant CONFIGURATOR_ROLE = keccak256("CONFIGURATOR_ROLE");
     using SafeMath for uint256;
@@ -18,15 +20,16 @@ contract APWarsLandPrivateSale is AccessControl, ERC1155Holder {
     uint256 private constant MAX_CLAN_TICKETS = 50;
 
     uint256 private constant ONE_HUNDRED_PERCENT = 10**4;
-    uint256 private constant DEV_PERCENTAGE = 10;
+    uint256 private constant WWISDOW_RATIO = ONE_HUNDRED_PERCENT;
 
     uint256 public constant FIRST_PACKAGE_TARGET = 0;
     uint256 public constant SECOND_PACKAGE_TARGET = 500000 * 10**18;
     uint256 public constant THIRD_PACKAGE_TARGET = 1000000 * 10**18;
-    uint256 public constant CLAN_TICKET_PRICE = 3900 * 10**18;
-    uint256 public constant WORLD_TICKET_PRICE = 39000 * 10**18;
-    uint256 public constant MAX_SUPPLY =
-        FIRST_PACKAGE_TARGET + SECOND_PACKAGE_TARGET + THIRD_PACKAGE_TARGET;
+    uint256 public constant CLAN_TICKET_PRICE = 3999 * 10**18;
+    uint256 public constant WORLD_TICKET_PRICE = 39999 * 10**18;
+    uint256 public constant SOFT_CAP = 200000 * 10**18;
+    uint256 public constant MAX_AVAILABLE_SUPPLY = 1462500 * 10**18;
+    uint256 public constant MAX_SUPPLY = 1500000 * 10**18;
 
     uint256 public constant FIRST_PACKAGE_PRICE = 5000;
     uint256 public constant SECOND_PACKAGE_PRICE = 7500;
@@ -37,6 +40,7 @@ contract APWarsLandPrivateSale is AccessControl, ERC1155Holder {
     struct InvestedAmountInfo {
         uint256 investedAmount;
         uint256 wLANDAmount;
+        uint256 wWISDOWToClaim;
         uint256 remainingAmount;
         uint256 claimedAmount;
         uint256 nextBlock;
@@ -46,13 +50,18 @@ contract APWarsLandPrivateSale is AccessControl, ERC1155Holder {
 
     uint256 public wLANDSoldAmount;
     mapping(address => bool) public whitelist;
+    mapping(address => uint256) public whitelistAmount;
+    mapping(address => bool) public whitelistPriority;
     mapping(address => InvestedAmountInfo) public shares;
     address[] public buyers;
     address public collectibles;
     address public wLAND;
+    address public wWISDOW;
     address public busd;
     address public dev;
-    uint256 public cliffStartBlock = 0;
+    uint256 public privateSaleEndBlock = 0;
+    uint256 public cliffEndBlock = 0;
+    uint256 public priorityEndBlock = 0;
     uint256 public worldTicketId = 0;
     uint256 public clanTicketId = 0;
     uint256 public nextBlockToClaim = 0;
@@ -67,10 +76,12 @@ contract APWarsLandPrivateSale is AccessControl, ERC1155Holder {
 
     event NewSell(address indexed sender, uint256 amount);
     event NewWorldTicket(address indexed sender);
-    event NewWClanTicket(address indexed sender);
+    event NewwWISDOWClaim(address indexed sender, uint256 amount);
+    event NewClanTicket(address indexed sender);
     event NewWorldTicketClaim(address indexed sender, uint256 amount);
     event NewClanTicketClaim(address indexed sender, uint256 amount);
-    event NewClaim(
+    event RemainingAmountWithdrawn(address indexed sender, uint256 amount);
+    event NewwLANDClaim(
         address indexed sender,
         uint256 block,
         uint256 unlockedBlock,
@@ -85,25 +96,75 @@ contract APWarsLandPrivateSale is AccessControl, ERC1155Holder {
 
     constructor(
         address _wLAND,
+        address _wWISDOW,
         address _busd,
         address _collectibles,
         uint256 _worldTicketId,
         uint256 _clanTicketId,
         address _dev,
-        uint256 _cliffStartBlock,
-        uint256 _vestingIntervalInBlocks
+        uint256 _cliffEndBlock,
+        uint256 _privateSaleEndBlock,
+        uint256 _vestingIntervalInBlocks,
+        uint256 _priorityEndBlock
     ) {
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
         _setupRole(CONFIGURATOR_ROLE, _msgSender());
 
         wLAND = _wLAND;
+        wWISDOW = _wWISDOW;
         collectibles = _collectibles;
         busd = _busd;
         dev = _dev;
-        cliffStartBlock = _cliffStartBlock;
+        cliffEndBlock = _cliffEndBlock;
+        privateSaleEndBlock = _privateSaleEndBlock;
         vestingIntervalInBlocks = _vestingIntervalInBlocks;
         worldTicketId = _worldTicketId;
         clanTicketId = _clanTicketId;
+        priorityEndBlock = _priorityEndBlock;
+    }
+
+    function getAvailableAmounts(uint256 _wLANDSoldAmount)
+        public
+        view
+        returns (uint256[3] memory availableAmounts)
+    {
+        uint256 level = 500000 * 10**18;
+        availableAmounts[0] = level;
+        availableAmounts[1] = level;
+        availableAmounts[2] = MAX_AVAILABLE_SUPPLY.sub(level).sub(level);
+
+        if (_wLANDSoldAmount >= level && _wLANDSoldAmount < level * 2) {
+            availableAmounts[0] = 0;
+            availableAmounts[1] = (level * 2).sub(_wLANDSoldAmount);
+        } else if (_wLANDSoldAmount >= level * 2) {
+            availableAmounts[0] = 0;
+            availableAmounts[1] = 0;
+            availableAmounts[2] = (level * 3).sub(_wLANDSoldAmount);
+        } else {
+            availableAmounts[0] = level.sub(_wLANDSoldAmount);
+        }
+    }
+
+    function getAmountsByPackage(uint256 _wLANDSoldAmount, uint256 _amount)
+        public
+        view
+        returns (uint256[3] memory amounts)
+    {
+        uint256[3] memory availableAmounts = getAvailableAmounts(
+            _wLANDSoldAmount
+        );
+
+        uint256 remainingAmount = _amount;
+
+        for (uint256 i = 0; i < 3; i++) {
+            if (availableAmounts[i] > remainingAmount) {
+                amounts[i] = remainingAmount;
+                remainingAmount = 0;
+            } else {
+                amounts[i] = availableAmounts[i];
+                remainingAmount = remainingAmount.sub(availableAmounts[i]);
+            }
+        }
     }
 
     function getBUSDwLANDPriceAmount(uint256 _wLANDSoldAmount, uint256 _amount)
@@ -111,50 +172,33 @@ contract APWarsLandPrivateSale is AccessControl, ERC1155Holder {
         view
         returns (uint256)
     {
-        uint256 firstPackageAmount = 0;
-        uint256 secondPackageAmount = 0;
-        uint256 thirdPackageAmount = 0;
-
-        uint256 level = _wLANDSoldAmount;
-        uint256 remainingAmount = _amount;
-
-        if (remainingAmount.add(level) > SECOND_PACKAGE_TARGET) {
-            firstPackageAmount = SECOND_PACKAGE_TARGET.sub(level);
-            remainingAmount = remainingAmount.sub(firstPackageAmount);
-            level = level.add(firstPackageAmount);
-        } else {
-            firstPackageAmount = remainingAmount;
-            remainingAmount = 0;
-        }
-
-        if (remainingAmount > 0) {
-            if (remainingAmount.add(level) > THIRD_PACKAGE_TARGET) {
-                secondPackageAmount = THIRD_PACKAGE_TARGET.sub(level);
-                remainingAmount = remainingAmount.sub(secondPackageAmount);
-                level = level.add(secondPackageAmount);
-            } else {
-                secondPackageAmount = remainingAmount;
-                remainingAmount = 0;
-            }
-
-            thirdPackageAmount = remainingAmount;
-        }
+        uint256[3] memory amounts = getAmountsByPackage(
+            _wLANDSoldAmount,
+            _amount
+        );
 
         return
-            firstPackageAmount
+            amounts[0]
                 .mul(FIRST_PACKAGE_PRICE)
-                .add(secondPackageAmount.mul(SECOND_PACKAGE_PRICE))
-                .add(thirdPackageAmount.mul(THIRD_PACKAGE_PRICE))
+                .add(amounts[1].mul(SECOND_PACKAGE_PRICE))
+                .add(amounts[2].mul(THIRD_PACKAGE_PRICE))
                 .div(ONE_HUNDRED_PERCENT);
     }
 
-    function setupWhiteList(address[] calldata _whitelist, bool _value)
-        public
-        onlyRole(CONFIGURATOR_ROLE)
-    {
+    function setupWhitelist(
+        address[] calldata _whitelist,
+        uint256[] calldata _amount,
+        bool _value
+    ) public onlyRole(CONFIGURATOR_ROLE) {
         for (uint256 i = 0; i < _whitelist.length; i++) {
             whitelist[_whitelist[i]] = _value;
+            whitelistAmount[_whitelist[i]] = _amount[i];
+            whitelistPriority[_whitelist[i]] = _value;
         }
+    }
+
+    function checkWhitelist(address _address) public view returns (bool) {
+        return whitelist[_address];
     }
 
     function buyClanTicket() public {
@@ -169,8 +213,15 @@ contract APWarsLandPrivateSale is AccessControl, ERC1155Holder {
         );
 
         require(
-            block.number <= cliffStartBlock,
+            block.number <= privateSaleEndBlock,
             "APWarsLandPrivateSale:PRIVATE_SALE_ENDED"
+        );
+
+        IERC1155 token = IERC1155(collectibles);
+
+        require(
+            token.balanceOf(address(this), clanTicketId) > worldTicketsCount,
+            "APWarsLandPrivateSale:CLAN_TICKET_SOLD_OUT"
         );
 
         clanTicketOwners[msg.sender] = clanTicketOwners[msg.sender].add(1);
@@ -185,8 +236,8 @@ contract APWarsLandPrivateSale is AccessControl, ERC1155Holder {
             "APWarsLandPrivateSale:SENDER_IS_NOT_WHITELISTED"
         );
         require(
-            block.number > cliffStartBlock,
-            "APWarsLandPrivateSale:PRIVATE_SALE_NOT_ENDED"
+            block.number > cliffEndBlock,
+            "APWarsLandPrivateSale:CLIFF_NOT_ENDED"
         );
         require(
             !clanTicketOwnersClaims[msg.sender],
@@ -218,8 +269,15 @@ contract APWarsLandPrivateSale is AccessControl, ERC1155Holder {
         );
 
         require(
-            block.number <= cliffStartBlock,
+            block.number <= privateSaleEndBlock,
             "APWarsLandPrivateSale:PRIVATE_SALE_ENDED"
+        );
+
+        IERC1155 token = IERC1155(collectibles);
+
+        require(
+            token.balanceOf(address(this), worldTicketId) > worldTicketsCount,
+            "APWarsLandPrivateSale:WOLRD_TICKET_SOLD_OUT"
         );
 
         worldTicketOwners[msg.sender] = worldTicketOwners[msg.sender].add(1);
@@ -228,14 +286,34 @@ contract APWarsLandPrivateSale is AccessControl, ERC1155Holder {
         emit NewWorldTicket(msg.sender);
     }
 
+    function getAvailableWorldTickets() public view returns (uint256) {
+        IERC1155 token = IERC1155(collectibles);
+        return
+            token.balanceOf(address(this), worldTicketId) >= worldTicketsCount
+                ? token.balanceOf(address(this), worldTicketId).sub(
+                    worldTicketsCount
+                )
+                : 0;
+    }
+
+    function getAvailableClanTickets() public view returns (uint256) {
+        IERC1155 token = IERC1155(collectibles);
+        return
+            token.balanceOf(address(this), clanTicketId) >= worldTicketsCount
+                ? token.balanceOf(address(this), clanTicketId).sub(
+                    clanTicketsCount
+                )
+                : 0;
+    }
+
     function claimWorldTicket() public {
         require(
             whitelist[msg.sender],
             "APWarsLandPrivateSale:SENDER_IS_NOT_WHITELISTED"
         );
         require(
-            block.number > cliffStartBlock,
-            "APWarsLandPrivateSale:PRIVATE_SALE_NOT_ENDED"
+            block.number > cliffEndBlock,
+            "APWarsLandPrivateSale:CLIFF_NOT_ENDED"
         );
         require(
             !worldTicketOwnersClaims[msg.sender],
@@ -256,19 +334,29 @@ contract APWarsLandPrivateSale is AccessControl, ERC1155Holder {
     }
 
     function buywLAND(uint256 _amount) public {
+        require(_amount > 0, "APWarsLandPrivateSale:INVALID_AMOUNT");
+
         require(
             whitelist[msg.sender],
             "APWarsLandPrivateSale:SENDER_IS_NOT_WHITELISTED"
         );
 
         require(
-            _amount.add(wLANDSoldAmount) < MAX_SUPPLY,
-            "APWarsLandPrivateSale:MAX_SUPPLY"
+            _amount.add(wLANDSoldAmount) < MAX_AVAILABLE_SUPPLY,
+            "APWarsLandPrivateSale:MAX_AVAILABLE_SUPPLY"
         );
 
         require(
-            block.number <= cliffStartBlock,
+            block.number <= privateSaleEndBlock,
             "APWarsLandPrivateSale:PRIVATE_SALE_ENDED"
+        );
+
+        require(
+            (block.number <= priorityEndBlock &&
+                whitelistAmount[msg.sender] == _amount &&
+                whitelistPriority[msg.sender]) ||
+                block.number > priorityEndBlock,
+            "APWarsLandPrivateSale:PRIORITY_LEVEL"
         );
 
         uint256 busdAmount = getBUSDwLANDPriceAmount(wLANDSoldAmount, _amount);
@@ -282,12 +370,18 @@ contract APWarsLandPrivateSale is AccessControl, ERC1155Holder {
             _amount
         );
         shares[msg.sender].remainingAmount = shares[msg.sender].wLANDAmount;
+        shares[msg.sender].wWISDOWToClaim = shares[msg.sender]
+            .wWISDOWToClaim
+            .add(_amount.div(WWISDOW_RATIO));
         shares[msg.sender].investedAmount = shares[msg.sender]
             .investedAmount
             .add(busdAmount);
-        shares[msg.sender].nextBlock = cliffStartBlock;
+        shares[msg.sender].nextBlock = cliffEndBlock;
 
         investedAmount = investedAmount.add(busdAmount);
+        wLANDSoldAmount = wLANDSoldAmount.add(_amount);
+
+        whitelistPriority[msg.sender] = false;
 
         require(
             IERC20(busd).transferFrom(msg.sender, dev, busdAmount),
@@ -295,6 +389,26 @@ contract APWarsLandPrivateSale is AccessControl, ERC1155Holder {
         );
 
         emit NewSell(msg.sender, _amount);
+    }
+
+    function claimwWISDOW() public {
+        InvestedAmountInfo storage info = shares[msg.sender];
+
+        require(
+            info.wWISDOWToClaim > 0,
+            "APWarsLandPrivateSale:NOTHING_TO_CLAIM"
+        );
+
+        require(
+            investedAmount >= SOFT_CAP,
+            "APWarsLandPrivateSale:OPENED_SOFT_CAP"
+        );
+
+        uint256 amount = info.wWISDOWToClaim;
+        IAPWarsMintableToken(wWISDOW).mint(msg.sender, amount);
+        info.wWISDOWToClaim = 0;
+
+        emit NewwWISDOWClaim(msg.sender, amount);
     }
 
     function claimwLAND() public {
@@ -321,14 +435,39 @@ contract APWarsLandPrivateSale is AccessControl, ERC1155Holder {
         info.nextBlock = info.nextBlock.add(vestingIntervalInBlocks);
         info.claims = info.claims.add(1);
 
-        IERC20(wLAND).transfer(msg.sender, amount);
+        IERC20 token = IERC20(wLAND);
 
-        emit NewClaim(
+        if (amount > token.balanceOf(address(this))) {
+            token.transfer(msg.sender, token.balanceOf(address(this)));
+        } else {
+            token.transfer(msg.sender, amount);
+        }
+
+        emit NewwLANDClaim(
             msg.sender,
             block.number,
             info.nextBlock,
             amount,
             info.remainingAmount
         );
+    }
+
+    function withdrawRemainingwLand() public onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(
+            block.number > privateSaleEndBlock,
+            "APWarsLandPrivateSale:PRIVATE_SALE_NOT_ENDED"
+        );
+
+        uint256 amount = MAX_SUPPLY.sub(wLANDSoldAmount);
+
+        IERC20 token = IERC20(wLAND);
+
+        if (amount > token.balanceOf(address(this))) {
+            amount = token.balanceOf(address(this));
+        }
+
+        token.transfer(msg.sender, amount);
+
+        emit RemainingAmountWithdrawn(msg.sender, amount);
     }
 }

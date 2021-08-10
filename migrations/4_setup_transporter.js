@@ -3,6 +3,10 @@ const APWarsCollectibles = artifacts.require("APWarsCollectibles");
 const APWarsNFTTransporter = artifacts.require("APWarsNFTTransporter");
 
 module.exports = async (deployer, network, accounts) => {
+  if (process.env.SKIP_MIGRATION === 'true') {
+    return;
+  }
+  
   const collectibles = await APWarsCollectibles.deployed();
   await deployer.deploy(APWarsNFTTransporter);
   const transporter = await APWarsNFTTransporter.deployed();
