@@ -137,7 +137,7 @@ contract APWarsLandPrivateSale is AccessControl, ERC1155Holder {
         uint256 _privateSaleEndBlock,
         uint256 _vestingIntervalInBlocks,
         uint256 _priorityEndBlock
-    ) public  onlyRole(DEFAULT_ADMIN_ROLE) {
+    ) public onlyRole(DEFAULT_ADMIN_ROLE) {
         wLAND = _wLAND;
         wWISDOW = _wWISDOW;
         collectibles = _collectibles;

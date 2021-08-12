@@ -56,7 +56,7 @@ const deployContracts = async (accounts, priorityEndBlock, internal, cliff, priv
   console.log('privateSale', privateSale.address);
 }
 
-contract.only('APWarswLANDPrivateSale deployment', accounts => {
+contract('APWarswLANDPrivateSale deployment', accounts => {
   it('should deploy the contracts', async () => {
     await deployContracts(accounts, 20, 50, 200, 100);
   });

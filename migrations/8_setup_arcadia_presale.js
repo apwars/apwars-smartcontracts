@@ -25,12 +25,12 @@ module.exports = async (deployer, network, accounts) => {
   // bsusdToken = "0xe9e7cea3dedca5984780bafc599bd69add087d56";
   const busdAddress = busd.address; // bsusdToken; //
 
-  const HOUR_INBLOCK = 3600 / 3 / 6;
+  const HOUR_INBLOCK = 3600 / 3 / 4;
   const blockNumber = await web3.eth.getBlockNumber();
 
-  const worldTicketId = 59;
+  const worldTicketId = 65;
   const worldTicketAmount = 2;
-  const clanTicketId = 60;
+  const clanTicketId = 66;
   const clanTicketAmount = 49;
   const dev = getContracts.devAddress;
   const cliffEndBlock = blockNumber + (HOUR_INBLOCK * 2);
@@ -79,7 +79,6 @@ module.exports = async (deployer, network, accounts) => {
   console.log("");
   console.log("setup");
   console.log({
-    APWarsLandPrivateSale,
     wLANDAddress: wLAND.address,
     wWISDOWAddress: wWISDOW.address,
     busdAddress,
