@@ -109,7 +109,34 @@ contract APWarsLandPrivateSale is AccessControl, ERC1155Holder {
     ) {
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
         _setupRole(CONFIGURATOR_ROLE, _msgSender());
+        setup(
+            _wLAND,
+            _wWISDOW,
+            _busd,
+            _collectibles,
+            _worldTicketId,
+            _clanTicketId,
+            _dev,
+            _cliffEndBlock,
+            _privateSaleEndBlock,
+            _vestingIntervalInBlocks,
+            _priorityEndBlock
+        );
+    }
 
+    function setup (
+        address _wLAND,
+        address _wWISDOW,
+        address _busd,
+        address _collectibles,
+        uint256 _worldTicketId,
+        uint256 _clanTicketId,
+        address _dev,
+        uint256 _cliffEndBlock,
+        uint256 _privateSaleEndBlock,
+        uint256 _vestingIntervalInBlocks,
+        uint256 _priorityEndBlock
+    ) public  onlyRole(DEFAULT_ADMIN_ROLE) {
         wLAND = _wLAND;
         wWISDOW = _wWISDOW;
         collectibles = _collectibles;
