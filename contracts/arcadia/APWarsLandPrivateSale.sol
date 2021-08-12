@@ -11,6 +11,7 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 
 import "./IAPWarsMintableToken.sol";
 
+//
 contract APWarsLandPrivateSale is AccessControl, ERC1155Holder {
     bytes32 public constant CONFIGURATOR_ROLE = keccak256("CONFIGURATOR_ROLE");
     using SafeMath for uint256;
