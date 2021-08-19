@@ -85,8 +85,6 @@ module.exports = async (deployer, network, accounts) => {
   console.log('_______________________________');
   console.log('wGOLD:', wGOLD.address);
   console.log('WarMachine:', warMachine.address);
-  console.log('BurnManager:', burnManager.address);
-  console.log('Collectibles:', collectibles.address);
 
   console.log("\nHumans:");
   console.log('_______________________________');
