@@ -1,6 +1,6 @@
 const APWarsBaseToken = artifacts.require("APWarsBaseToken");
 const APWarsLandToken = artifacts.require("APWarsLandToken");
-const APWarsWisdowToken = artifacts.require('APWarsWisdowToken');
+const APWarsWisdomToken = artifacts.require('APWarsWisdomToken');
 const APWarsLandPrivateSale = artifacts.require("APWarsLandPrivateSale");
 const Collectibles = artifacts.require('APWarsCollectibles');
 const contracts = require('../data/contracts');
@@ -16,7 +16,7 @@ module.exports = async (deployer, network, accounts) => {
   const contractCollectibles = getContracts.APWarsCollectiblesTest;
   const collectibles = await Collectibles.at(contractCollectibles);
 
-  const wWISDOW = await APWarsWisdowToken.new('wWISDOW', 'wWISDOW');
+  const wWISDOM = await APWarsWisdomToken.new('wWISDOM', 'wWISDOM');
 
   const busd = await APWarsBaseToken.new('BUSD', 'BUSD');
   await busd.mint('0xf6375FfD609Fa886803C27260d872CcCfA7d9257', web3.utils.toWei('10000000', 'ether'));
@@ -49,7 +49,7 @@ module.exports = async (deployer, network, accounts) => {
   await deployer.deploy(
     APWarsLandPrivateSale,
     wLAND.address,
-    wWISDOW.address,
+    wWISDOM.address,
     busdAddress,
     contractCollectibles,
     worldTicketId,
@@ -62,7 +62,7 @@ module.exports = async (deployer, network, accounts) => {
   const landPrivateSale = await APWarsLandPrivateSale.deployed();
 
   await wLAND.transfer(landPrivateSale.address, web3.utils.toWei('1500000', 'ether'));
-  await wWISDOW.grantRole(await wWISDOW.MINTER_ROLE(), landPrivateSale.address);
+  await wWISDOM.grantRole(await wWISDOM.MINTER_ROLE(), landPrivateSale.address);
 
   /* transfer collectibles */
   await collectibles.safeTransferFrom(accounts[0], landPrivateSale.address, worldTicketId, worldTicketAmount, "0x0", {
@@ -73,14 +73,14 @@ module.exports = async (deployer, network, accounts) => {
   });
 
   console.log(`\n wLAND: ${wLAND.address}`);
-  console.log(`\n wWISDOW: ${wWISDOW.address}`);
+  console.log(`\n wWISDOM: ${wWISDOM.address}`);
   console.log(`\n busd: ${busdAddress}`);
   console.log(`landPrivateSale: ${landPrivateSale.address}`);
   console.log("");
   console.log("setup");
   console.log({
     wLANDAddress: wLAND.address,
-    wWISDOWAddress: wWISDOW.address,
+    wWISDOMAddress: wWISDOM.address,
     busdAddress,
     contractCollectibles,
     worldTicketId,
