@@ -5,6 +5,10 @@ const Collectibles = artifacts.require('APWarsCollectibles');
 const BurnManager = artifacts.require('APWarsBurnManagerV2');
 
 module.exports = async (deployer, network, accounts) => {
+  if (process.env.SKIP_MIGRATION === 'true') {
+    return;
+  }
+  
   const externalRandomSource = '0x019f7d857c47a36ffce885e3978b815ae7b7b5b6f52fff6dae164a3845ad7eff';
 
   await deployer.deploy(APWarsGoldToken, "wGOLD", "wGOLD");
