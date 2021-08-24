@@ -25,6 +25,8 @@ https://www.apwars.farm Feel free to read the code. More details coming soon.
 - wUNDEAD-ARCHER: https://bscscan.com/token/0xd048cDf2e870E60D46527463a14aEFC0377D754c
 - wUNDEAD-PIKEMAN: https://bscscan.com/token/0x8b394cfAeBA9812801C92388570C95208Ad1300D
 - wWITCH: https://bscscan.com/token/0x2a63DDDD2c0ba10F465080a06563aF3acb5d1d3c
+- wPIKE-ELF	https://bscscan.com/token/0xa248284fB4E3E58400644dc4Cd37410F8AB31266
+- wELVEN-ARCHER https://bscscan.com/token/0x804e7030F932CA06DEe7bC08051f1123898ceF5d
 
 ------------
 
@@ -47,3 +49,5 @@ https://www.apwars.farm Feel free to read the code. More details coming soon.
 - wUNDEAD-ARCHER Farm Manager (MasterChef) - https://bscscan.com/address/0x550a370BDb1342Ea1024Ec7F67534f64EE4b35c3
 - wUNDEAD-PIKEMAN Farm Manager (MasterChef) - https://bscscan.com/address/0x4Fb3fD5c747d900Cf8Ef9846D9898D4542521B44
 - wWITCH Farm Manager (MasterChef) - https://bscscan.com/address/0xbaCA24eDAB5A5c4028edbCdc7ba855E5FFD091dE
+- wPIKE-ELF Farm Manager (MasterChef) - https://bscscan.com/address/0xAef96D25b95dB95dDE79f63681C6427452939e6d
+- wELVEN-ARCHER Farm Manager (MasterChef) - https://bscscan.com/address/0x775d7a91148771ba2aae7f2098113e008520bebf
