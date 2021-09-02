@@ -4,6 +4,10 @@ const contracts = require('../data/contracts');
 
 module.exports = async (deployer, network, accounts) => {
 
+  if (process.env.SKIP_MIGRATION === 'true') {
+    return;
+  }
+
   const getContracts = contracts(network);
 
   const INITIAL_MINT = web3.utils.toWei("1000", "ether");
@@ -16,25 +20,47 @@ module.exports = async (deployer, network, accounts) => {
   const WITH_UPDATE = true;
 
   const troops = [
+    // {
+    //   name: "wPIKE-ELF",
+    //   strength: 6,
+    //   defense: 10,
+    //   improvement: 0,
+    //   unitToken: {},
+    //   farmManagerV3: {},
+    //   tokenPerBlock: web3.utils.toWei("2", "ether"),
+    //   startBlock: 0,
+    //   lpToken: wGOLD,
+    // },
+    // {
+    //   name: "wELVEN-ARCHER",
+    //   strength: 12,
+    //   defense: 6,
+    //   improvement: 0,
+    //   unitToken: {},
+    //   farmManagerV3: {},
+    //   tokenPerBlock: web3.utils.toWei("2", "ether"),
+    //   startBlock: 0,
+    //   lpToken: wGOLD,
+    // },
     {
-      name: "wPIKE-ELF",
-      strength: 6,
-      defense: 10,
+      name: "wARMORED-ELF",
+      strength: 25,
+      defense: 25,
       improvement: 0,
       unitToken: {},
       farmManagerV3: {},
-      tokenPerBlock: web3.utils.toWei("2", "ether"),
+      tokenPerBlock: web3.utils.toWei("1", "ether"),
       startBlock: 0,
       lpToken: wGOLD,
     },
     {
-      name: "wELVEN-ARCHER",
-      strength: 12,
-      defense: 6,
+      name: "wBLADEMASTER",
+      strength: 40,
+      defense: 10,
       improvement: 0,
       unitToken: {},
       farmManagerV3: {},
-      tokenPerBlock: web3.utils.toWei("2", "ether"),
+      tokenPerBlock: web3.utils.toWei("1", "ether"),
       startBlock: 0,
       lpToken: wGOLD,
     },
