@@ -12,7 +12,7 @@ module.exports = async (deployer, network, accounts) => {
   const wGOLD = "0x7Ab6eedd9443e0e98E5Ea93667CA5B250b8ddA51";
   const wCOURAGE = "0x5f51a3ce7f2233777328866f477e86a91ca9ddec";
   const LP_TOKEN = wCOURAGE;
-  const BURN_MANAGER = "0xBeC25BD8b102761ab70bd821181A4F679C6EdC58";
+  const BURN_MANAGER = "0x192530A89FF2ADDD01A487aD6a41c8dCE3B5Ca26";
   const WITH_UPDATE = true;
 
   const troops = [

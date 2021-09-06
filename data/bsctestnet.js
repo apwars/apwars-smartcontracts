@@ -11,6 +11,8 @@ module.exports = {
   devAddress: '0xC80F0F04b04608Fc68Ba6Ba67fCAE11C0eadA10F',
   APWarsMarketNFTSwapEscrow: '0x772E7CdA35E8B8eCad250888C364e1B538fb0162',
   APWarsNFTTransporter: '0x674ED40E9B9caC70819B34188e60b4f9D7042C32',
+  APWarsCombinator: '0xCAE00ce5282CF2b559BC45f17c47b2f5d3E20244',
+  APWarsCombinatorManager: '0x48C3aCFd578D3Eb07E2eA01d9e08E432B48d9C74',
 
   units: [
     {
@@ -177,6 +179,39 @@ module.exports = {
       tierDesc: 'Arcane Library',
       name: 'wWITCH',
       contract: '0xB80797707aa7b6663d87cc4Cd754DC0F206c6eB3'
+    },
+        {
+      id: 15,
+      team: 1,
+      teamDesc: 'The Corporation',
+      race: 1,
+      raceDesc: 'Humans',
+      tier: 4,
+      tierDesc: 'Stables',
+      name: "wHORSEMAN",
+      contract: "0xC523c0a1DC59B00efEbDdD6a527CDf44269E16Dd",
+    },
+    {
+      id: 16,
+      team: 2,
+      teamDesc: 'The Degenerate',
+      race: 2,
+      raceDesc: 'Orcs',
+      tier: 4,
+      tierDesc: 'Stables',
+      name: "wWARG",
+      contract: "0x1E3d19Eb941B20eC6Ee5BD81Ff089529CB9563F4",
+    },
+    {
+      id: 17,
+      team: 2,
+      teamDesc: 'The Degenerate',
+      race: 2,
+      raceDesc: 'Undead',
+      tier: 4,
+      tierDesc: 'Stables',
+      name: "wDEATH-KNIGHT",
+      contract: "0x2BCEb0E99B9Eb54540aE32F3d5278e19829466ae",
     },
   ]
 };

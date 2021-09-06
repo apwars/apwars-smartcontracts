@@ -11,6 +11,9 @@ module.exports = {
   devAddress: '0x63ada67b95de4fa6fedcbd5435cf40bdeeb55fb6',
   APWarsMarketNFTSwapEscrow: '0x8FCC46678541C07341b62A23A0efDE7A237D3A61',
   APWarsNFTTransporter: '0x31c6bba549586ca05f1ed5cdd845381b15179053',
+  APWarsCombinator: '0x4311C6e36FaAD6B3Cd5bf4A73fc273A02b32Ec46',
+  APWarsCombinatorManager: '0xb0b94d8689ff562c81727a166508865ca1540330',
+
   units: [
     {
       id: 0,
