@@ -3,10 +3,9 @@ const APWarsFarmManagerV3 = artifacts.require("APWarsFarmManagerV3");
 const contracts = require('../data/contracts');
 
 module.exports = async (deployer, network, accounts) => {
-
-  // if (process.env.SKIP_MIGRATION === 'true') {
-  //   return;
-  // }
+  if (process.env.SKIP_MIGRATION === 'true') {
+    return;
+  }
 
   const getContracts = contracts(network);
 

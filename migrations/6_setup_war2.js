@@ -2,6 +2,9 @@ const APWarsWarMachineV2 = artifacts.require("APWarsWarMachineV2");
 const contracts = require('../data/contracts');
 
 module.exports = async (deployer, network, accounts) => {
+  if (process.env.SKIP_MIGRATION === 'true') {
+    return;
+  }
 
   const getContracts = contracts(network);
 
