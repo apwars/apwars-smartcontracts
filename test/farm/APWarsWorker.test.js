@@ -16,6 +16,8 @@ contract('APWarsWorker', accounts => {
     worker = await APWarsWorker.new();
 
     await collectibles.mint(worker.address, 10, 100, '0x0');
+    await collectibles.mint(accounts[2], 1, 100, '0x0');
+    await collectibles.mint(accounts[3], 2, 100, '0x0');
 
     await worker.setup(
       10,
@@ -25,7 +27,7 @@ contract('APWarsWorker', accounts => {
       collectibles.address
     );
 
-    await workerManager.setup(10, 1, 100);
+    await workerManager.setup(10, 1, 100, collectibles.address, [1, 2]);
     
     await worker.claim({ from: accounts[1] });
     
@@ -37,7 +39,7 @@ contract('APWarsWorker', accounts => {
     }
 
     for (i = 0; i < 10; i++) {
-      await workerManager.setup(10, 1, 100);
+      await workerManager.setup(10, 1, 100, collectibles.address, [1, 2]);
     }
 
     await worker.claim({ from: accounts[1] });
@@ -53,5 +55,9 @@ contract('APWarsWorker', accounts => {
 
     expect((await collectibles.balanceOf(accounts[1], 10)).toString()).to.be.equal("1");
     expect(account.amount.toString()).to.be.equal("1");
+
+    await worker.claim({ from: accounts[2] });
+    let account2 = await worker.accounts(accounts[2]);
+    expect(account2.amount.toString()).to.be.equal("2");
   });
 });
