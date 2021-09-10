@@ -1,0 +1,49 @@
+const APWarsWarMachineV2 = artifacts.require("APWarsWarMachineV2");
+const contracts = require('../data/contracts');
+
+module.exports = async (deployer, network, accounts) => {
+
+  const getContracts = contracts(network);
+
+  await deployer.deploy(APWarsWarMachineV2);
+  const warMachine = await APWarsWarMachineV2.new();
+  const externalRandomSource = '0x7aa8c713c524f009f59a8d85c6d9f5f47117f03d5a4df456dea6fec11796fd83';
+  const externalRandomSourceHash = await warMachine.hashExternalRandomSource(externalRandomSource);
+
+  const setup = {
+    wGOLD: getContracts.wGOLD,
+    burnManager: getContracts.APWarsBurnManager,
+    teamA: [],
+    teamB: [],
+    collectibles: getContracts.APWarsCollectibles,
+    collectiblesNFTs: [2, 3, 4, 5, 6],
+  }
+
+  getContracts.units.map(unit => {
+    if (unit.team === 1) {
+      setup.teamA.push(unit.contract);
+    }
+    if (unit.team === 2) {
+      setup.teamB.push(unit.contract);
+    }
+  });
+
+  await warMachine.setup(
+    setup.wGOLD,
+    setup.burnManager,
+    setup.teamA,
+    setup.teamB,
+    setup.collectibles,
+    setup.collectiblesNFTs
+  );
+
+  await warMachine.createWar('War#3', externalRandomSourceHash);
+
+  console.log('WarMachine:', warMachine.address);
+  console.log('externalRandomSource:', externalRandomSource);
+  console.log('externalRandomSourceHash:', externalRandomSourceHash);
+
+  console.log(setup);
+};
+
+
