@@ -1,12 +1,12 @@
-const APWarsWarMachineV2 = artifacts.require("APWarsWarMachineV2");
+const APWarsWarMachineV3 = artifacts.require("APWarsWarMachineV3");
 const contracts = require('../data/contracts');
 
 module.exports = async (deployer, network, accounts) => {
 
   const getContracts = contracts(network);
 
-  await deployer.deploy(APWarsWarMachineV2);
-  const warMachine = await APWarsWarMachineV2.new();
+  await deployer.deploy(APWarsWarMachineV3);
+  const warMachine = await APWarsWarMachineV3.new();
   const externalRandomSource = '0x7aa8c713c524f009f59a8d85c6d9f5f47117f03d5a4df456dea6fec11796fd83';
   const externalRandomSourceHash = await warMachine.hashExternalRandomSource(externalRandomSource);
 
@@ -37,7 +37,7 @@ module.exports = async (deployer, network, accounts) => {
     setup.collectiblesNFTs
   );
 
-  await warMachine.createWar('War#3', externalRandomSourceHash);
+  await warMachine.createWar('War3', externalRandomSourceHash);
 
   console.log('WarMachine:', warMachine.address);
   console.log('externalRandomSource:', externalRandomSource);

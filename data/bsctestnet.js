@@ -180,7 +180,7 @@ module.exports = {
       name: 'wWITCH',
       contract: '0xB80797707aa7b6663d87cc4Cd754DC0F206c6eB3'
     },
-        {
+    {
       id: 15,
       team: 1,
       teamDesc: 'The Corporation',
