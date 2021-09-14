@@ -60,4 +60,54 @@ contract('APWarsWorker', accounts => {
     let account2 = await worker.accounts(accounts[2]);
     expect(account2.amount.toString()).to.be.equal("2");
   });
+
+  it('should calculate next claim', async () => {
+    burnManager = await APWarsBurnManager.new();
+    collectibles = await APWarsCollectibles.new(burnManager.address, "URI");
+    workerManager = await APWarsWorkerManager.new();
+    worker = await APWarsWorker.new();
+
+    // 1000 blocks with 40% (4 workers * 10%) reduction goes to 600 blocks
+    // 600 blocks is greater than the minum blocks (200), the result must be 700
+    // (currentBlock + blocks)
+    let nextClaim = await worker.getNextClaim(
+      100, //uint256 currentBlock,
+      1000, //uint256 rate,
+      200, //uint256 minBlocks,
+      1000, //uint256 blocks,
+      4, //uint256 workersAmount
+    );
+
+    expect(nextClaim.toString()).to.be.equal("700", "fail to check #1");
+
+    nextClaim = await worker.getNextClaim(
+      100, //uint256 currentBlock,
+      1000, //uint256 rate,
+      200, //uint256 minBlocks,
+      1000, //uint256 blocks,
+      9, //uint256 workersAmount
+    );
+
+    expect(nextClaim.toString()).to.be.equal("300", "fail to check #2");
+
+    nextClaim = await worker.getNextClaim(
+      100, //uint256 currentBlock,
+      1000, //uint256 rate,
+      200, //uint256 minBlocks,
+      1000, //uint256 blocks,
+      12, //uint256 workersAmount
+    );
+
+    expect(nextClaim.toString()).to.be.equal("300", "fail to check #3");
+
+    nextClaim = await worker.getNextClaim(
+      50, //uint256 currentBlock,
+      10000, //uint256 rate,
+      50, //uint256 minBlocks,
+      1000, //uint256 blocks,
+      12, //uint256 workersAmount
+    );
+
+    expect(nextClaim.toString()).to.be.equal("100", "fail to check #4");
+  });
 });

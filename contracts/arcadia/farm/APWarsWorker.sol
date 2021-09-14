@@ -17,6 +17,7 @@ contract APWarsWorker is AccessControl, ERC1155Holder {
 
     struct AccountInfo {
         uint256 amount;
+        uint256 previousClaim;
         uint256 nextClaim;
     }
 
@@ -71,6 +72,27 @@ contract APWarsWorker is AccessControl, ERC1155Holder {
         );
     }
 
+    function getNextClaim(
+        uint256 currentBlock,
+        uint256 rate,
+        uint256 minBlocks,
+        uint256 blocks,
+        uint256 workersAmount
+    ) public pure returns (uint256) {
+        uint256 reduction = blocks.mul(rate.mul(workersAmount)).div(
+            ONE_HUNDRED_PERCENT
+        );
+
+        uint256 newBlockInterval = reduction > blocks
+            ? minBlocks
+            : blocks.sub(reduction);
+
+        return
+            (newBlockInterval < minBlocks ? minBlocks : newBlockInterval).add(
+                currentBlock
+            );
+    }
+
     function claim() public {
         AccountInfo storage info = accounts[msg.sender];
         IAPWarsWorkerManager workerManager = IAPWarsWorkerManager(
@@ -82,16 +104,14 @@ contract APWarsWorker is AccessControl, ERC1155Holder {
 
         require(block.number >= info.nextClaim, "APWarsWorker:INVALID_BLOCK");
 
-        uint256 reduction = blocks.mul(reductionRate.mul(info.amount)).div(
-            ONE_HUNDRED_PERCENT
+        info.previousClaim = block.number;
+        info.nextClaim = getNextClaim(
+            block.number,
+            reductionRate,
+            minimumBlocks,
+            blocks,
+            info.amount
         );
-
-        if (reduction < minimumBlocks) {
-            info.nextClaim = block.number.add(minimumBlocks);
-        } else {
-            info.nextClaim = block.number.add(blocks).sub(reduction);
-        }
-
         info.amount = info.amount.add(reward);
 
         workerManager.onClaim(msg.sender, address(this));

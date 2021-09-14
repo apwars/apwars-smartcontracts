@@ -2,7 +2,10 @@ const APWarsUnitToken = artifacts.require("APWarsUnitToken");
 const APWarsFarmManagerV3 = artifacts.require("APWarsFarmManagerV3");
 
 module.exports = async (deployer, network, accounts) => {
-
+  if (process.env.SKIP_MIGRATION === 'true') {
+    return;
+  }
+  
   const INITIAL_MINT = web3.utils.toWei("1000", "ether");
   const DEV_ADDR = "0x63ada67b95de4fa6fedcbd5435cf40bdeeb55fb6"; // accounts[8];
   // const FEE_ADDRESS = accounts[9];
