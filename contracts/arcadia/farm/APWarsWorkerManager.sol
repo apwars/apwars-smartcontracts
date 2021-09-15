@@ -16,6 +16,14 @@ contract APWarsWorkerManager is IAPWarsWorkerManager, AccessControl {
     address public collectibles;
     uint256[] public gameItems;
 
+    event NewSetup(
+        uint256 defaultBlocks,
+        uint256 defaultReward,
+        uint256 defaultLimit,
+        address collectibles,
+        uint256[] _gameItems
+    );
+
     constructor() {
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
         _setupRole(CONFIGURATOR_ROLE, _msgSender());
@@ -41,6 +49,14 @@ contract APWarsWorkerManager is IAPWarsWorkerManager, AccessControl {
         defaultLimit = _defaultLimit;
         collectibles = _collectibles;
         gameItems = _gameItems;
+
+        emit NewSetup(
+            _defaultBlocks,
+            _defaultReward,
+            _defaultLimit,
+            _collectibles,
+            _gameItems
+        );
     }
 
     function getGeneralConfig(address _player, address _source)

@@ -104,6 +104,11 @@ contract APWarsWorker is AccessControl, ERC1155Holder {
 
         require(block.number >= info.nextClaim, "APWarsWorker:INVALID_BLOCK");
 
+        require(
+            limit == 0 || limit >= info.amount.add(reward),
+            "APWarsWorker:INVALID_LIMIT"
+        );
+
         info.previousClaim = block.number;
         info.nextClaim = getNextClaim(
             block.number,

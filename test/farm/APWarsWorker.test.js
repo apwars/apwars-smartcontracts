@@ -27,7 +27,7 @@ contract('APWarsWorker', accounts => {
       collectibles.address
     );
 
-    await workerManager.setup(10, 1, 100, collectibles.address, [1, 2]);
+    await workerManager.setup(10, 1, 2, collectibles.address, [1, 2]);
     
     await worker.claim({ from: accounts[1] });
     
@@ -39,7 +39,7 @@ contract('APWarsWorker', accounts => {
     }
 
     for (i = 0; i < 10; i++) {
-      await workerManager.setup(10, 1, 100, collectibles.address, [1, 2]);
+      await APWarsWorker.new();
     }
 
     await worker.claim({ from: accounts[1] });
@@ -49,6 +49,17 @@ contract('APWarsWorker', accounts => {
 
     expect((await collectibles.balanceOf(accounts[1], 10)).toString()).to.be.equal("0");
     expect((await collectibles.balanceOf(worker.address, 10)).toString()).to.be.equal("100");
+
+    for (i = 0; i < 10; i++) {
+      await APWarsWorker.new();
+    }
+
+    try {
+      await worker.claim({ from: accounts[1] });
+      throw {};
+    } catch (e) {
+      expect(e.reason).to.be.equal("APWarsWorker:INVALID_LIMIT");
+    }
 
     await worker.withdraw(accounts[1], 1, {from: accounts[1]});
     account = await worker.accounts(accounts[1]);
