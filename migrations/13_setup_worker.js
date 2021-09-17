@@ -18,7 +18,7 @@ module.exports = async (deployer, network, accounts) => {
   await deployer.deploy(APWarsWorkerManager);
   const workerManager = await APWarsWorkerManager.deployed();
 
-  const workerId = 45;
+  const workerId = 49;
   const minimumBlocks = 1200;
   const reductionRate = 1000;
 
