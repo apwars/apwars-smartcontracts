@@ -4,9 +4,9 @@ const Collectibles = artifacts.require('APWarsCollectibles');
 const contracts = require('../data/contracts');
 
 module.exports = async (deployer, network, accounts) => {
-  if (process.env.SKIP_MIGRATION === 'true') {
-    return;
-  }
+  // if (process.env.SKIP_MIGRATION === 'true') {
+  //   return;
+  // }
   
   const getContracts = contracts(network);
   const contractCollectibles = getContracts.APWarsCollectibles;
@@ -14,7 +14,7 @@ module.exports = async (deployer, network, accounts) => {
   const timeBlock = 30;
   const maxMultiple = 1;
   const isEnabled = true;
-  const newItems = [2, 3, 4, 5];
+  const newItems = [40, 41, 42, 43];
   const MAX_INT_NUMBER = web3.utils.toBN(2).pow(web3.utils.toBN(256)).sub(web3.utils.toBN(1)).toString();
   const amount = MAX_INT_NUMBER;
   
@@ -22,45 +22,45 @@ module.exports = async (deployer, network, accounts) => {
     {
       idCollectibles: newItems[0],
       idCollectiblesReceived: newItems[0],
-      tokenAQty: '1',
-      tokenBQty: '1000',
+      tokenAQty: '9000',
+      tokenBQty: '1',
       tokenABurningRate: '0',
-      tokenAFeeRate: '0',
-      tokenBBurningRate: '9000',
-      tokenBFeeRate: '1000',
+      tokenAFeeRate: '10000',
+      tokenBBurningRate: '0',
+      tokenBFeeRate: '0',
       maxMultiple: maxMultiple,
     },
     {
       idCollectibles: newItems[1],
       idCollectiblesReceived: newItems[1],
-      tokenAQty: '1',
-      tokenBQty: '1000',
+      tokenAQty: '900000',
+      tokenBQty: '1',
       tokenABurningRate: '0',
-      tokenAFeeRate: '0',
-      tokenBBurningRate: '9000',
-      tokenBFeeRate: '1000',
+      tokenAFeeRate: '10000',
+      tokenBBurningRate: '0',
+      tokenBFeeRate: '0',
       maxMultiple: maxMultiple,
     },
     {
       idCollectibles: newItems[2],
       idCollectiblesReceived: newItems[2],
-      tokenAQty: '1',
-      tokenBQty: '1000',
+      tokenAQty: '1800000',
+      tokenBQty: '1',
       tokenABurningRate: '0',
-      tokenAFeeRate: '0',
-      tokenBBurningRate: '9000',
-      tokenBFeeRate: '1000',
+      tokenAFeeRate: '10000',
+      tokenBBurningRate: '0',
+      tokenBFeeRate: '0',
       maxMultiple: maxMultiple,
     },
     {
       idCollectibles: newItems[3],
       idCollectiblesReceived: newItems[3],
-      tokenAQty: '1',
-      tokenBQty: '1000',
+      tokenAQty: '90000',
+      tokenBQty: '1',
       tokenABurningRate: '0',
-      tokenAFeeRate: '0',
-      tokenBBurningRate: '9000',
-      tokenBFeeRate: '1000',
+      tokenAFeeRate: '10000',
+      tokenBBurningRate: '0',
+      tokenBFeeRate: '0',
       maxMultiple: maxMultiple,
     },
   ];
@@ -110,17 +110,17 @@ module.exports = async (deployer, network, accounts) => {
     await combinatorManager.setupTokenA(
       idCombinator,
       setup.wCOURAGE,
-      web3.utils.toWei(unitInfo.tokenBQty, 'ether'),
-      unitInfo.tokenBBurningRate,
-      unitInfo.tokenBFeeRate,
+      web3.utils.toWei(unitInfo.tokenAQty, 'ether'),
+      unitInfo.tokenABurningRate,
+      unitInfo.tokenAFeeRate,
     );
     await combinatorManager.setupGameItemB(
       idCombinator,
       setup.collectibles,
       unitInfo.idCollectibles,
-      unitInfo.tokenAQty,
-      unitInfo.tokenABurningRate,
-      unitInfo.tokenAFeeRate,
+      unitInfo.tokenBQty,
+      unitInfo.tokenBBurningRate,
+      unitInfo.tokenBFeeRate,
     );
     await combinatorManager.setupGameItemC(
       idCombinator,

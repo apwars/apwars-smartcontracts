@@ -151,7 +151,7 @@ contract APWarsCombinatorTokenGameItem is AccessControl, ERC1155Holder {
         );
     }
 
-    function _processUnStake(uint256 _combinatorId, uint256 _multiple)
+    function _processUnstake(uint256 _combinatorId, uint256 _multiple)
         internal
     {
         IAPWarsCombinatorManager manager = IAPWarsCombinatorManager(
@@ -361,7 +361,7 @@ contract APWarsCombinatorTokenGameItem is AccessControl, ERC1155Holder {
             "APWarsCombinatorTokenGameItem:INVALID_CONFIG"
         );
 
-        _processUnStake(_combinatorId, claimable.multiple);
+        _processUnstake(_combinatorId, claimable.multiple);
 
         (address collectibles, uint256 id, uint256 amount, , ) = manager
             .getGameItemCConfig(msg.sender, address(this), _combinatorId);
@@ -412,7 +412,7 @@ contract APWarsCombinatorTokenGameItem is AccessControl, ERC1155Holder {
             "APWarsCombinatorTokenGameItem:INVALID_CONFIG"
         );
 
-        _processUnStake(_combinatorId, claimable.multiple);
+        _processUnstake(_combinatorId, claimable.multiple);
 
         (
             address tokenAddress,
