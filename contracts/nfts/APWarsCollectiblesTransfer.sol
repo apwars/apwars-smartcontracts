@@ -8,6 +8,14 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 contract APWarsCollectiblesTransfer is AccessControl {
     bytes32 public constant TRANSFER_ROLE = keccak256("TRANSFER_ROLE");
 
+    event NewTransfer(
+        address sender,
+        address from,
+        address to,
+        uint256 id,
+        uint256 amount
+    );
+
     constructor() {
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
         _setupRole(TRANSFER_ROLE, _msgSender());
@@ -29,6 +37,9 @@ contract APWarsCollectiblesTransfer is AccessControl {
         uint256 _amount,
         bytes memory _data
     ) public onlyRole(TRANSFER_ROLE) {
+        require(_from == tx.origin, "_from != tx.origin");
         _collectibles.safeTransferFrom(_from, _to, _id, _amount, _data);
+
+        emit NewTransfer(msg.sender, _from, _to, _id, _amount);
     }
 }
