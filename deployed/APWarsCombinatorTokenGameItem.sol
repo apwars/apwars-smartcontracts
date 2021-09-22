@@ -1645,7 +1645,10 @@ contract APWarsCombinatorTokenGameItem is AccessControl, ERC1155Holder {
     );
 
     modifier onlyRole(bytes32 role) {
-        require(hasRole(role, _msgSender()), "APWarsCombinatorTokenGameItem:INVALID_ROLE");
+        require(
+            hasRole(role, _msgSender()),
+            "APWarsCombinatorTokenGameItem:INVALID_ROLE"
+        );
         _;
     }
 
@@ -1674,7 +1677,7 @@ contract APWarsCombinatorTokenGameItem is AccessControl, ERC1155Holder {
         IAPWarsCombinatorManager manager = IAPWarsCombinatorManager(
             combinatorManagerAddress
         );
-        (uint256 blocks, uint256 maxMultiple, bool isEnabled) = manager
+        (, uint256 maxMultiple, bool isEnabled) = manager
             .getGeneralConfig(msg.sender, address(this), _combinatorId);
 
         require(isEnabled, "APWarsCombinatorTokenGameItem:DISABLED_COMBINATOR");
@@ -1696,9 +1699,7 @@ contract APWarsCombinatorTokenGameItem is AccessControl, ERC1155Holder {
         emit NewCombinator(msg.sender, _combinatorId, _multiple);
     }
 
-    function _processStake(uint256 _combinatorId, uint256 _multiple)
-        internal
-    {
+    function _processStake(uint256 _combinatorId, uint256 _multiple) internal {
         IAPWarsCombinatorManager manager = IAPWarsCombinatorManager(
             combinatorManagerAddress
         );
@@ -1738,6 +1739,32 @@ contract APWarsCombinatorTokenGameItem is AccessControl, ERC1155Holder {
             _combinatorId,
             block.number,
             _multiple
+        );
+    }
+
+    function _processUnstake(uint256 _combinatorId, uint256 _multiple)
+        internal
+    {
+        IAPWarsCombinatorManager manager = IAPWarsCombinatorManager(
+            combinatorManagerAddress
+        );
+
+        address tokenAddress;
+        uint256 id;
+        uint256 tokenAmount;
+        uint256 burningRate;
+        uint256 feeRate;
+
+        (tokenAddress, id, tokenAmount, burningRate, feeRate) = manager
+            .getGameItemBConfig(msg.sender, address(this), _combinatorId);
+        _transferGameItem(
+            msg.sender,
+            tokenAddress,
+            id,
+            tokenAmount,
+            _multiple,
+            burningRate,
+            feeRate
         );
     }
 
@@ -1851,7 +1878,7 @@ contract APWarsCombinatorTokenGameItem is AccessControl, ERC1155Holder {
         uint256 netAmount = totalAmount.sub(burnAmount).sub(feeAmount);
         if (netAmount > 0) {
             token.safeTransferFrom(
-                msg.sender,
+                address(this),
                 _player,
                 _id,
                 netAmount,
@@ -1873,20 +1900,18 @@ contract APWarsCombinatorTokenGameItem is AccessControl, ERC1155Holder {
         );
         Claimable storage claimable = combinators[_combinatorId][_player];
 
-        require(claimable.combinatorId > 0, "APWarsCombinatorTokenGameItem:INVALID_CONFIG");
-        
+        require(
+            claimable.combinatorId > 0,
+            "APWarsCombinatorTokenGameItem:INVALID_CONFIG"
+        );
+
         address tokenAddress;
-        uint256 id;
         uint256 tokenAmount;
         uint256 burningRate;
         uint256 feeRate;
 
-        (
-            tokenAddress,
-            tokenAmount,
-            burningRate,
-            feeRate
-        ) = manager.getTokenAConfig(_player, address(this), _combinatorId);
+        (tokenAddress, tokenAmount, burningRate, feeRate) = manager
+            .getTokenAConfig(_player, address(this), _combinatorId);
         _transfer(
             _player,
             tokenAddress,
@@ -1896,24 +1921,6 @@ contract APWarsCombinatorTokenGameItem is AccessControl, ERC1155Holder {
             feeRate,
             false,
             false
-        );
-
-        (
-            tokenAddress, 
-            id, 
-            tokenAmount, 
-            burningRate, 
-            feeRate
-        ) = manager
-            .getGameItemBConfig(_player, address(this), _combinatorId);
-        _transferGameItem(
-            _player,
-            tokenAddress,
-            id,
-            tokenAmount,
-            claimable.multiple,
-            burningRate,
-            feeRate
         );
     }
 
@@ -1940,7 +1947,12 @@ contract APWarsCombinatorTokenGameItem is AccessControl, ERC1155Holder {
             block.number.sub(claimable.startBlock) >= blocks,
             "APWarsCombinatorTokenGameItem:INVALID_BLOCK"
         );
-        require(claimable.combinatorId > 0, "APWarsCombinatorTokenGameItem:INVALID_CONFIG");
+        require(
+            claimable.combinatorId > 0,
+            "APWarsCombinatorTokenGameItem:INVALID_CONFIG"
+        );
+
+        _processUnstake(_combinatorId, claimable.multiple);
 
         (address collectibles, uint256 id, uint256 amount, , ) = manager
             .getGameItemCConfig(msg.sender, address(this), _combinatorId);
@@ -1986,7 +1998,12 @@ contract APWarsCombinatorTokenGameItem is AccessControl, ERC1155Holder {
             block.number.sub(claimable.startBlock) >= blocks,
             "APWarsCombinatorTokenGameItem:INVALID_BLOCK"
         );
-        require(claimable.combinatorId > 0, "APWarsCombinatorTokenGameItem:INVALID_CONFIG");
+        require(
+            claimable.combinatorId > 0,
+            "APWarsCombinatorTokenGameItem:INVALID_CONFIG"
+        );
+
+        _processUnstake(_combinatorId, claimable.multiple);
 
         (
             address tokenAddress,

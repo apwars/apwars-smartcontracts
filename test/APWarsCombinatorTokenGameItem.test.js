@@ -35,7 +35,7 @@ const deployContracts = async (accounts) => {
   wCOURAGE.grantRole(await wCOURAGE.MINTER_ROLE(), combinator.address);
 }
 
-contract.only('APWarsCombinator > Token A + GameItem B -> Game Item C', accounts => {
+contract('APWarsCombinator > Token A + GameItem B -> Game Item C', accounts => {
   it('should deploy the contracts', async () => {
     await deployContracts(accounts);
   });
@@ -47,8 +47,9 @@ contract.only('APWarsCombinator > Token A + GameItem B -> Game Item C', accounts
       wCOURAGE.address,
       web3.utils.toWei('100', 'ether'),
       0,
-      0,
+      10000,
     );
+
     await combinatorManager.setupGameItemB(
       1,
       collectibles.address,
@@ -99,8 +100,11 @@ contract.only('APWarsCombinator > Token A + GameItem B -> Game Item C', accounts
 
     expect((await wCOURAGE.balanceOf(combinator.address)).toString()).to.be.equal('0', 'fail to check wCOURAGE balance #3');
 
-    expect((await collectibles.balanceOf(accounts[0], 11)).toString()).to.be.equal('20', 'fail to check collectibles balance accounts[0] #3');
+    expect((await wCOURAGE.balanceOf(accounts[8])).toString()).to.be.equal(web3.utils.toWei('200', 'ether'), 'check wCOURAGE fee');
+
     expect((await collectibles.balanceOf(accounts[8], 11)).toString()).to.be.equal('2', 'fail to check collectibles balance accounts[8] #3');
+    expect((await collectibles.balanceOf(accounts[0], 11)).toString()).to.be.equal('20', 'fail to check collectibles balance accounts[0] #3');
+    
 
     try {
       await combinator.claimGameItemFromTokens(1);
@@ -121,58 +125,53 @@ contract('APWarsCombinator > Token A + GameItem B -> Token C', accounts => {
     await combinatorManager.setupCombinator(1, 3, 2, true);
     await combinatorManager.setupTokenA(
       1,
-      wGOLD.address,
-      web3.utils.toWei('2200', 'ether'),
-      0,
-      Math.pow(10, 4),
-    );
-    await combinatorManager.setupTokenB(
-      1,
       wWARRIOR.address,
       web3.utils.toWei('100', 'ether'),
-      Math.pow(10, 3) * 9,
-      Math.pow(10, 3)
+      0,
+      10000,
+    );
+
+    await combinatorManager.setupGameItemB(
+      1,
+      collectibles.address,
+      10,
+      1,
+      0,
+      0
     );
     await combinatorManager.setupTokenC(
       1,
       wCOURAGE.address,
       web3.utils.toWei('100', 'ether'),
       0,
-      0,
+      0
     );
   });
 
   it('should put a combinator on the schedule', async () => {
-    await wGOLD.approve(combinator.address, await wGOLD.balanceOf(accounts[0]));
+    await wCOURAGE.approve(combinator.address, await wCOURAGE.balanceOf(accounts[0]));
     await wWARRIOR.approve(combinator.address, await wWARRIOR.balanceOf(accounts[0]));
+    await collectibles.setApprovalForAll(combinator.address, accounts[0]);
 
-    expect((await combinator.combinatorsCount(1)).toString()).to.be.equal('0', 'fail to count');
+    expect((await wCOURAGE.balanceOf(combinator.address)).toString()).to.be.equal('0', 'fail to check wCOURAGE balance #1');
+    expect((await wWARRIOR.balanceOf(combinator.address)).toString()).to.be.equal('0', 'fail to check wCOURAGE balance #1');
 
-    expect((await wGOLD.balanceOf(combinator.address)).toString()).to.be.equal('0', 'fail to check wGOLD balance #1');
-    expect((await wWARRIOR.balanceOf(combinator.address)).toString()).to.be.equal('0', 'fail to check wWARRIOR balance #1');
+    await combinator.combineTokens(1, 2);
 
-    expect((await wCOURAGE.balanceOf(accounts[0])).toString()).to.be.equal('0', 'fail to check wCOURAGE balance #1');
+    expect((await wCOURAGE.balanceOf(combinator.address)).toString()).to.be.equal(web3.utils.toWei('0', 'ether'), 'fail to check wCOURAGE balance');
 
-    await combinator.combineTokens(1, 1);
-
-    expect((await wGOLD.balanceOf(combinator.address)).toString()).to.be.equal(web3.utils.toWei('0', 'ether'), 'fail to check wGOLD balance');
-    expect((await wGOLD.balanceOf(accounts[8])).toString()).to.be.equal(web3.utils.toWei('2200', 'ether'), 'fail to check wGOLD balance accounts[8] #3');
-    expect((await burnManager.getBurnedAmount(wGOLD.address)).toString()).to.be.equal(web3.utils.toWei('0', 'ether'), 'fail to check wGOLD burned #3');
-    
-    expect((await wWARRIOR.balanceOf(combinator.address)).toString()).to.be.equal(web3.utils.toWei('0', 'ether'), 'fail to check wWARRIOR balance');
-    expect((await burnManager.getBurnedAmount(wWARRIOR.address)).toString()).to.be.equal(web3.utils.toWei('90', 'ether'), 'fail to check wWARRIOR burned #3');
-    expect((await wWARRIOR.balanceOf(accounts[8])).toString()).to.be.equal(web3.utils.toWei('10', 'ether'), 'fail to check wWARRIOR balance accounts[8] #3');
 
     try {
       await combinator.claimTokenFromTokens(1);
       throw {};
     } catch (e) {
-      expect(e.reason).to.be.equal("APWarsCombinator:INVALID_BLOCK");
+      expect(e.reason).to.be.equal("APWarsCombinatorTokenGameItem:INVALID_BLOCK");
     }
 
     //moving 2 blocks forward
-    await wGOLD.approve(combinator.address, await wGOLD.balanceOf(accounts[0]));
-    await wGOLD.approve(combinator.address, await wGOLD.balanceOf(accounts[0]));
+    await wCOURAGE.approve(combinator.address, await wCOURAGE.balanceOf(accounts[0]));
+    await wWARRIOR.approve(combinator.address, await wWARRIOR.balanceOf(accounts[0]));
+    
 
     try {
       await combinator.claimGameItemFromTokens(1);
@@ -183,18 +182,16 @@ contract('APWarsCombinator > Token A + GameItem B -> Token C', accounts => {
 
     await combinator.claimTokenFromTokens(1);
 
-    expect((await combinator.combinatorsCount(1)).toString()).to.be.equal('1', 'fail to count');
+    expect((await wCOURAGE.balanceOf(combinator.address)).toString()).to.be.equal('0', 'fail to check wCOURAGE balance #3');
 
-    expect((await wCOURAGE.balanceOf(accounts[0])).toString()).to.be.equal(web3.utils.toWei('100', 'ether'), 'fail to check wCOURAGE accounts[0] balance #3');
-    expect((await wCOURAGE.balanceOf(accounts[8])).toString()).to.be.equal(web3.utils.toWei('10', 'ether'), 'fail to check wCOURAGE accounts[8] balance #3');
+    expect((await wCOURAGE.balanceOf(accounts[0])).toString()).to.be.equal(web3.utils.toWei('1000200', 'ether'), 'check wCOURAGE');
+
 
     try {
       await combinator.claimGameItemFromTokens(1);
       throw {};
     } catch (e) {
-      expect(e.reason).to.be.equal("APWarsCombinator:INVALID_CONFIG");
+      expect(e.reason).to.be.equal("APWarsCombinatorTokenGameItem:INVALID_CONFIG");
     }
-
-    await combinator.combineTokens(1, 2);
   });
 });
