@@ -23,7 +23,21 @@ contract('APWarsCollectiblesTransfer.test', accounts => {
 
     await collectibles.setApprovalForAll(transfer.address, true);
 
+    try {
+      await transferMock.safeTransferFrom(transfer.address, collectibles.address, accounts[0], accounts[1], 10, 1, '0x0');
+      throw {};
+    } catch (e) {
+      expect(e.reason).to.be.equal("APWarsCollectiblesTransfer: INVALID_ROLE");
+    }
+
     await transfer.grantRole(await transfer.TRANSFER_ROLE(), transferMock.address);
     await transferMock.safeTransferFrom(transfer.address, collectibles.address, accounts[0], accounts[1], 10, 1, '0x0');
+
+    try {
+      await transferMock.safeTransferFrom(transfer.address, collectibles.address, accounts[0], accounts[1], 10, 1, '0x0', { from: accounts[1] });
+      throw {};
+    } catch (e) {
+      expect(e.reason).to.be.equal("_from != tx.origin");
+    }
   });
 });

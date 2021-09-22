@@ -72,6 +72,14 @@ contract APWarsWorker is AccessControl, ERC1155Holder {
         );
     }
 
+    // 100
+    // 0.1
+    // 100
+    // 1000
+    // 2
+    // reduction = 1000 * 0.1 * 3 => 300
+    // newBlockInterval = 1000 - 300 => 700
+    // return 700 + 100 => 800
     function getNextClaim(
         uint256 currentBlock,
         uint256 rate,
