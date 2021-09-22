@@ -14,14 +14,15 @@ module.exports = async (deployer, network, accounts) => {
   const timeBlock = 30;
   const maxMultiple = 1;
   const isEnabled = true;
-  const newItems = [40, 41, 42, 43];
+  const newItems = [2, 3, 4, 5];
+  const newItemsReceived = [40, 41, 42, 43];
   const MAX_INT_NUMBER = web3.utils.toBN(2).pow(web3.utils.toBN(256)).sub(web3.utils.toBN(1)).toString();
   const amount = MAX_INT_NUMBER;
   
   const configCombinatorManager = [
     {
       idCollectibles: newItems[0],
-      idCollectiblesReceived: newItems[0],
+      idCollectiblesReceived: newItemsReceived[0],
       tokenAQty: '9000',
       tokenBQty: '1',
       tokenABurningRate: '0',
@@ -32,7 +33,7 @@ module.exports = async (deployer, network, accounts) => {
     },
     {
       idCollectibles: newItems[1],
-      idCollectiblesReceived: newItems[1],
+      idCollectiblesReceived: newItemsReceived[1],
       tokenAQty: '900000',
       tokenBQty: '1',
       tokenABurningRate: '0',
@@ -43,7 +44,7 @@ module.exports = async (deployer, network, accounts) => {
     },
     {
       idCollectibles: newItems[2],
-      idCollectiblesReceived: newItems[2],
+      idCollectiblesReceived: newItemsReceived[2],
       tokenAQty: '1800000',
       tokenBQty: '1',
       tokenABurningRate: '0',
@@ -54,7 +55,7 @@ module.exports = async (deployer, network, accounts) => {
     },
     {
       idCollectibles: newItems[3],
-      idCollectiblesReceived: newItems[3],
+      idCollectiblesReceived: newItemsReceived[3],
       tokenAQty: '90000',
       tokenBQty: '1',
       tokenABurningRate: '0',

@@ -287,7 +287,7 @@ contract APWarsCombinatorTokenGameItem is AccessControl, ERC1155Holder {
         uint256 netAmount = totalAmount.sub(burnAmount).sub(feeAmount);
         if (netAmount > 0) {
             token.safeTransferFrom(
-                msg.sender,
+                address(this),
                 _player,
                 _id,
                 netAmount,
