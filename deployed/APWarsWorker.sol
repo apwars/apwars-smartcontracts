@@ -736,86 +736,6 @@ abstract contract AccessControl is Context {
     }
 }
 
-// File: @openzeppelin/contracts/token/ERC20/IERC20.sol
-
-
-
-pragma solidity >=0.6.0 <0.8.0;
-
-/**
- * @dev Interface of the ERC20 standard as defined in the EIP.
- */
-interface IERC20 {
-    /**
-     * @dev Returns the amount of tokens in existence.
-     */
-    function totalSupply() external view returns (uint256);
-
-    /**
-     * @dev Returns the amount of tokens owned by `account`.
-     */
-    function balanceOf(address account) external view returns (uint256);
-
-    /**
-     * @dev Moves `amount` tokens from the caller's account to `recipient`.
-     *
-     * Returns a boolean value indicating whether the operation succeeded.
-     *
-     * Emits a {Transfer} event.
-     */
-    function transfer(address recipient, uint256 amount) external returns (bool);
-
-    /**
-     * @dev Returns the remaining number of tokens that `spender` will be
-     * allowed to spend on behalf of `owner` through {transferFrom}. This is
-     * zero by default.
-     *
-     * This value changes when {approve} or {transferFrom} are called.
-     */
-    function allowance(address owner, address spender) external view returns (uint256);
-
-    /**
-     * @dev Sets `amount` as the allowance of `spender` over the caller's tokens.
-     *
-     * Returns a boolean value indicating whether the operation succeeded.
-     *
-     * IMPORTANT: Beware that changing an allowance with this method brings the risk
-     * that someone may use both the old and the new allowance by unfortunate
-     * transaction ordering. One possible solution to mitigate this race
-     * condition is to first reduce the spender's allowance to 0 and set the
-     * desired value afterwards:
-     * https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729
-     *
-     * Emits an {Approval} event.
-     */
-    function approve(address spender, uint256 amount) external returns (bool);
-
-    /**
-     * @dev Moves `amount` tokens from `sender` to `recipient` using the
-     * allowance mechanism. `amount` is then deducted from the caller's
-     * allowance.
-     *
-     * Returns a boolean value indicating whether the operation succeeded.
-     *
-     * Emits a {Transfer} event.
-     */
-    function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);
-
-    /**
-     * @dev Emitted when `value` tokens are moved from one account (`from`) to
-     * another (`to`).
-     *
-     * Note that `value` may be zero.
-     */
-    event Transfer(address indexed from, address indexed to, uint256 value);
-
-    /**
-     * @dev Emitted when the allowance of a `spender` for an `owner` is set by
-     * a call to {approve}. `value` is the new allowance.
-     */
-    event Approval(address indexed owner, address indexed spender, uint256 value);
-}
-
 // File: @openzeppelin/contracts/introspection/IERC165.sol
 
 
@@ -1320,279 +1240,27 @@ library SafeMath {
     }
 }
 
-// File: contracts/libs/IBEP20.sol
-
-pragma solidity >=0.6.4;
-
-interface IBEP20 {
-    /**
-     * @dev Returns the amount of tokens in existence.
-     */
-    function totalSupply() external view returns (uint256);
-
-    /**
-     * @dev Returns the token decimals.
-     */
-    function decimals() external view returns (uint8);
-
-    /**
-     * @dev Returns the token symbol.
-     */
-    function symbol() external view returns (string memory);
-
-    /**
-     * @dev Returns the token name.
-     */
-    function name() external view returns (string memory);
-
-    /**
-     * @dev Returns the bep token owner.
-     */
-    function getOwner() external view returns (address);
-
-    /**
-     * @dev Returns the amount of tokens owned by `account`.
-     */
-    function balanceOf(address account) external view returns (uint256);
-
-    /**
-     * @dev Moves `amount` tokens from the caller's account to `recipient`.
-     *
-     * Returns a boolean value indicating whether the operation succeeded.
-     *
-     * Emits a {Transfer} event.
-     */
-    function transfer(address recipient, uint256 amount)
-        external
-        returns (bool);
-
-    /**
-     * @dev Returns the remaining number of tokens that `spender` will be
-     * allowed to spend on behalf of `owner` through {transferFrom}. This is
-     * zero by default.
-     *
-     * This value changes when {approve} or {transferFrom} are called.
-     */
-    function allowance(address _owner, address spender)
-        external
-        view
-        returns (uint256);
-
-    /**
-     * @dev Sets `amount` as the allowance of `spender` over the caller's tokens.
-     *
-     * Returns a boolean value indicating whether the operation succeeded.
-     *
-     * IMPORTANT: Beware that changing an allowance with this method brings the risk
-     * that someone may use both the old and the new allowance by unfortunate
-     * transaction ordering. One possible solution to mitigate this race
-     * condition is to first reduce the spender's allowance to 0 and set the
-     * desired value afterwards:
-     * https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729
-     *
-     * Emits an {Approval} event.
-     */
-    function approve(address spender, uint256 amount) external returns (bool);
-
-    /**
-     * @dev Moves `amount` tokens from `sender` to `recipient` using the
-     * allowance mechanism. `amount` is then deducted from the caller's
-     * allowance.
-     *
-     * Returns a boolean value indicating whether the operation succeeded.
-     *
-     * Emits a {Transfer} event.
-     */
-    function transferFrom(
-        address sender,
-        address recipient,
-        uint256 amount
-    ) external returns (bool);
-
-    /**
-     * @dev Emitted when `value` tokens are moved from one account (`from`) to
-     * another (`to`).
-     *
-     * Note that `value` may be zero.
-     */
-    event Transfer(address indexed from, address indexed to, uint256 value);
-
-    /**
-     * @dev Emitted when the allowance of a `spender` for an `owner` is set by
-     * a call to {approve}. `value` is the new allowance.
-     */
-    event Approval(
-        address indexed owner,
-        address indexed spender,
-        uint256 value
-    );
-}
-
-// File: contracts/IAPWarsBaseToken.sol
+// File: contracts/arcadia/farm/IAPWarsWorkerManager.sol
 
 
 pragma solidity >=0.6.0;
 
-
-interface IAPWarsBaseToken is IBEP20 {
-    function burn(uint256 _amount) external;
-
-    function mint(address to, uint256 amount) external;
-}
-
-// File: contracts/utils/IAPWarsBurnManager.sol
-
-
-pragma solidity >=0.6.0;
-
-
-interface IAPWarsBurnManager {
-    function getBurnRate(
-        address _farmManager,
-        address _token,
-        address _player,
-        uint256 _pid
-    ) external view returns (uint16);
-
-    function getBurnedAmount(address _token) external view returns (uint256);
-
-    function manageAmount(
-        address _farmManager,
-        address _token,
-        address _player,
-        uint256 _pid,
-        uint256 _userAmount,
-        uint256 _burnAmount
-    ) external;
-
-    function burn(address _token) external;
-}
-
-// File: contracts/arcadia/IAPWarsCombinatorManager.sol
-
-
-pragma solidity >=0.6.0;
-
-
-interface IAPWarsCombinatorManager {
-    function getGeneralConfig(
-        address _player,
-        address _source,
-        uint256 _combinatorId
-    )
+interface IAPWarsWorkerManager {
+    function getGeneralConfig(address _player, address _source)
         external
         view
         returns (
             uint256 blocks,
-            uint256 maxMultiple,
-            bool isEnabled
+            uint256 reward,
+            uint256 limit
         );
 
-    function getTokenAConfig(
-        address _player,
-        address _source,
-        uint256 _combinatorId
-    )
-        external
-        view
-        returns (
-            address tokenAddress,
-            uint256 amount,
-            uint256 burningRate,
-            uint256 feeRate
-        );
+    function onClaim(address _player, address _source) external;
 
-    function getTokenBConfig(
-        address _player,
-        address _source,
-        uint256 _combinatorId
-    )
-        external
-        view
-        returns (
-            address tokenAddress,
-            uint256 amount,
-            uint256 burningRate,
-            uint256 feeRate
-        );
-
-    function getTokenCConfig(
-        address _player,
-        address _source,
-        uint256 _combinatorId
-    )
-        external
-        view
-        returns (
-            address tokenAddress,
-            uint256 amount,
-            uint256 burningRate,
-            uint256 feeRate
-        );
-
-    function getGameItemAConfig(
-        address _player,
-        address _source,
-        uint256 _combinatorId
-    )
-        external
-        view
-        returns (
-            address collectibles,
-            uint256 id,
-            uint256 amount,
-            uint256 burningRate,
-            uint256 feeRate
-        );
-
-    function getGameItemBConfig(
-        address _player,
-        address _source,
-        uint256 _combinatorId
-    )
-        external
-        view
-        returns (
-            address collectibles,
-            uint256 id,
-            uint256 amount,
-            uint256 burningRate,
-            uint256 feeRate
-        );
-
-    function getGameItemCConfig(
-        address _player,
-        address _source,
-        uint256 _combinatorId
-    )
-        external
-        view
-        returns (
-            address collectibles,
-            uint256 id,
-            uint256 amount,
-            uint256 burningRate,
-            uint256 feeRate
-        );
-
-    function onClaimed(
-        address _player,
-        address _source,
-        uint256 _combinatorId
-    ) external;
+    function onWithdraw(address _player, address _source) external;
 }
 
-// File: contracts/arcadia/IAPWarsMintableToken.sol
-
-
-pragma solidity >=0.6.0;
-
-
-interface IAPWarsMintableToken {
-    function mint(address _to, uint256 _amount) external;
-}
-
-// File: contracts/arcadia/APWarsCombinatorTokenGameItem.sol
+// File: contracts/arcadia/farm/APWarsWorker.sol
 
 
 pragma solidity >=0.6.0;
@@ -1602,53 +1270,38 @@ pragma solidity >=0.6.0;
 
 
 
-
-
-
-contract APWarsCombinatorTokenGameItem is AccessControl, ERC1155Holder {
+contract APWarsWorker is AccessControl, ERC1155Holder {
+    uint256 private constant ONE_HUNDRED_PERCENT = 10**4;
     bytes32 public constant CONFIGURATOR_ROLE = keccak256("CONFIGURATOR_ROLE");
     using SafeMath for uint256;
 
-    uint256 private constant ONE_HUNDRED_PERCENT = 10**4;
-    uint256 private constant DEV_PERCENTAGE = 10;
-    bytes private DEFAULT_MESSAGE;
-
-    struct Claimable {
-        uint256 combinatorId;
-        uint256 startBlock;
-        uint256 multiple;
+    struct AccountInfo {
+        uint256 amount;
+        uint256 previousClaim;
+        uint256 nextClaim;
     }
 
-    mapping(uint256 => mapping(address => Claimable)) public combinators;
-    mapping(uint256 => uint256) public combinatorsCount;
-    address public feeAddress;
-    address public burnManagerAddress;
-    address public combinatorManagerAddress;
+    bytes private DEFAULT_MESSAGE;
 
-    event NewCombinator(
-        address indexed sender,
-        uint256 indexed combinatorId,
-        uint256 multiple
-    );
+    mapping(address => AccountInfo) public accounts;
+    address public workerManagerAddress;
+    address public collectibles;
+    uint256 public workerId;
+    uint256 public minimumBlocks;
+    uint256 public reductionRate;
 
     event NewSetup(
-        address feeAddress,
-        address burnManagerAddress,
-        address combinatorManagerAddress
+        uint256 workerId,
+        uint256 minimumBlocks,
+        uint256 reductionRate,
+        address workerManagerAddress,
+        address collectibles
     );
-
-    event NewTokenClaim(address indexed sender, uint256 indexed combinatorId);
-
-    event NewGameItemClaim(
-        address indexed sender,
-        uint256 indexed combinatorId
-    );
+    event NewClaim(address sender, uint256 amount);
+    event NewWithdraw(address sender, address to, uint256 amount);
 
     modifier onlyRole(bytes32 role) {
-        require(
-            hasRole(role, _msgSender()),
-            "APWarsCombinatorTokenGameItem:INVALID_ROLE"
-        );
+        require(hasRole(role, _msgSender()), "APWarsCombinator:INVALID_ROLE");
         _;
     }
 
@@ -1658,374 +1311,99 @@ contract APWarsCombinatorTokenGameItem is AccessControl, ERC1155Holder {
     }
 
     function setup(
-        address _feeAddress,
-        address _burnManagerAddress,
-        address _combinatorManagerAddress
+        uint256 _workerId,
+        uint256 _minimumBlocks,
+        uint256 _reductionRate,
+        address _workerManagerAddress,
+        address _collectible
     ) public onlyRole(CONFIGURATOR_ROLE) {
-        feeAddress = _feeAddress;
-        burnManagerAddress = _burnManagerAddress;
-        combinatorManagerAddress = _combinatorManagerAddress;
+        workerId = _workerId;
+        minimumBlocks = _minimumBlocks;
+        reductionRate = _reductionRate;
+        workerManagerAddress = _workerManagerAddress;
+        collectibles = _collectible;
 
         emit NewSetup(
-            _feeAddress,
-            _burnManagerAddress,
-            _combinatorManagerAddress
+            workerId,
+            minimumBlocks,
+            reductionRate,
+            workerManagerAddress,
+            collectibles
         );
     }
 
-    function combineTokens(uint256 _combinatorId, uint256 _multiple) public {
-        IAPWarsCombinatorManager manager = IAPWarsCombinatorManager(
-            combinatorManagerAddress
-        );
-        (, uint256 maxMultiple, bool isEnabled) = manager
-            .getGeneralConfig(msg.sender, address(this), _combinatorId);
-
-        require(isEnabled, "APWarsCombinatorTokenGameItem:DISABLED_COMBINATOR");
-
-        require(
-            combinators[_combinatorId][msg.sender].combinatorId == 0,
-            "APWarsCombinatorTokenGameItem:COMBINATOR_IS_EXCLUSIVE"
+    function getNextClaim(
+        uint256 currentBlock,
+        uint256 rate,
+        uint256 minBlocks,
+        uint256 blocks,
+        uint256 workersAmount
+    ) public pure returns (uint256) {
+        uint256 reduction = blocks.mul(rate.mul(workersAmount)).div(
+            ONE_HUNDRED_PERCENT
         );
 
-        require(
-            _multiple > 0 && _multiple <= maxMultiple,
-            "APWarsCombinatorTokenGameItem:INVALID_MULTIPLE"
-        );
+        uint256 newBlockInterval = reduction > blocks
+            ? minBlocks
+            : blocks.sub(reduction);
 
-        _processStake(_combinatorId, _multiple);
-
-        _processTokensTransfers(msg.sender, _combinatorId);
-
-        emit NewCombinator(msg.sender, _combinatorId, _multiple);
+        return
+            (newBlockInterval < minBlocks ? minBlocks : newBlockInterval).add(
+                currentBlock
+            );
     }
 
-    function _processStake(uint256 _combinatorId, uint256 _multiple) internal {
-        IAPWarsCombinatorManager manager = IAPWarsCombinatorManager(
-            combinatorManagerAddress
+    function claim() public {
+        AccountInfo storage info = accounts[msg.sender];
+        IAPWarsWorkerManager workerManager = IAPWarsWorkerManager(
+            workerManagerAddress
         );
 
-        address tokenAddress;
-        uint256 id;
-        uint256 tokenAmount;
-        uint256 burningRate;
-        uint256 feeRate;
+        (uint256 blocks, uint256 reward, uint256 limit) = workerManager
+            .getGeneralConfig(msg.sender, address(this));
 
-        (tokenAddress, tokenAmount, burningRate, feeRate) = manager
-            .getTokenAConfig(msg.sender, address(this), _combinatorId);
-        IERC20 tokenA = IERC20(tokenAddress);
+        require(block.number >= info.nextClaim, "APWarsWorker:INVALID_BLOCK");
 
         require(
-            tokenA.transferFrom(
-                msg.sender,
-                address(this),
-                tokenAmount.mul(_multiple)
-            ),
-            "APWarsCombinatorTokenGameItem:FAIL_TO_STAKE_TOKEN_A"
+            limit == 0 || limit >= info.amount.add(reward),
+            "APWarsWorker:INVALID_LIMIT"
         );
 
-        (tokenAddress, id, tokenAmount, burningRate, feeRate) = manager
-            .getGameItemBConfig(msg.sender, address(this), _combinatorId);
-        IERC1155 tokenB = IERC1155(tokenAddress);
-
-        tokenB.safeTransferFrom(
-            msg.sender,
-            address(this),
-            id,
-            tokenAmount.mul(_multiple),
-            DEFAULT_MESSAGE
-        );
-
-        combinators[_combinatorId][msg.sender] = Claimable(
-            _combinatorId,
+        info.previousClaim = block.number;
+        info.nextClaim = getNextClaim(
             block.number,
-            _multiple
+            reductionRate,
+            minimumBlocks,
+            blocks,
+            info.amount
         );
+        info.amount = info.amount.add(reward);
+
+        workerManager.onClaim(msg.sender, address(this));
+
+        emit NewClaim(msg.sender, reward);
     }
 
-    function _processUnstake(uint256 _combinatorId, uint256 _multiple)
-        internal
-    {
-        IAPWarsCombinatorManager manager = IAPWarsCombinatorManager(
-            combinatorManagerAddress
+    function withdraw(address _to, uint256 _amount) public {
+        IAPWarsWorkerManager workerManager = IAPWarsWorkerManager(
+            workerManagerAddress
         );
-
-        address tokenAddress;
-        uint256 id;
-        uint256 tokenAmount;
-        uint256 burningRate;
-        uint256 feeRate;
-
-        (tokenAddress, id, tokenAmount, burningRate, feeRate) = manager
-            .getGameItemBConfig(msg.sender, address(this), _combinatorId);
-        _transferGameItem(
-            msg.sender,
-            tokenAddress,
-            id,
-            tokenAmount,
-            _multiple,
-            burningRate,
-            feeRate
-        );
-    }
-
-    function _transfer(
-        address _player,
-        address _tokenAddress,
-        uint256 _amount,
-        uint256 _multiple,
-        uint256 _burningRate,
-        uint256 _feeRate,
-        bool mint,
-        bool mintToDev
-    ) internal {
-        IERC20 token = IERC20(_tokenAddress);
-        uint256 totalAmount = _amount * _multiple;
-        uint256 burnAmount = 0;
-        uint256 feeAmount = 0;
-
-        if (mint) {
-            IAPWarsMintableToken(_tokenAddress).mint(
-                address(this),
-                totalAmount
-            );
-        }
-
-        if (_burningRate > 0) {
-            burnAmount = totalAmount.mul(_burningRate).div(ONE_HUNDRED_PERCENT);
-
-            IAPWarsBurnManager burnManager = IAPWarsBurnManager(
-                burnManagerAddress
-            );
-
-            require(
-                token.transfer(burnManagerAddress, burnAmount),
-                "APWarsCombinatorTokenGameItem:FAIL_TO_BURN_TOKEN"
-            );
-
-            burnManager.burn(_tokenAddress);
-        }
-
-        if (_feeRate > 0) {
-            feeAmount = totalAmount.mul(_feeRate).div(ONE_HUNDRED_PERCENT);
-
-            require(
-                token.transfer(feeAddress, feeAmount),
-                "APWarsCombinatorTokenGameItem:FAIL_TO_COLLECT_FEE"
-            );
-        }
-
-        uint256 netAmount = totalAmount.sub(burnAmount).sub(feeAmount);
-        if (netAmount > 0) {
-            require(
-                token.transfer(_player, netAmount),
-                "APWarsCombinatorTokenGameItem:FAIL_TO_UNSTAKE_AMOUNT"
-            );
-        }
-
-        if (mintToDev) {
-            uint256 devAmount = totalAmount / DEV_PERCENTAGE;
-
-            if (devAmount > 0) {
-                IAPWarsMintableToken(_tokenAddress).mint(feeAddress, devAmount);
-            }
-        }
-    }
-
-    function _transferGameItem(
-        address _player,
-        address _collectibles,
-        uint256 _id,
-        uint256 _amount,
-        uint256 _multiple,
-        uint256 _burningRate,
-        uint256 _feeRate
-    ) internal {
-        IERC1155 token = IERC1155(_collectibles);
-        uint256 totalAmount = _amount * _multiple;
-        uint256 burnAmount = 0;
-        uint256 feeAmount = 0;
-
-        if (_burningRate > 0) {
-            burnAmount = totalAmount.mul(_burningRate).div(ONE_HUNDRED_PERCENT);
-
-            IAPWarsBurnManager burnManager = IAPWarsBurnManager(
-                burnManagerAddress
-            );
-
-            token.safeTransferFrom(
-                msg.sender,
-                burnManagerAddress,
-                _id,
-                burnAmount,
-                DEFAULT_MESSAGE
-            );
-
-            burnManager.burn(_collectibles);
-        }
-
-        if (_feeRate > 0) {
-            feeAmount = totalAmount.mul(_feeRate).div(ONE_HUNDRED_PERCENT);
-
-            token.safeTransferFrom(
-                msg.sender,
-                feeAddress,
-                _id,
-                feeAmount,
-                DEFAULT_MESSAGE
-            );
-        }
-
-        uint256 netAmount = totalAmount.sub(burnAmount).sub(feeAmount);
-        if (netAmount > 0) {
-            token.safeTransferFrom(
-                address(this),
-                _player,
-                _id,
-                netAmount,
-                DEFAULT_MESSAGE
-            );
-        }
-    }
-
-    function _processTokensTransfers(address _player, uint256 _combinatorId)
-        internal
-    {
-        IAPWarsCombinatorManager manager = IAPWarsCombinatorManager(
-            combinatorManagerAddress
-        );
-        (uint256 blocks, , ) = manager.getGeneralConfig(
-            msg.sender,
-            address(this),
-            _combinatorId
-        );
-        Claimable storage claimable = combinators[_combinatorId][_player];
-
-        require(
-            claimable.combinatorId > 0,
-            "APWarsCombinatorTokenGameItem:INVALID_CONFIG"
-        );
-
-        address tokenAddress;
-        uint256 tokenAmount;
-        uint256 burningRate;
-        uint256 feeRate;
-
-        (tokenAddress, tokenAmount, burningRate, feeRate) = manager
-            .getTokenAConfig(_player, address(this), _combinatorId);
-        _transfer(
-            _player,
-            tokenAddress,
-            tokenAmount,
-            claimable.multiple,
-            burningRate,
-            feeRate,
-            false,
-            false
-        );
-    }
-
-    function _clearCombinator(address _player, uint256 _combinatorId) internal {
-        combinators[_combinatorId][_player].combinatorId = 0;
-        combinatorsCount[_combinatorId] = combinatorsCount[_combinatorId].add(
-            1
-        );
-    }
-
-    function claimGameItemFromTokens(uint256 _combinatorId) public {
-        Claimable storage claimable = combinators[_combinatorId][msg.sender];
-        IAPWarsCombinatorManager manager = IAPWarsCombinatorManager(
-            combinatorManagerAddress
-        );
-
-        (uint256 blocks, , ) = manager.getGeneralConfig(
-            msg.sender,
-            address(this),
-            _combinatorId
-        );
-
-        require(
-            block.number.sub(claimable.startBlock) >= blocks,
-            "APWarsCombinatorTokenGameItem:INVALID_BLOCK"
-        );
-        require(
-            claimable.combinatorId > 0,
-            "APWarsCombinatorTokenGameItem:INVALID_CONFIG"
-        );
-
-        _processUnstake(_combinatorId, claimable.multiple);
-
-        (address collectibles, uint256 id, uint256 amount, , ) = manager
-            .getGameItemCConfig(msg.sender, address(this), _combinatorId);
-
+        AccountInfo storage info = accounts[msg.sender];
         IERC1155 token = IERC1155(collectibles);
 
-        token.safeTransferFrom(
-            address(this),
-            msg.sender,
-            id,
-            amount.mul(claimable.multiple),
-            DEFAULT_MESSAGE
-        );
+        require(_amount <= info.amount, "APWarsWorker:INVALID_AMOUNT");
 
         token.safeTransferFrom(
             address(this),
-            feeAddress,
-            id,
-            amount.mul(claimable.multiple) / DEV_PERCENTAGE,
+            _to,
+            workerId,
+            _amount,
             DEFAULT_MESSAGE
         );
 
-        _clearCombinator(msg.sender, _combinatorId);
+        info.amount = info.amount.sub(_amount);
+        workerManager.onWithdraw(msg.sender, address(this));
 
-        manager.onClaimed(msg.sender, address(this), _combinatorId);
-
-        emit NewGameItemClaim(msg.sender, _combinatorId);
-    }
-
-    function claimTokenFromTokens(uint256 _combinatorId) public {
-        Claimable storage claimable = combinators[_combinatorId][msg.sender];
-        IAPWarsCombinatorManager manager = IAPWarsCombinatorManager(
-            combinatorManagerAddress
-        );
-
-        (uint256 blocks, , ) = manager.getGeneralConfig(
-            msg.sender,
-            address(this),
-            _combinatorId
-        );
-
-        require(
-            block.number.sub(claimable.startBlock) >= blocks,
-            "APWarsCombinatorTokenGameItem:INVALID_BLOCK"
-        );
-        require(
-            claimable.combinatorId > 0,
-            "APWarsCombinatorTokenGameItem:INVALID_CONFIG"
-        );
-
-        _processUnstake(_combinatorId, claimable.multiple);
-
-        (
-            address tokenAddress,
-            uint256 tokenAmount,
-            uint256 burningRate,
-            uint256 feeRate
-        ) = manager.getTokenCConfig(msg.sender, address(this), _combinatorId);
-        _transfer(
-            msg.sender,
-            tokenAddress,
-            tokenAmount,
-            claimable.multiple,
-            burningRate,
-            feeRate,
-            true,
-            true
-        );
-
-        _clearCombinator(msg.sender, _combinatorId);
-
-        manager.onClaimed(msg.sender, address(this), _combinatorId);
-
-        emit NewTokenClaim(msg.sender, _combinatorId);
+        emit NewWithdraw(msg.sender, _to, _amount);
     }
 }
