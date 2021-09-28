@@ -320,6 +320,7 @@ contract APWarsWorldManager is AccessControl {
             worldMap.isValidLand(_x, _y),
             "APWarsWorldManager:INVALID_LAND"
         );
+
         require(
             getLandOwner(_worldId, _x, _y) == address(0),
             "APWarsWorldManager:LAND_IS_OWNED"

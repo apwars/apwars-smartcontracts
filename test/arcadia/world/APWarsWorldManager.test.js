@@ -79,10 +79,30 @@ contract('APWarsWorldManager.test', accounts => {
       worldTreasury.address
     );
 
-    await worldManager.setBasePrice(0, web3.utils.toWei('10', 'ether'))
+    await worldManager.setBasePrice(1, web3.utils.toWei('10', 'ether'));
+    await worldManager.setPriceIncrementByFoundationType(1, [0], [web3.utils.toWei('.95', 'ether')]);
+
+    const varName0 = await worldManager.getLandVarName(0, 0);
+    const owner0 = await worldManager.getLandOwner(1, 0, 0);
+    const tokenId0 = await worldManager.getLandTokenId(1, 0, 0);
+    console.log({ varName0, owner0, tokenId0: tokenId0.toString() });
 
     await wLANDToken.transfer(accounts[1], web3.utils.toWei('100', 'ether'));
     await wLANDToken.approve(tokenTransfer.address, web3.utils.toWei('100', 'ether'), {from: accounts[1]});
-    await worldManager.buyLand(0, 0, 0, {from: accounts[1]});
+    await worldManager.buyLand(1, 0, 0, { from: accounts[1] });
+
+    const varName1 = await worldManager.getLandVarName(0, 0);
+    const owner1 = await worldManager.getLandOwner(1, 0, 0);
+    const tokenId1 = await worldManager.getLandTokenId(1, 0, 0);
+    console.log({ varName1, owner1, tokenId1: tokenId1.toString() });
+    
+    try {
+      await worldManager.buyLand(1, 0, 0, { from: accounts[1] });
+      throw {}; 
+    } catch (e) {
+      expect(e.reason).to.be.equal('APWarsWorldManager:LAND_IS_OWNED');
+    }
+
+    await worldManager.buyLand(0, 0, 1, { from: accounts[1] });
   });
 });

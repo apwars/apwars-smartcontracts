@@ -31,6 +31,15 @@ contract APWarsBaseNFTStorage is AccessControl {
     mapping(address => mapping(uint256 => mapping(bytes32 => ScheduledUInt256)))
         public uint256Storage;
 
+    event NewValue(
+        address sender,
+        address nft,
+        uint256 tokenId,
+        bytes32 varName,
+        uint256 value,
+        uint256 blockLimit
+    );
+
     constructor() {
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
         _setupRole(CONFIGURATOR_ROLE, _msgSender());
@@ -63,6 +72,15 @@ contract APWarsBaseNFTStorage is AccessControl {
         uint256Storage[_nft][_tokenId][_var].blockLimit = block.number.add(
             _block
         );
+
+        emit NewValue(
+            msg.sender,
+            _nft,
+            _tokenId,
+            _var,
+            _value,
+            uint256Storage[_nft][_tokenId][_var].blockLimit
+        );
     }
 
     function getUInt256(
@@ -71,7 +89,7 @@ contract APWarsBaseNFTStorage is AccessControl {
         bytes32 _var
     ) public view returns (uint256) {
         return
-            uint256Storage[_nft][_tokenId][_var].blockLimit > block.number
+            uint256Storage[_nft][_tokenId][_var].blockLimit <= block.number
                 ? uint256Storage[_nft][_tokenId][_var].newValue
                 : uint256Storage[_nft][_tokenId][_var].oldValue;
     }

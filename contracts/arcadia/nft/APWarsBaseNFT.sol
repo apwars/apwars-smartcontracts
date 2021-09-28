@@ -15,6 +15,9 @@ contract APWarsBaseNFT is ERC721PresetMinterPauserAutoId {
         string memory baseTokenURI
     ) ERC721PresetMinterPauserAutoId(name, symbol, baseTokenURI) {
         _setupRole(CONFIGURATOR_ROLE, _msgSender());
+
+        //starting the ids from 1
+        _tokenIds.increment();
     }
 
     modifier onlyRole(bytes32 role) {
@@ -47,10 +50,9 @@ contract APWarsBaseNFT is ERC721PresetMinterPauserAutoId {
 
     function mint(address to) public override onlyRole(MINTER_ROLE) {
         lastId = _tokenIds.current();
+        available[lastId] = true;
 
         _mint(to, lastId);
         _tokenIds.increment();
-
-        available[lastId] = true;
     }
 }
