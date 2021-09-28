@@ -6,21 +6,23 @@ const APWarsCollectiblesTransferMock = artifacts.require('APWarsCollectiblesTran
 
 const APWarsLandToken = artifacts.require('APWarsLandToken');
 const APWarsWorldMap = artifacts.require('APWarsWorldMap');
+const APWarsWorldManager = artifacts.require('APWarsWorldManager');
 const APWarsBaseNFT = artifacts.require('APWarsBaseNFT');
 const APWarsBaseNFTStorage = artifacts.require('APWarsBaseNFTStorage');
 const APWarsWorldTreasury = artifacts.require('APWarsWorldTreasury');
 const APWarsTokenTransfer = artifacts.require('APWarsTokenTransfer');
 
-contract('APWarsCollectiblesTransfer.test', accounts => {
+contract('APWarsWorldManager.test', accounts => {
   const UNIT_DEFAULT_SUPPLY = 10000000;
 
   let wGOLDToken = null;
-  let worldMap = null;
   let wLANDToken = null;
   let collectibles = null;
   let transfer = null;
   let transferMock = null;
 
+  let worldManager = null;
+  let worldMap = null;
   let landNFT = null;
   let worldNFT = null;
   let nftStorage = null;
@@ -29,6 +31,7 @@ contract('APWarsCollectiblesTransfer.test', accounts => {
   it('should transfer', async () => {
     wGOLDToken = await APWarsBaseToken.new('wGOLD', 'wGOLD');
     worldMap = await APWarsWorldMap.new();
+    worldManager = await APWarsWorldManager.new();
     wLANDToken = await APWarsLandToken.new('wLAND', 'wLAND');
     burnManager = await APWarsBurnManager.new();
     transfer = await APWarsCollectiblesTransfer.new();
@@ -45,10 +48,26 @@ contract('APWarsCollectiblesTransfer.test', accounts => {
 
     await worldNFT.mint(accounts[0]);
 
-    await landNFT.grantRole(await landNFT.MINTER_ROLE(), worldMap.address);
-    await tokenTransfer.grantRole(await tokenTransfer.TRANSFER_ROLE(), worldMap.address);
+    await landNFT.grantRole(await landNFT.MINTER_ROLE(), worldManager.address);
+    await tokenTransfer.grantRole(await tokenTransfer.TRANSFER_ROLE(), worldManager.address);
+    await nftStorage.grantRole(await nftStorage.CONFIGURATOR_ROLE(), worldManager.address);
 
     await worldMap.setup(
+      nftStorage.address,
+      2,
+      2,
+      2
+    );
+    let region = 1;
+    for (let x = 0; x < 2; x++) {
+      for (let y = 0; y < 2; y++) {
+        await worldMap.setupMap(region, x, y);
+        region++;
+      }
+    }
+
+    await worldManager.setup(
+      worldMap.address,
       worldNFT.address,
       landNFT.address,
       nftStorage.address,
@@ -60,16 +79,10 @@ contract('APWarsCollectiblesTransfer.test', accounts => {
       worldTreasury.address
     );
 
-    let region = 1;
-    for (let x = 0; x < 2; x++) {
-      for (let y = 0; y < 2; y++) {
-        await worldMap.setupMap(0, region, x, y, 2, web3.utils.toWei('10', 'ether'))
-        region++;
-      }
-    }
+    await worldManager.setBasePrice(0, web3.utils.toWei('10', 'ether'))
 
     await wLANDToken.transfer(accounts[1], web3.utils.toWei('100', 'ether'));
     await wLANDToken.approve(tokenTransfer.address, web3.utils.toWei('100', 'ether'), {from: accounts[1]});
-    await worldMap.buyLand(0, 0, 0, {from: accounts[1]});
+    await worldManager.buyLand(0, 0, 0, {from: accounts[1]});
   });
 });

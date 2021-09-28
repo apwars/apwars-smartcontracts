@@ -32,6 +32,7 @@ contract APWarsBaseNFTStorage is AccessControl {
         public uint256Storage;
 
     constructor() {
+        _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
         _setupRole(CONFIGURATOR_ROLE, _msgSender());
     }
 
@@ -49,7 +50,7 @@ contract APWarsBaseNFTStorage is AccessControl {
         bytes32 _var,
         uint256 _value,
         uint256 _block
-    ) public {
+    ) public onlyRole(CONFIGURATOR_ROLE) {
         require(
             uint256Storage[_nft][_tokenId][_var].blockLimit <= block.number,
             "APWarsBaseNFTStorage:INVALID_BLOCK"
