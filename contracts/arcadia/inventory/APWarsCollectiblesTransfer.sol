@@ -9,6 +9,7 @@ contract APWarsCollectiblesTransfer is AccessControl {
     bytes32 public constant TRANSFER_ROLE = keccak256("TRANSFER_ROLE");
 
     event NewTransfer(
+        ERC1155 collectibles,
         address sender,
         address from,
         address to,
@@ -40,6 +41,6 @@ contract APWarsCollectiblesTransfer is AccessControl {
         require(_from == tx.origin, "_from != tx.origin");
         _collectibles.safeTransferFrom(_from, _to, _id, _amount, _data);
 
-        emit NewTransfer(msg.sender, _from, _to, _id, _amount);
+        emit NewTransfer(_collectibles, msg.sender, _from, _to, _id, _amount);
     }
 }
