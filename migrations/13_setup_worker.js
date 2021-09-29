@@ -5,6 +5,11 @@ const contracts = require('../data/contracts');
 
 module.exports = async (deployer, network, accounts) => {
 
+  if (process.env.SKIP_MIGRATION === 'true') {
+    return;
+  }
+  
+
   const getContracts = contracts(network);
   const MAX_INT_NUMBER = web3.utils.toBN(2).pow(web3.utils.toBN(256)).sub(web3.utils.toBN(1)).toString();
   // const worker = "0x8cF80184BCA8b0eFa10DB41c9A7A42E73E7806d4";
