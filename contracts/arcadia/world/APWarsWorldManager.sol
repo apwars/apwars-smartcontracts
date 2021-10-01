@@ -16,8 +16,11 @@ contract APWarsWorldManager is AccessControl {
     using SafeMath for uint256;
 
     bytes32 public constant CONFIGURATOR_ROLE = keccak256("CONFIGURATOR_ROLE");
-    bytes32 public constant LAND_X_Y_PREFIX = keccak256("LAND_");
-    bytes32 public constant FOUNDATION_AT_PREFIX = keccak256("LAND_");
+    bytes32 public constant LAND_X_Y_PREFIX = keccak256("LAND_X_Y_");
+    bytes32 public constant FOUNDATION_AT_PREFIX = keccak256("FOUNDATION_X_Y_");
+
+    uint256 public constant DEFAULT_FOUNDATION_TYPE = 1;
+
     bytes public DEFAULT_MESSAGE;
 
     APWarsWorldMap public worldMap;
@@ -32,6 +35,7 @@ contract APWarsWorldManager is AccessControl {
     mapping(uint256 => bool) public foundationsGameItemsMap;
     uint256[] public foundationsGameItems;
     address public deadAddress;
+    uint256 workerGameItemId;
 
     struct LandPrice {
         uint256 currentPrice;
@@ -49,7 +53,9 @@ contract APWarsWorldManager is AccessControl {
 
     mapping(uint256 => mapping(uint256 => uint256)) public landIncrement;
     mapping(uint256 => mapping(uint256 => mapping(uint256 => uint256)))
-        public landTypeChangeInterval;
+        public foundationsBuildingTime;
+    mapping(uint256 => mapping(uint256 => mapping(uint256 => uint256)))
+        public necessaryWorkersByFoundations;
     mapping(uint256 => mapping(uint256 => LandPrice)) public landPrice;
     uint256 public priceChangeInterval;
 
@@ -85,8 +91,10 @@ contract APWarsWorldManager is AccessControl {
         APWarsBaseNFT _landNFT,
         APWarsBaseNFTStorage _nftStorage,
         uint256[] calldata _foundationsGameItems,
+        uint256 _workerGameItemId,
         address _deadAddress,
         APWarsTokenTransfer _tokenTransfer,
+        APWarsCollectiblesTransfer _collectiblesTransfer,
         IERC20 _wLAND,
         ERC1155 _collectibles,
         APWarsWorldTreasury _worldTreasury
@@ -100,6 +108,8 @@ contract APWarsWorldManager is AccessControl {
         wLAND = _wLAND;
         collectibles = _collectibles;
         worldTreasury = _worldTreasury;
+        collectiblesTransfer = _collectiblesTransfer;
+        workerGameItemId = _workerGameItemId;
 
         for (uint256 i = 0; i < foundationsGameItems.length; i++) {
             foundationsGameItemsMap[foundationsGameItems[i]] = false;
@@ -150,7 +160,7 @@ contract APWarsWorldManager is AccessControl {
         return landIncrement[_worldId][_type];
     }
 
-    function setChangeTypeInterval(
+    function setFoundationBuildingInterval(
         uint256 _worldId,
         uint256[] calldata _from,
         uint256[] calldata _to,
@@ -166,16 +176,46 @@ contract APWarsWorldManager is AccessControl {
         );
 
         for (uint256 i = 0; i < _from.length; i++) {
-            landTypeChangeInterval[_worldId][_from[i]][_to[i]] = _interval[i];
+            foundationsBuildingTime[_worldId][_from[i]][_to[i]] = _interval[i];
         }
     }
 
-    function getChangeTypeInterval(
+    function setNecessaryWorkersByFoundations(
+        uint256 _worldId,
+        uint256[] calldata _from,
+        uint256[] calldata _to,
+        uint256[] calldata _workers
+    ) public {
+        require(
+            _from.length == _to.length && _from.length == _workers.length,
+            "APWarsWorldManager:INVALID_ARRAY_LENTH"
+        );
+        require(
+            worldNFT.getOwnerOf(_worldId) == msg.sender,
+            "APWarsWorldManager:INVALID_OWNER"
+        );
+
+        for (uint256 i = 0; i < _from.length; i++) {
+            necessaryWorkersByFoundations[_worldId][_from[i]][
+                _to[i]
+            ] = _workers[i];
+        }
+    }
+
+    function getNecessaryWorkersByFoundations(
         uint256 _worldId,
         uint256 _from,
         uint256 _to
     ) public view returns (uint256) {
-        return landTypeChangeInterval[_worldId][_from][_to];
+        return necessaryWorkersByFoundations[_worldId][_from][_to];
+    }
+
+    function getFoundationBuildingInterval(
+        uint256 _worldId,
+        uint256 _from,
+        uint256 _to
+    ) public view returns (uint256) {
+        return foundationsBuildingTime[_worldId][_from][_to];
     }
 
     function getFoundationVarName(uint256 _x, uint256 _y)
@@ -223,35 +263,42 @@ contract APWarsWorldManager is AccessControl {
 
     function getFoundationsByLands(
         uint256 _worldId,
-        uint256[] calldata _x,
-        uint256[] calldata _y
+        uint256 _x,
+        uint256 _y,
+        uint256 _area
     )
         public
         view
         returns (
-            uint256[] memory,
-            uint256[] memory,
-            uint256[] memory
+            uint256[] memory oldValues,
+            uint256[] memory newValues,
+            uint256[] memory blockLimits
         )
     {
-        require(
-            _x.length == _y.length,
-            "APWarsWorldManager:INVALID_ARRAY_LENTH"
-        );
+        oldValues = new uint256[](_area * _area);
+        newValues = new uint256[](_area * _area);
+        blockLimits = new uint256[](_area * _area);
 
-        uint256[] memory oldValues = new uint256[](_x.length);
-        uint256[] memory newValues = new uint256[](_x.length);
-        uint256[] memory blockLimits = new uint256[](_x.length);
+        uint256 i = 0;
+        for (uint256 x = 0; x < _area; x++) {
+            for (uint256 y = 0; y < _area; y++) {
+                (
+                    oldValues[i],
+                    newValues[i],
+                    blockLimits[i]
+                ) = getRawFoundationTypeByLand(_worldId, _x + x, _y + y);
 
-        for (uint256 i = 0; i < _x.length; i++) {
-            (
-                oldValues[i],
-                newValues[i],
-                blockLimits[i]
-            ) = getRawFoundationTypeByLand(_worldId, _x[i], _y[i]);
+                i++;
+            }
         }
+    }
 
-        return (oldValues, newValues, blockLimits);
+    function getLandFoundationVarName(uint256 _x, uint256 _y)
+        internal
+        pure
+        returns (bytes32)
+    {
+        return keccak256(abi.encodePacked(FOUNDATION_AT_PREFIX, _x, _y));
     }
 
     function getLandVarName(uint256 _x, uint256 _y)
@@ -283,7 +330,7 @@ contract APWarsWorldManager is AccessControl {
         return landNFT.getOwnerOf(getLandTokenId(_worldId, _x, _y));
     }
 
-    function getLandPrice(uint256 _worldId, uint256 _region)
+    function getLandPriceByRegion(uint256 _worldId, uint256 _region)
         public
         view
         returns (uint256 currentPrice)
@@ -294,6 +341,15 @@ contract APWarsWorldManager is AccessControl {
         if (price.nextBlockUpdate > block.number) {
             currentPrice = price.nextPrice;
         }
+    }
+
+    function getLandPrice(
+        uint256 _worldId,
+        uint256 _x,
+        uint256 _y
+    ) public view returns (uint256) {
+        uint256 region = worldMap.getLandRegion(_x, _y);
+        return getLandPriceByRegion(_worldId, region);
     }
 
     function setLandTokenId(
@@ -311,16 +367,29 @@ contract APWarsWorldManager is AccessControl {
         );
     }
 
+    function buyLandAndBuildFoundation(
+        uint256 _worldId,
+        uint256 _x,
+        uint256 _y,
+        uint256 _foundationType
+    ) public {
+        buyLand(_worldId, _x, _y);
+        buildFoundation(_worldId, _x, _y, _foundationType);
+    }
+
     function buyLand(
         uint256 _worldId,
         uint256 _x,
         uint256 _y
     ) public {
         require(
+            worldNFT.isAvailable(_worldId),
+            "APWarsWorldManager:INVALID_WORLD"
+        );
+        require(
             worldMap.isValidLand(_x, _y),
             "APWarsWorldManager:INVALID_LAND"
         );
-
         require(
             getLandOwner(_worldId, _x, _y) == address(0),
             "APWarsWorldManager:LAND_IS_OWNED"
@@ -330,11 +399,23 @@ contract APWarsWorldManager is AccessControl {
         LandPrice storage price = landPrice[_worldId][region];
 
         if (price.nextBlockUpdate < block.number) {
-            price.nextPrice = price.nextPrice.add(landIncrement[_worldId][0]);
+            price.nextPrice = price.nextPrice.add(
+                landIncrement[_worldId][DEFAULT_FOUNDATION_TYPE]
+            );
         } else {
             price.currentPrice = price.nextPrice;
             price.nextBlockUpdate = block.number.add(priceChangeInterval);
         }
+
+        require(
+            wLAND.balanceOf(msg.sender) >= price.currentPrice,
+            "APWarsWorldManager:INVALID_WLAND_BALANCE"
+        );
+        require(
+            wLAND.allowance(msg.sender, address(tokenTransfer)) >=
+                price.currentPrice,
+            "APWarsWorldManager:INVALID_WLAND_ALLOWANCE"
+        );
 
         tokenTransfer.transferFrom(
             wLAND,
@@ -346,6 +427,8 @@ contract APWarsWorldManager is AccessControl {
         landNFT.mint(msg.sender);
         uint256 tokenId = landNFT.getLastId();
         setLandTokenId(_worldId, _x, _y, tokenId);
+
+        setFoundationTypeByLand(_worldId, _x, _y, DEFAULT_FOUNDATION_TYPE);
 
         emit NewLand(msg.sender, _worldId, _x, _y, price.currentPrice, tokenId);
     }
@@ -359,9 +442,9 @@ contract APWarsWorldManager is AccessControl {
         nftStorage.setUInt256(
             address(worldNFT),
             _worldId,
-            getLandVarName(_x, _y),
+            getLandFoundationVarName(_x, _y),
             _type,
-            getChangeTypeInterval(
+            getFoundationBuildingInterval(
                 _worldId,
                 getFoundationTypeByLand(_worldId, _x, _y),
                 _type
@@ -376,6 +459,10 @@ contract APWarsWorldManager is AccessControl {
         uint256 _foundationType
     ) public {
         require(
+            worldNFT.isAvailable(_worldId),
+            "APWarsWorldManager:INVALID_WORLD"
+        );
+        require(
             foundationsGameItemsMap[_foundationType],
             "APWarsWorldManager:INVALID_FOUNDATION_TYPE"
         );
@@ -384,8 +471,38 @@ contract APWarsWorldManager is AccessControl {
             "APWarsWorldManager:INVALID_OWNER"
         );
         require(
-            getFoundationTypeByLand(_worldId, _x, _y) == 0,
+            getFoundationTypeByLand(_worldId, _x, _y) ==
+                DEFAULT_FOUNDATION_TYPE,
             "APWarsWorldManager:ALREADY_FOUNDED"
+        );
+
+        uint256 necessaryWorkers = getNecessaryWorkersByFoundations(
+            _worldId,
+            DEFAULT_FOUNDATION_TYPE,
+            _foundationType
+        );
+
+        if (necessaryWorkers > 0) {
+            require(
+                collectibles.balanceOf(msg.sender, workerGameItemId) >=
+                    necessaryWorkers,
+                "APWarsWorldManager:INVALID_WORKERS_BALANCE"
+            );
+
+            collectiblesTransfer.safeTransferFrom(
+                collectibles,
+                msg.sender,
+                deadAddress,
+                workerGameItemId,
+                necessaryWorkers,
+                DEFAULT_MESSAGE
+            );
+        }
+
+        require(
+            collectibles.balanceOf(msg.sender, _foundationType) >=
+                necessaryWorkers,
+            "APWarsWorldManager:INVALID_FOUNDATION_TICKET_BALANCE"
         );
 
         collectiblesTransfer.safeTransferFrom(
@@ -406,6 +523,10 @@ contract APWarsWorldManager is AccessControl {
         uint256 _y
     ) public {
         require(
+            worldNFT.isAvailable(_worldId),
+            "APWarsWorldManager:INVALID_WORLD"
+        );
+        require(
             getLandOwner(_worldId, _x, _y) == msg.sender,
             "APWarsWorldManager:INVALID_OWNER"
         );
@@ -414,6 +535,30 @@ contract APWarsWorldManager is AccessControl {
             "APWarsWorldManager:ALREADY_FOUNDED"
         );
 
-        setFoundationTypeByLand(_worldId, _x, _y, 0);
+        uint256 foundationType = getFoundationTypeByLand(_worldId, _x, _y);
+        uint256 necessaryWorkers = getNecessaryWorkersByFoundations(
+            _worldId,
+            foundationType,
+            1
+        );
+
+        if (necessaryWorkers > 0) {
+            require(
+                collectibles.balanceOf(msg.sender, workerGameItemId) >=
+                    necessaryWorkers,
+                "APWarsWorldManager:INVALID_WORKERS_BALANCE"
+            );
+
+            collectiblesTransfer.safeTransferFrom(
+                collectibles,
+                msg.sender,
+                deadAddress,
+                workerGameItemId,
+                necessaryWorkers,
+                DEFAULT_MESSAGE
+            );
+        }
+
+        setFoundationTypeByLand(_worldId, _x, _y, DEFAULT_FOUNDATION_TYPE);
     }
 }

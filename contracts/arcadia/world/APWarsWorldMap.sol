@@ -26,6 +26,12 @@ contract APWarsWorldMap is AccessControl {
     uint256 public landsPerRegion;
 
     event NewRegion(address indexed sender, uint256 indexed region);
+    event NewLand(
+        address indexed sender,
+        uint256 indexed region,
+        uint256 x,
+        uint256 y
+    );
 
     constructor() {
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
@@ -50,7 +56,7 @@ contract APWarsWorldMap is AccessControl {
     }
 
     function getRegions() public view returns (uint256) {
-        return maxX * maxY;
+        return (maxX * maxY) / (landsPerRegion * landsPerRegion);
     }
 
     function setupMap(
