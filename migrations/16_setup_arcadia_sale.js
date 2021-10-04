@@ -1,7 +1,4 @@
-const APWarsBaseToken = artifacts.require("APWarsBaseToken");
-const APWarsLandToken = artifacts.require("APWarsLandToken");
-const APWarsWisdomToken = artifacts.require('APWarsWisdomToken');
-const APWarsLandPrivateSale = artifacts.require("APWarsLandPrivateSale");
+const APWarsLandSale = artifacts.require('APWarsLandSale');
 const Collectibles = artifacts.require('APWarsCollectibles');
 const contracts = require('../data/contracts');
 
@@ -11,85 +8,41 @@ module.exports = async (deployer, network, accounts) => {
   }
 
   const getContracts = contracts(network);
-  await deployer.deploy(APWarsLandToken, "wLAND", "wLAND");
-  const wLAND = await APWarsLandToken.deployed();
-  const contractCollectibles = getContracts.APWarsCollectiblesTest;
+
+  const MAX_INT_NUMBER = web3.utils.toBN(2).pow(web3.utils.toBN(256)).sub(web3.utils.toBN(1)).toString();
+  const SEND_TICKET = 1000;
+
+  const contractCollectibles = getContracts.APWarsCollectibles;
   const collectibles = await Collectibles.at(contractCollectibles);
 
-  const wWISDOM = await APWarsWisdomToken.new('wWISDOM', 'wWISDOM');
-
-  const busd = await APWarsBaseToken.new('BUSD', 'BUSD');
-  await busd.mint('0xf6375FfD609Fa886803C27260d872CcCfA7d9257', web3.utils.toWei('10000000', 'ether'));
-  await busd.mint('0xE256B4b2755Eba57d8C1EC6FB5942a9DeBAF6b3F', web3.utils.toWei('10000000', 'ether'));
-  // busd prod 0xe9e7cea3dedca5984780bafc599bd69add087d56
-  // bsusdToken = "0xe9e7cea3dedca5984780bafc599bd69add087d56";
-  const busdAddress = busd.address; // bsusdToken; //
-
-  const HOUR_INBLOCK = 3600 / 3 / 4;
-  const blockNumber = await web3.eth.getBlockNumber();
-
-  const worldTicketId = 65;
-  const worldTicketAmount = 2;
-  const clanTicketId = 66;
-  const clanTicketAmount = 49;
-  const dev = getContracts.devAddress;
-  const cliffEndBlock = blockNumber + (HOUR_INBLOCK * 2);
-  const privateSaleEndBlock = blockNumber + HOUR_INBLOCK;
-  const vestingIntervalInBlocks = HOUR_INBLOCK / 6;
-  const priorityEndBlock = blockNumber + HOUR_INBLOCK / 2;
-
-  /* Create world and clan */
-  if (network !== "bsc") {
-    await collectibles.mint(accounts[0], worldTicketId, worldTicketAmount, '0x0');
-    console.log(`collectibles mint id: ${worldTicketId}`);
-    await collectibles.mint(accounts[0], clanTicketId, clanTicketAmount, '0x0');
-    console.log(`collectibles mint id: ${clanTicketId}`);
-  }
+  _idTickets = [58, 59, 60, 61, 62];
+  _priceTickets = [
+    web3.utils.toWei('150', 'ether'),
+    web3.utils.toWei('100', 'ether'),
+    web3.utils.toWei('100', 'ether'),
+    web3.utils.toWei('50', 'ether'),
+    web3.utils.toWei('50', 'ether'),
+  ];
 
   await deployer.deploy(
-    APWarsLandPrivateSale,
-    wLAND.address,
-    wWISDOM.address,
-    busdAddress,
-    contractCollectibles,
-    worldTicketId,
-    clanTicketId,
-    dev,
-    cliffEndBlock,
-    privateSaleEndBlock,
-    vestingIntervalInBlocks,
-    priorityEndBlock);
-  const landPrivateSale = await APWarsLandPrivateSale.deployed();
+    APWarsLandSale, 
+    getContracts.wLAND,
+    getContracts.busd,
+    getContracts.APWarsCollectibles,
+    getContracts.devAddress,
+    _idTickets,
+    _priceTickets
+  );
 
-  await wLAND.transfer(landPrivateSale.address, web3.utils.toWei('1500000', 'ether'));
-  await wWISDOM.grantRole(await wWISDOM.MINTER_ROLE(), landPrivateSale.address);
+  const landSale = await APWarsLandSale.deployed();
 
-  /* transfer collectibles */
-  await collectibles.safeTransferFrom(accounts[0], landPrivateSale.address, worldTicketId, worldTicketAmount, "0x0", {
-    from: accounts[0],
-  });
-  await collectibles.safeTransferFrom(accounts[0], landPrivateSale.address, clanTicketId, clanTicketAmount, "0x0", {
-    from: accounts[0],
-  });
+  for (id in _idTickets) {
+    // await collectibles.mint(accounts[0], _idTickets[id], MAX_INT_NUMBER, '0x0');
+    await collectibles.safeTransferFrom(accounts[0], landSale.address, _idTickets[id], SEND_TICKET, "0x0", {
+      from: accounts[0],
+    });
+  }
 
-  console.log(`\n wLAND: ${wLAND.address}`);
-  console.log(`\n wWISDOM: ${wWISDOM.address}`);
-  console.log(`\n busd: ${busdAddress}`);
-  console.log(`landPrivateSale: ${landPrivateSale.address}`);
-  console.log("");
-  console.log("setup");
-  console.log({
-    wLANDAddress: wLAND.address,
-    wWISDOMAddress: wWISDOM.address,
-    busdAddress,
-    contractCollectibles,
-    worldTicketId,
-    clanTicketId,
-    dev,
-    cliffEndBlock,
-    privateSaleEndBlock,
-    vestingIntervalInBlocks,
-    priorityEndBlock
-  })
+  console.log(`\n landSale: ${landSale.address}`);
 
 };

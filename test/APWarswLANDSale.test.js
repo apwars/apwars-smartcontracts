@@ -5,6 +5,7 @@ const APWarsBurnManager = artifacts.require('APWarsBurnManagerV2');
 const APWarsCollectibles = artifacts.require('APWarsCollectibles');
 
 var sleep = require('sleep');
+const BigNumber = require('bignumber.js');
 
 let burnManager = null;
 let wLAND = null;
@@ -12,6 +13,9 @@ let busd = null;
 let landSale = null;
 let collectibles = null;
 const ref = web3.utils.keccak256("TEST");
+const ONE_HUNDRED_PERCENT = 10 ** 4;
+const FIVE_PERCENT = 10 ** 3 / 2;
+const PRICE_WLAND = 15 * 10 ** 17;
 
 const deployContracts = async (accounts) => {
   burnManager = await APWarsBurnManager.new(accounts[2]);
@@ -39,6 +43,7 @@ const deployContracts = async (accounts) => {
 
   await busd.mint(accounts[1], web3.utils.toWei('2500000', 'ether'));
   await busd.mint(accounts[2], web3.utils.toWei('2500000', 'ether'));
+  await busd.mint(accounts[6], web3.utils.toWei('2500000', 'ether'));
   await wLAND.transfer(landSale.address, web3.utils.toWei('1500000', 'ether'));
 
   for (id in _idTickets) {
@@ -47,9 +52,11 @@ const deployContracts = async (accounts) => {
 
   await busd.approve(landSale.address, await busd.balanceOf(accounts[1]), { from: accounts[1] });
   await busd.approve(landSale.address, await busd.balanceOf(accounts[2]), { from: accounts[2] });
+  await busd.approve(landSale.address, await busd.balanceOf(accounts[6]), { from: accounts[6] });
 
   await wLAND.approve(landSale.address, web3.utils.toWei('1500000', 'ether'), { from: accounts[1] });
   await wLAND.approve(landSale.address, web3.utils.toWei('1500000', 'ether'), { from: accounts[2] });
+  await wLAND.approve(landSale.address, web3.utils.toWei('1500000', 'ether'), { from: accounts[6] });
 
 
   console.log('wLAND', wLAND.address);
@@ -94,6 +101,74 @@ contract.only('APWarswLANDlandSale buy wLAND', accounts => {
 
     let balancewLAND = await wLAND.balanceOf(accounts[1], { from: accounts[1] });
     expect(balancewLAND.toString()).to.be.equal(web3.utils.toWei(amountBuy.toString(), 'ether'));
+
+  });
+
+  it('should test add referral and buy wLAND referral', async () => {
+
+    const refAccount5 = web3.utils.keccak256("account5");
+    await landSale.addRef(refAccount5, { from: accounts[5] });
+
+    try {
+      await landSale.addRef(refAccount5, { from: accounts[5] });
+    } catch (error) {
+      expect(error.reason).to.be.equal("APWarsLandSale:INVALID_REFERRAL");
+    }
+
+    let balanceBUSDAccount6 = new BigNumber(await busd.balanceOf(accounts[6], { from: accounts[6] }));
+    let balanceBUSDAccount8 =  new BigNumber(await busd.balanceOf(accounts[8], { from: accounts[8] }));
+
+    const amountBuy = 5000;
+    const busdAmount = new BigNumber(amountBuy).multipliedBy(PRICE_WLAND);
+    const refAmount = busdAmount.multipliedBy(FIVE_PERCENT).dividedBy(
+      ONE_HUNDRED_PERCENT
+    );
+    const netAmount = busdAmount.minus(refAmount.multipliedBy(2));
+
+    await landSale.buywLAND(amountBuy, refAccount5, { from: accounts[6] });
+    
+    let newBalanceBUSDAccount6 = new BigNumber(await busd.balanceOf(accounts[6], { from: accounts[6] }));
+    const balanceReduceAccount6 = balanceBUSDAccount6.minus(netAmount.plus(refAmount)); // PERCENT REF 5%
+
+    expect(balanceReduceAccount6.toString()).to.be.equal(newBalanceBUSDAccount6.toString(), "validate if the balance in busd has been reduced");
+
+    let newBalanceBUSDAccount8 = new BigNumber(await busd.balanceOf(accounts[8], { from: accounts[8] }));
+    const balanceAddAccount8 = balanceBUSDAccount8.plus(netAmount);
+    expect(balanceAddAccount8.toString()).to.be.equal(newBalanceBUSDAccount8.toString(), "validate if it was dev earned the correct value");
+
+    let balanceBUSD = new BigNumber(await busd.balanceOf(accounts[5], { from: accounts[5] }));
+    expect(balanceBUSD.toString()).to.be.equal(refAmount.toString());
+
+  });
+
+  it('should test add referral and buy Ticket referral', async () => {
+
+    const refAccount5 = web3.utils.keccak256("account5");
+    let balanceBUSDAccount6 = new BigNumber(await wLAND.balanceOf(accounts[6], { from: accounts[6] }));
+    let balanceBUSDAccount8 =  new BigNumber(await wLAND.balanceOf(accounts[8], { from: accounts[8] }));
+
+    const amountBuy = 2;
+    const ticketId = 60;
+    const priceTicket = 1000000000000000000000;
+    const busdAmount = new BigNumber(amountBuy).multipliedBy(priceTicket);
+    const refAmount = busdAmount.multipliedBy(FIVE_PERCENT).dividedBy(
+      ONE_HUNDRED_PERCENT
+    );
+    const netAmount = busdAmount.minus(refAmount.multipliedBy(2));
+
+    await landSale.buyTicket(ticketId, amountBuy, refAccount5, { from: accounts[6] });
+    
+    let newBalanceBUSDAccount6 = new BigNumber(await wLAND.balanceOf(accounts[6], { from: accounts[6] }));
+    const balanceReduceAccount6 = balanceBUSDAccount6.minus(netAmount.plus(refAmount)); // PERCENT REF 5%
+
+    expect(balanceReduceAccount6.toString()).to.be.equal(newBalanceBUSDAccount6.toString(), "validate if the balance in busd has been reduced");
+
+    let newBalanceBUSDAccount8 = new BigNumber(await wLAND.balanceOf(accounts[8], { from: accounts[8] }));
+    const balanceAddAccount8 = balanceBUSDAccount8.plus(netAmount);
+    expect(balanceAddAccount8.toString()).to.be.equal(newBalanceBUSDAccount8.toString(), "validate if it was dev earned the correct value");
+
+    let balanceBUSD = new BigNumber(await wLAND.balanceOf(accounts[5], { from: accounts[5] }));
+    expect(balanceBUSD.toString()).to.be.equal(refAmount.toString());
 
   });
 
@@ -223,7 +298,7 @@ contract.only('APWarswLANDlandSale buy wLAND', accounts => {
     const amountBuy = 1;
     try {
       await landSale.buywLAND(amountBuy, ref, { from: accounts[2] });
-    } catch(error){
+    } catch (error) {
       expect(error.reason).to.be.equal("APWarsLandSale:INVALID_BALANCE");
     }
   });

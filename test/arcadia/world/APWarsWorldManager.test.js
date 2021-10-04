@@ -234,13 +234,18 @@ contract('APWarsWorldManager.test', accounts => {
       10
     );
     let region = 1;
+    let setupMapPromise = [];
     for (let x = 0; x < 10; x++) {
       for (let y = 0; y < 10; y++) {
         console.log(`Setting up the region ${region} ${x}/${y}`);
-        await worldMap.setupMap(region, x, y);
+        setupMapPromise.push(worldMap.setupMap(region, x, y));
         region++;
       }
     }
+
+    await Promise.all(setupMapPromise);
+
+    console.log("Finish setupMapPromise");
 
     await worldManager.setup(
       worldMap.address,

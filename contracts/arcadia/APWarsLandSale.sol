@@ -81,9 +81,9 @@ contract APWarsLandSale is AccessControl, ERC1155Holder {
         }
     }
 
-    function addRef(bytes32 ref, address account) public {
+    function addRef(bytes32 ref) public {
         require(referral[ref] == address(0), "APWarsLandSale:INVALID_REFERRAL");
-        referral[ref] = account;
+        referral[ref] = msg.sender;
     }
 
     function buyTicket(
@@ -109,7 +109,7 @@ contract APWarsLandSale is AccessControl, ERC1155Holder {
                 .mul(FIVE_PERCENT)
                 .div(ONE_HUNDRED_PERCENT);
             uint256 netAmount = priceTicket[ticketId].mul(_amount).sub(
-                refAmount
+                refAmount.mul(2)
             );
 
             require(
@@ -146,13 +146,12 @@ contract APWarsLandSale is AccessControl, ERC1155Holder {
             DEFAULT_MESSAGE
         );
 
-        wLANDTotalAmount.add(priceTicket[ticketId].mul(_amount));
+        wLANDTotalAmount = wLANDTotalAmount.add(priceTicket[ticketId].mul(_amount));
 
         emit NewTicket(msg.sender, ticketId, _amount);
     }
 
     function buywLAND(uint256 _amount, bytes32 _ref) public {
-    
         require(_amount > 0, "APWarsLandSale:INVALID_AMOUNT");
 
         IERC20 token = IERC20(wLAND);
@@ -169,7 +168,7 @@ contract APWarsLandSale is AccessControl, ERC1155Holder {
             uint256 refAmount = busdAmount.mul(FIVE_PERCENT).div(
                 ONE_HUNDRED_PERCENT
             );
-            uint256 netAmount = busdAmount.sub(refAmount);
+            uint256 netAmount = busdAmount.sub(refAmount.mul(2));
 
             require(
                 IERC20(busd).transferFrom(msg.sender, dev, netAmount),
@@ -195,9 +194,9 @@ contract APWarsLandSale is AccessControl, ERC1155Holder {
 
         token.transfer(msg.sender, amountWei);
 
-        wLANDSoldAmount.add(amountWei);
-        wLANDTotalAmount.add(amountWei);
-        busdTotalAmount.add(busdAmount);
+        wLANDSoldAmount = wLANDSoldAmount.add(amountWei);
+        wLANDTotalAmount = wLANDTotalAmount.add(amountWei);
+        busdTotalAmount = busdTotalAmount.add(busdAmount);
 
         emit NewSell(msg.sender, _amount);
     }
