@@ -17,27 +17,58 @@ contract APWarsBaseNFTStorage is AccessControl {
 
     struct ScheduledUInt256 {
         uint256 oldValue;
-        uint256 blockLimit;
         uint256 newValue;
+        uint256 targetBlock;
     }
 
-    mapping(address => mapping(uint256 => mapping(bytes32 => bool)))
-        public boolStorage;
-    mapping(address => mapping(uint256 => mapping(bytes32 => string)))
+    struct ScheduledString {
+        string oldValue;
+        string newValue;
+        uint256 targetBlock;
+    }
+
+    struct ScheduledBytes32 {
+        bytes32 oldValue;
+        bytes32 newValue;
+        uint256 targetBlock;
+    }
+
+    mapping(address => mapping(uint256 => mapping(bytes32 => ScheduledString)))
         public stringStorage;
-    mapping(address => mapping(uint256 => mapping(bytes32 => address)))
-        public addressStorage;
+    mapping(address => mapping(uint256 => mapping(bytes32 => ScheduledBytes32)))
+        public bytes32Storage;
 
     mapping(address => mapping(uint256 => mapping(bytes32 => ScheduledUInt256)))
         public uint256Storage;
 
-    event NewValue(
+    event NewUInt256Value(
         address sender,
         address nft,
         uint256 tokenId,
         bytes32 varName,
-        uint256 value,
-        uint256 blockLimit
+        uint256 oldValue,
+        uint256 newValue,
+        uint256 targetBlock
+    );
+
+    event NewStringValue(
+        address sender,
+        address nft,
+        uint256 tokenId,
+        bytes32 varName,
+        string oldValue,
+        string newValue,
+        uint256 targetBlock
+    );
+
+    event NewBytes32Value(
+        address sender,
+        address nft,
+        uint256 tokenId,
+        bytes32 varName,
+        bytes32 oldValue,
+        bytes32 newValue,
+        uint256 targetBlock
     );
 
     constructor() {
@@ -61,7 +92,7 @@ contract APWarsBaseNFTStorage is AccessControl {
         uint256 _block
     ) public onlyRole(CONFIGURATOR_ROLE) {
         require(
-            uint256Storage[_nft][_tokenId][_var].blockLimit <= block.number,
+            uint256Storage[_nft][_tokenId][_var].targetBlock <= block.number,
             "APWarsBaseNFTStorage:INVALID_BLOCK"
         );
 
@@ -69,17 +100,80 @@ contract APWarsBaseNFTStorage is AccessControl {
             _tokenId
         ][_var].newValue;
         uint256Storage[_nft][_tokenId][_var].newValue = _value;
-        uint256Storage[_nft][_tokenId][_var].blockLimit = block.number.add(
+        uint256Storage[_nft][_tokenId][_var].targetBlock = block.number.add(
             _block
         );
 
-        emit NewValue(
+        emit NewUInt256Value(
             msg.sender,
             _nft,
             _tokenId,
             _var,
-            _value,
-            uint256Storage[_nft][_tokenId][_var].blockLimit
+            uint256Storage[_nft][_tokenId][_var].oldValue,
+            uint256Storage[_nft][_tokenId][_var].newValue,
+            uint256Storage[_nft][_tokenId][_var].targetBlock
+        );
+    }
+
+    function setString(
+        address _nft,
+        uint256 _tokenId,
+        bytes32 _var,
+        string calldata _value,
+        uint256 _block
+    ) public onlyRole(CONFIGURATOR_ROLE) {
+        require(
+            stringStorage[_nft][_tokenId][_var].targetBlock <= block.number,
+            "APWarsBaseNFTStorage:INVALID_BLOCK"
+        );
+
+        stringStorage[_nft][_tokenId][_var].oldValue = stringStorage[_nft][
+            _tokenId
+        ][_var].newValue;
+        stringStorage[_nft][_tokenId][_var].newValue = _value;
+        stringStorage[_nft][_tokenId][_var].targetBlock = block.number.add(
+            _block
+        );
+
+        emit NewStringValue(
+            msg.sender,
+            _nft,
+            _tokenId,
+            _var,
+            stringStorage[_nft][_tokenId][_var].oldValue,
+            stringStorage[_nft][_tokenId][_var].newValue,
+            stringStorage[_nft][_tokenId][_var].targetBlock
+        );
+    }
+
+    function setBytes32(
+        address _nft,
+        uint256 _tokenId,
+        bytes32 _var,
+        bytes32 _value,
+        uint256 _block
+    ) public onlyRole(CONFIGURATOR_ROLE) {
+        require(
+            bytes32Storage[_nft][_tokenId][_var].targetBlock <= block.number,
+            "APWarsBaseNFTStorage:INVALID_BLOCK"
+        );
+
+        bytes32Storage[_nft][_tokenId][_var].oldValue = bytes32Storage[_nft][
+            _tokenId
+        ][_var].newValue;
+        bytes32Storage[_nft][_tokenId][_var].newValue = _value;
+        bytes32Storage[_nft][_tokenId][_var].targetBlock = block.number.add(
+            _block
+        );
+
+        emit NewBytes32Value(
+            msg.sender,
+            _nft,
+            _tokenId,
+            _var,
+            bytes32Storage[_nft][_tokenId][_var].oldValue,
+            bytes32Storage[_nft][_tokenId][_var].newValue,
+            bytes32Storage[_nft][_tokenId][_var].targetBlock
         );
     }
 
@@ -89,9 +183,31 @@ contract APWarsBaseNFTStorage is AccessControl {
         bytes32 _var
     ) public view returns (uint256) {
         return
-            uint256Storage[_nft][_tokenId][_var].blockLimit <= block.number
+            uint256Storage[_nft][_tokenId][_var].targetBlock <= block.number
                 ? uint256Storage[_nft][_tokenId][_var].newValue
                 : uint256Storage[_nft][_tokenId][_var].oldValue;
+    }
+
+    function getSting(
+        address _nft,
+        uint256 _tokenId,
+        bytes32 _var
+    ) public view returns (string memory) {
+        return
+            stringStorage[_nft][_tokenId][_var].targetBlock <= block.number
+                ? stringStorage[_nft][_tokenId][_var].newValue
+                : stringStorage[_nft][_tokenId][_var].oldValue;
+    }
+
+    function getBytes32(
+        address _nft,
+        uint256 _tokenId,
+        bytes32 _var
+    ) public view returns (bytes32) {
+        return
+            bytes32Storage[_nft][_tokenId][_var].targetBlock <= block.number
+                ? bytes32Storage[_nft][_tokenId][_var].newValue
+                : bytes32Storage[_nft][_tokenId][_var].oldValue;
     }
 
     function getScheduledUInt256(
@@ -104,62 +220,47 @@ contract APWarsBaseNFTStorage is AccessControl {
         returns (
             uint256 oldValue,
             uint256 newValue,
-            uint256 blockLimit
+            uint256 targetBlock
         )
     {
-        oldValue = uint256Storage[_nft][_tokenId][_var].newValue;
+        oldValue = uint256Storage[_nft][_tokenId][_var].oldValue;
         newValue = uint256Storage[_nft][_tokenId][_var].newValue;
-        blockLimit = uint256Storage[_nft][_tokenId][_var].blockLimit;
+        targetBlock = uint256Storage[_nft][_tokenId][_var].targetBlock;
     }
 
-    function setBool(
-        address _nft,
-        uint256 _tokenId,
-        bytes32 _var,
-        bool _value
-    ) public {
-        boolStorage[_nft][_tokenId][_var] = _value;
-    }
-
-    function getBool(
+    function getScheduledString(
         address _nft,
         uint256 _tokenId,
         bytes32 _var
-    ) public view returns (bool) {
-        return boolStorage[_nft][_tokenId][_var];
+    )
+        public
+        view
+        returns (
+            string memory oldValue,
+            string memory newValue,
+            uint256 targetBlock
+        )
+    {
+        oldValue = stringStorage[_nft][_tokenId][_var].oldValue;
+        newValue = stringStorage[_nft][_tokenId][_var].newValue;
+        targetBlock = stringStorage[_nft][_tokenId][_var].targetBlock;
     }
 
-    function setString(
-        address _nft,
-        uint256 _tokenId,
-        bytes32 _var,
-        string memory _value
-    ) public {
-        stringStorage[_nft][_tokenId][_var] = _value;
-    }
-
-    function getString(
-        address _nft,
-        uint256 _tokenId,
-        bytes32 _var
-    ) public view returns (string memory) {
-        return stringStorage[_nft][_tokenId][_var];
-    }
-
-    function setAddress(
-        address _nft,
-        uint256 _tokenId,
-        bytes32 _var,
-        address _value
-    ) public {
-        addressStorage[_nft][_tokenId][_var] = _value;
-    }
-
-    function getAddress(
+    function getScheduledBytes32(
         address _nft,
         uint256 _tokenId,
         bytes32 _var
-    ) public view returns (address) {
-        return addressStorage[_nft][_tokenId][_var];
+    )
+        public
+        view
+        returns (
+            bytes32 oldValue,
+            bytes32 newValue,
+            uint256 targetBlock
+        )
+    {
+        oldValue = bytes32Storage[_nft][_tokenId][_var].oldValue;
+        newValue = bytes32Storage[_nft][_tokenId][_var].newValue;
+        targetBlock = bytes32Storage[_nft][_tokenId][_var].targetBlock;
     }
 }

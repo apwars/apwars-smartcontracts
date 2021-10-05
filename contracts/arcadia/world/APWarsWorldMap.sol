@@ -24,6 +24,10 @@ contract APWarsWorldMap is AccessControl {
     uint256 public maxX;
     uint256 public maxY;
     uint256 public landsPerRegion;
+    uint256[] public specialPlacesX;
+    uint256[] public specialPlacesY;
+    uint256[] public specialPlacesTypes;
+    mapping(uint256 => mapping(uint256 => uint256)) specialPlaces;
 
     event NewRegion(address indexed sender, uint256 indexed region);
     event NewLand(
@@ -94,29 +98,41 @@ contract APWarsWorldMap is AccessControl {
     }
 
     function isValidLand(uint256 _x, uint256 _y) public view returns (bool) {
-        return regions[_x][_y] != 0;
+        return regions[_x][_y] != 0 && specialPlaces[_x][_y] == 0;
     }
 
-    //EVALUATE
-    function setLandType(
+    function setSpecialPlaces(
         uint256[] calldata _x,
         uint256[] calldata _y,
-        uint256[] calldata _type
+        uint256[] calldata _types
     ) public {
         require(
-            _x.length == _y.length,
+            _x.length == _y.length && _x.length == _types.length,
             "APWarsWorldManager:INVALID_ARRAY_LENTH"
         );
 
-        for (uint256 i = 0; i < _x.length; i++) {
-            bytes32 varName = keccak256(
-                abi.encodePacked(LAND_TYPE_AT, _x[i], _y[i])
-            );
-
-            if (nftStorage.getUInt256(address(this), 0, varName) == 0) {
-                nftStorage.setUInt256(address(this), 0, varName, _type[i], 0);
-            }
+        for (uint256 i = 0; i < specialPlacesX.length; i++) {
+            specialPlaces[specialPlacesX[i]][specialPlacesY[i]] = 0;
         }
+
+        for (uint256 i = 0; i < _x.length; i++) {
+            specialPlaces[_x[i]][_y[i]] = _types[i];
+        }
+
+        specialPlacesX = _x;
+        specialPlacesY = _y;
+        specialPlacesTypes = _types;
+    }
+
+    function getSpecialPlaces()
+        public
+        returns (
+            uint256[] memory,
+            uint256[] memory,
+            uint256[] memory
+        )
+    {
+        return (specialPlacesX, specialPlacesY, specialPlacesTypes);
     }
 
     function getLandRegion(uint256 _x, uint256 _y)

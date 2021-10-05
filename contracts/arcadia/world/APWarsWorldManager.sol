@@ -275,9 +275,9 @@ contract APWarsWorldManager is AccessControl {
         public
         view
         returns (
-            uint256,
-            uint256,
-            uint256
+            uint256 oldValue,
+            uint256 newValue,
+            uint256 targetBlock
         )
     {
         return
@@ -299,12 +299,12 @@ contract APWarsWorldManager is AccessControl {
         returns (
             uint256[] memory oldValues,
             uint256[] memory newValues,
-            uint256[] memory blockLimits
+            uint256[] memory targetBlocks
         )
     {
         oldValues = new uint256[](_area * _area);
         newValues = new uint256[](_area * _area);
-        blockLimits = new uint256[](_area * _area);
+        targetBlocks = new uint256[](_area * _area);
 
         uint256 i = 0;
         for (uint256 x = 0; x < _area; x++) {
@@ -312,7 +312,7 @@ contract APWarsWorldManager is AccessControl {
                 (
                     oldValues[i],
                     newValues[i],
-                    blockLimits[i]
+                    targetBlocks[i]
                 ) = getRawFoundationTypeByLand(_worldId, _x + x, _y + y);
 
                 i++;
@@ -576,6 +576,14 @@ contract APWarsWorldManager is AccessControl {
             "APWarsWorldManager:ALREADY_FOUNDED"
         );
 
+        require(
+            collectibles.isApprovedForAll(
+                msg.sender,
+                address(collectiblesTransfer)
+            ),
+            "APWarsWorldManager:INVALID_COLLECTIBLES_ALLOWANCE"
+        );
+
         uint256 necessaryWorkers = getNecessaryWorkersByFoundation(
             _worldId,
             DEFAULT_FOUNDATION_TYPE,
@@ -634,6 +642,14 @@ contract APWarsWorldManager is AccessControl {
         require(
             getFoundationTypeByLand(_worldId, _x, _y) != 0,
             "APWarsWorldManager:ALREADY_FOUNDED"
+        );
+
+        require(
+            collectibles.isApprovedForAll(
+                msg.sender,
+                address(collectiblesTransfer)
+            ),
+            "APWarsWorldManager:INVALID_COLLECTIBLES_ALLOWANCE"
         );
 
         uint256 foundationType = getFoundationTypeByLand(_worldId, _x, _y);
