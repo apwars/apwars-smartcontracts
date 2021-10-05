@@ -81,9 +81,9 @@ contract APWarsLandSale is AccessControl, ERC1155Holder {
         }
     }
 
-    function addRef(bytes32 ref) public {
+    function addRef(bytes32 ref, address account) public onlyRole(DEFAULT_ADMIN_ROLE) {
         require(referral[ref] == address(0), "APWarsLandSale:INVALID_REFERRAL");
-        referral[ref] = msg.sender;
+        referral[ref] = account;
     }
 
     function buyTicket(

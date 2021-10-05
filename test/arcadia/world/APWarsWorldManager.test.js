@@ -91,8 +91,50 @@ contract('APWarsWorldManager.test', accounts => {
       worldTreasury.address
     );
 
-    await worldManager.setBasePrice(1, web3.utils.toWei('10', 'ether'));
-    await worldManager.setPriceIncrementByFoundationType(1, [1], [web3.utils.toWei('0.95', 'ether')]);
+    await worldManager.setFoundationBuildingInterval(1,
+      [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+      ],
+      [
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+      ],
+      [
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21
+      ]);
+
   });
 
   it('should approve contracts', async () => {
@@ -101,6 +143,22 @@ contract('APWarsWorldManager.test', accounts => {
     
     await collectibles.setApprovalForAll(transfer.address, true, { from: accounts[1] });
     await collectibles.setApprovalForAll(transfer.address, true);
+  });
+
+  it('should setup pricing', async () => {
+    await worldManager.initializeWorldLandPricing(1, web3.utils.toWei('10', 'ether'));
+    const landPrice = await worldManager.getLandPrice(1, 0, 0);
+    expect(landPrice.toString()).to.be.equal(web3.utils.toWei('10', 'ether'), "fail to check landPrice");
+
+    await worldManager.setPriceIncrementByFoundationType(
+      1,
+      [1, 20, 21],
+      [
+        web3.utils.toWei('0.95', 'ether'),
+        web3.utils.toWei('1.75', 'ether'),
+        web3.utils.toWei('2.75', 'ether'),
+      ]
+    );
   });
 
   it('should buy a land and fail to buy again', async () => {
@@ -135,6 +193,9 @@ contract('APWarsWorldManager.test', accounts => {
     await wLANDToken.approve(tokenTransfer.address, web3.utils.toWei('1000000', 'ether'), { from: accounts[1] });
     await worldManager.buyLand(1, 0, 0, { from: accounts[1] });
 
+    const landPrice = await worldManager.getLandPrice(1, 0, 0);
+    expect(landPrice.toString()).to.be.equal(web3.utils.toWei('10.95', 'ether'), "fail to check landPrice");
+
     const owner1 = await worldManager.getLandOwner(1, 0, 0);
     const tokenId1 = await worldManager.getLandTokenId(1, 0, 0);
     const foundation1 = await worldManager.getRawFoundationTypeByLand(1, 0, 0);
@@ -153,9 +214,12 @@ contract('APWarsWorldManager.test', accounts => {
 
   it('should buy a land, build and destroy a foundation', async () => {
     await worldManager.setFoundationBuildingInterval(1, [1, 20], [20, 1], [0, 0]);
-    await worldManager.setNecessaryWorkersByFoundations(1, [1, 20], [20, 1], [1000, 5]);
+    await worldManager.setNecessaryWorkersByFoundation(1, [1, 20], [20, 1], [1000, 5]);
 
     await worldManager.buyLand(1, 0, 1);
+
+    const landPrice = await worldManager.getLandPrice(1, 0, 0);
+    expect(landPrice.toString()).to.be.equal(web3.utils.toWei('11.90', 'ether'), "fail to check landPrice");
 
     const owner2 = await worldManager.getLandOwner(1, 0, 1);
     const tokenId2 = await worldManager.getLandTokenId(1, 0, 1);
@@ -169,9 +233,12 @@ contract('APWarsWorldManager.test', accounts => {
       expect(e.reason).to.be.equal('APWarsWorldManager:INVALID_WORKERS_BALANCE');
     }
 
-    await worldManager.setNecessaryWorkersByFoundations(1, [1, 20], [20, 1], [10, 5]);
+    await worldManager.setNecessaryWorkersByFoundation(1, [1, 20], [20, 1], [10, 5]);
     await worldManager.buildFoundation(1, 0, 1, 20);
     await worldManager.destroyFoundation(1, 0, 1);
+
+    const landPrice3 = await worldManager.getLandPrice(1, 0, 0);
+    expect(landPrice3.toString()).to.be.equal(web3.utils.toWei('13.65', 'ether'), "fail to check landPrice");
 
     const workersBalance = await collectibles.balanceOf(accounts[0], 10);
     const villagesBalance = await collectibles.balanceOf(accounts[0], 20);
@@ -180,8 +247,19 @@ contract('APWarsWorldManager.test', accounts => {
   });
 
   it('should buy a land and build in one transaction', async () => {
-    await worldManager.setNecessaryWorkersByFoundations(1, [1], [21], [1]);
+    await worldManager.setNecessaryWorkersByFoundation(1, [1], [21], [1]);
     await worldManager.buyLandAndBuildFoundation(1, 1, 1, 21);
+
+    const landPrice = await worldManager.getLandPrice(1, 0, 0);
+    expect(landPrice.toString()).to.be.equal(web3.utils.toWei('17.35', 'ether'), "fail to check landPrice");
+
+    const obj = await worldManager.getRawFoundationTypeByLand(1, 1, 1);
+    expect(obj.oldValue.toString()).to.be.equal('1', 'fail to check oldValue');
+    expect(obj.newValue.toString()).to.be.equal('21', 'fail to check newValue');
+    console.log({ oldValue: obj.oldValue.toString(), newValue: obj.newValue.toString(), targetBlock: obj.targetBlock.toString() });
+
+    const foundationType = await worldManager.getFoundationTypeByLand(1, 1, 1);
+    expect(foundationType.toString()).to.be.equal('21');
 
     const workersBalance = await collectibles.balanceOf(accounts[0], 10);
     const villagesBalance = await collectibles.balanceOf(accounts[0], 21);
@@ -190,7 +268,7 @@ contract('APWarsWorldManager.test', accounts => {
     expect(villagesBalance.toString()).to.be.equal('99');
   });
 
-  it.only('should create a 100x100 map', async () => {
+  it.skip('should create a 100x100 map', async () => {
     wGOLDToken = await APWarsBaseToken.new('wGOLD', 'wGOLD');
     worldMap = await APWarsWorldMap.new();
     worldManager = await APWarsWorldManager.new();
@@ -233,6 +311,7 @@ contract('APWarsWorldManager.test', accounts => {
       100,
       10
     );
+
     let region = 1;
     let setupMapPromise = [];
     for (let x = 0; x < 10; x++) {
@@ -262,7 +341,65 @@ contract('APWarsWorldManager.test', accounts => {
       worldTreasury.address
     );
 
-    await worldManager.setBasePrice(1, web3.utils.toWei('10', 'ether'));
+    await worldManager.setFoundationBuildingInterval(1,
+      [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+      ],
+      [
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+      ],
+      [
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21
+      ]);
+    
+    await worldManager.setPriceIncrementByFoundationType(
+      1,
+      [1, 20, 21, 22, 23, 24, 25,],
+      [
+        web3.utils.toWei('0.95', 'ether'),
+        web3.utils.toWei('1.75', 'ether'),
+        web3.utils.toWei('2.15', 'ether'),
+        web3.utils.toWei('2.25', 'ether'),
+        web3.utils.toWei('2.35', 'ether'),
+        web3.utils.toWei('2.45', 'ether'),
+        web3.utils.toWei('2.55', 'ether'),
+      ]
+    );
+
+    await worldManager.initializeWorldLandPricing(1, web3.utils.toWei('10', 'ether'));
     await worldManager.setPriceIncrementByFoundationType(1, [0], [web3.utils.toWei('.95', 'ether')]);
 
     console.log("finished");

@@ -7,7 +7,7 @@ module.exports = async (deployer, network, accounts) => {
   if (process.env.SKIP_MIGRATION === 'true') {
     return;
   }
-  
+
   const getContracts = contracts(network);
   const contractCollectibles = getContracts.APWarsCollectibles;
   const collectibles = await Collectibles.at(contractCollectibles);
@@ -18,7 +18,7 @@ module.exports = async (deployer, network, accounts) => {
   const newItemsReceived = [40, 41, 42, 43];
   const MAX_INT_NUMBER = web3.utils.toBN(2).pow(web3.utils.toBN(256)).sub(web3.utils.toBN(1)).toString();
   const amount = MAX_INT_NUMBER;
-  
+
   const configCombinatorManager = [
     {
       idCollectibles: newItems[0],
@@ -82,21 +82,27 @@ module.exports = async (deployer, network, accounts) => {
   const combinatorManager = await APWarsCombinatorManager.deployed();
   await combinator.setup(setup.feeAddress, setup.burnManager, combinatorManager.address);
 
-  // 0xCAE00ce5282CF2b559BC45f17c47b2f5d3E20244
   // const combinator = await APWarsCombinatorTokenGameItem.at(getContracts.APWarsCombinatorTokenGameItem);
   // const combinatorManager = await APWarsCombinatorManager.at(getContracts.APWarsCombinatorManager);
 
-  console.log("create new game items for combinator");
+  console.log("transfer game items for combinator");
 
-  // create new game items for combinator
-  // await collectibles.mint(combinator.address, newItems[0], amount, '0x0');
-  // console.log(`collectibles mint id: ${newItems[0]}`);
-  // await collectibles.mint(combinator.address, newItems[1], amount, '0x0');
-  // console.log(`collectibles mint id: ${newItems[1]}`);
-  // await collectibles.mint(combinator.address, newItems[2], amount, '0x0');
-  // console.log(`collectibles mint id: ${newItems[2]}`);
-  // await collectibles.mint(combinator.address, newItems[3], amount, '0x0');
-  // console.log(`collectibles mint id: ${newItems[3]}`);
+  await collectibles.safeTransferFrom(accounts[0], combinator.address, newItemsReceived[0], 10, "0x0", {
+    from: accounts[0],
+  });
+
+  await collectibles.safeTransferFrom(accounts[0], combinator.address, newItemsReceived[1], 10, "0x0", {
+    from: accounts[0],
+  });
+
+  await collectibles.safeTransferFrom(accounts[0], combinator.address, newItemsReceived[2], 10, "0x0", {
+    from: accounts[0],
+  });
+
+  await collectibles.safeTransferFrom(accounts[0], combinator.address, newItemsReceived[3], 10, "0x0", {
+    from: accounts[0],
+  });
+
 
   // config set combinator
   let idCombinator = 0;
@@ -135,8 +141,8 @@ module.exports = async (deployer, network, accounts) => {
     console.log(`config set end combinator: ${unitInfo.idCollectibles}`);
   }
 
-  console.log(`\n Combinator: ${combinator.address}`);
-  console.log(`CombinatorManager: ${combinatorManager.address}`);
+  console.log(`\n CombinatorTokenGameItem: ${combinator.address}`);
+  console.log(`CombinatorTokenGameItemManager: ${combinatorManager.address}`);
   console.log("");
   printsUnits.map(print => {
     console.log(`idCollectibles: ${print.idCollectibles}`);
