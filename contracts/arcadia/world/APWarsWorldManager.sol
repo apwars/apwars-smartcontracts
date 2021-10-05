@@ -460,16 +460,16 @@ contract APWarsWorldManager is AccessControl {
         price.nextPrice = _price;
         price.nextBlockUpdate = block.number;
 
-        emit NewLandPrice(
-            msg.sender,
-            _worldId,
-            0,
-            0,
-            0,
-            currentPrice,
-            _price,
-            block.number
-        );
+        // emit NewLandPrice(
+        //     msg.sender,
+        //     _worldId,
+        //     0,
+        //     0,
+        //     0,
+        //     currentPrice,
+        //     _price,
+        //     block.number
+        // );
     }
 
     function updateRegionLandPrice(
