@@ -36,6 +36,7 @@ contract APWarsWorldManager is AccessControl {
     uint256[] public foundationsGameItems;
     address public deadAddress;
     uint256 workerGameItemId;
+    mapping(uint256 => uint256) basePrice;
 
     struct LandPrice {
         uint256 currentPrice;
@@ -148,14 +149,7 @@ contract APWarsWorldManager is AccessControl {
             "APWarsWorldManager:INVALID_OWNER"
         );
 
-        for (uint256 i = 1; i <= worldMap.getRegions(); i++) {
-            require(
-                landPrice[_worldId][i].currentPrice == 0,
-                "APWarsWorldManager:PRICING_ALREADY_SET"
-            );
-
-            setRegionLancePrice(_worldId, i, _basePrice);
-        }
+        basePrice[_worldId] = _basePrice;
     }
 
     function setPriceIncrementByFoundationType(
@@ -368,6 +362,10 @@ contract APWarsWorldManager is AccessControl {
         if (price.nextBlockUpdate <= block.number) {
             currentPrice = price.nextPrice;
         }
+
+        if (currentPrice == 0) {
+            return basePrice[_worldId];
+        }
     }
 
     function getLandPrice(
@@ -460,16 +458,16 @@ contract APWarsWorldManager is AccessControl {
         price.nextPrice = _price;
         price.nextBlockUpdate = block.number;
 
-        // emit NewLandPrice(
-        //     msg.sender,
-        //     _worldId,
-        //     0,
-        //     0,
-        //     0,
-        //     currentPrice,
-        //     _price,
-        //     block.number
-        // );
+        emit NewLandPrice(
+            msg.sender,
+            _worldId,
+            0,
+            0,
+            0,
+            currentPrice,
+            _price,
+            block.number
+        );
     }
 
     function updateRegionLandPrice(
