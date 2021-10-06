@@ -271,15 +271,17 @@ contract APWarsWorldManager is AccessControl {
         returns (
             uint256 oldValue,
             uint256 newValue,
-            uint256 targetBlock
+            uint256 targetBlock,
+            uint256 landType
         )
     {
-        return
-            nftStorage.getScheduledUInt256(
-                address(worldNFT),
-                _worldId,
-                getFoundationVarName(_x, _y)
-            );
+        (oldValue, newValue, targetBlock) = nftStorage.getScheduledUInt256(
+            address(worldNFT),
+            _worldId,
+            getFoundationVarName(_x, _y)
+        );
+
+        landType = worldMap.getSpecialPlace(_x, _y);
     }
 
     function getFoundationsByLands(
@@ -293,12 +295,14 @@ contract APWarsWorldManager is AccessControl {
         returns (
             uint256[] memory oldValues,
             uint256[] memory newValues,
-            uint256[] memory targetBlocks
+            uint256[] memory targetBlocks,
+            uint256[] memory types
         )
     {
         oldValues = new uint256[](_area * _area);
         newValues = new uint256[](_area * _area);
         targetBlocks = new uint256[](_area * _area);
+        types = new uint256[](_area * _area);
 
         uint256 i = 0;
         for (uint256 x = 0; x < _area; x++) {
@@ -306,7 +310,8 @@ contract APWarsWorldManager is AccessControl {
                 (
                     oldValues[i],
                     newValues[i],
-                    targetBlocks[i]
+                    targetBlocks[i],
+                    types[i]
                 ) = getRawFoundationTypeByLand(_worldId, _x + x, _y + y);
 
                 i++;
