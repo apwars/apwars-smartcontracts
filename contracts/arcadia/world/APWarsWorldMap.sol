@@ -9,7 +9,6 @@ import "../nft/APWarsBaseNFT.sol";
 import "../nft/APWarsBaseNFTStorage.sol";
 import "../inventory/APWarsTokenTransfer.sol";
 import "../inventory/APWarsCollectiblesTransfer.sol";
-import "./APWarsWorldTreasury.sol";
 
 contract APWarsWorldMap is AccessControl {
     using SafeMath for uint256;

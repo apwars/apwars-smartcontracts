@@ -9,8 +9,8 @@ import "../nft/APWarsBaseNFT.sol";
 import "../nft/APWarsBaseNFTStorage.sol";
 import "../inventory/APWarsTokenTransfer.sol";
 import "../inventory/APWarsCollectiblesTransfer.sol";
-import "./APWarsWorldTreasury.sol";
 import "./APWarsWorldMap.sol";
+import "./IAPWarsWorldManagerEventHandler.sol";
 
 contract APWarsWorldManager is AccessControl {
     using SafeMath for uint256;
@@ -29,7 +29,7 @@ contract APWarsWorldManager is AccessControl {
     APWarsBaseNFTStorage public nftStorage;
     APWarsTokenTransfer public tokenTransfer;
     APWarsCollectiblesTransfer public collectiblesTransfer;
-    APWarsWorldTreasury worldTreasury;
+    IAPWarsWorldManagerEventHandler eventHandler;
     IERC20 public wLAND;
     ERC1155 public collectibles;
     mapping(uint256 => bool) public foundationsGameItemsMap;
@@ -57,8 +57,9 @@ contract APWarsWorldManager is AccessControl {
         public foundationsBuildingTime;
     mapping(uint256 => mapping(uint256 => mapping(uint256 => uint256)))
         public necessaryWorkersByFoundations;
-    mapping(uint256 => mapping(uint256 => LandPrice)) public landPrice;
+    mapping(uint256 => mapping(uint256 => LandPrice)) private landPrice;
     mapping(uint256 => uint256) public priceChangeInterval;
+    mapping(uint256 => address) private worldTreasury;
 
     event NewRegion(
         address indexed sender,
@@ -116,7 +117,7 @@ contract APWarsWorldManager is AccessControl {
         APWarsCollectiblesTransfer _collectiblesTransfer,
         IERC20 _wLAND,
         ERC1155 _collectibles,
-        APWarsWorldTreasury _worldTreasury
+        IAPWarsWorldManagerEventHandler _eventHandler
     ) public onlyRole(CONFIGURATOR_ROLE) {
         worldMap = _worldMap;
         worldNFT = _worldNFT;
@@ -126,9 +127,9 @@ contract APWarsWorldManager is AccessControl {
         tokenTransfer = _tokenTransfer;
         wLAND = _wLAND;
         collectibles = _collectibles;
-        worldTreasury = _worldTreasury;
         collectiblesTransfer = _collectiblesTransfer;
         workerGameItemId = _workerGameItemId;
+        eventHandler = _eventHandler;
 
         for (uint256 i = 0; i < foundationsGameItems.length; i++) {
             foundationsGameItemsMap[foundationsGameItems[i]] = false;
@@ -150,6 +151,17 @@ contract APWarsWorldManager is AccessControl {
         );
 
         basePrice[_worldId] = _basePrice;
+    }
+
+    function setWorldTreasury(uint256 _worldId, address _address)
+        public
+        onlyRole(CONFIGURATOR_ROLE)
+    {
+        worldTreasury[_worldId] = _address;
+    }
+
+    function getWorldTreasury(uint256 _worldId) public returns (address) {
+        return worldTreasury[_worldId];
     }
 
     function setPriceIncrementByFoundationType(
@@ -272,7 +284,8 @@ contract APWarsWorldManager is AccessControl {
             uint256 oldValue,
             uint256 newValue,
             uint256 targetBlock,
-            uint256 landType
+            uint256 landType,
+            address owner
         )
     {
         (oldValue, newValue, targetBlock) = nftStorage.getScheduledUInt256(
@@ -282,6 +295,7 @@ contract APWarsWorldManager is AccessControl {
         );
 
         landType = worldMap.getSpecialPlace(_x, _y);
+        owner = getLandOwner(_worldId, _x, _y);
     }
 
     function getFoundationsByLands(
@@ -296,13 +310,15 @@ contract APWarsWorldManager is AccessControl {
             uint256[] memory oldValues,
             uint256[] memory newValues,
             uint256[] memory targetBlocks,
-            uint256[] memory types
+            uint256[] memory types,
+            address[] memory owners
         )
     {
         oldValues = new uint256[](_area * _area);
         newValues = new uint256[](_area * _area);
         targetBlocks = new uint256[](_area * _area);
         types = new uint256[](_area * _area);
+        owners = new address[](_area * _area);
 
         uint256 i = 0;
         for (uint256 x = 0; x < _area; x++) {
@@ -311,7 +327,8 @@ contract APWarsWorldManager is AccessControl {
                     oldValues[i],
                     newValues[i],
                     targetBlocks[i],
-                    types[i]
+                    types[i],
+                    owners[i]
                 ) = getRawFoundationTypeByLand(_worldId, _x + x, _y + y);
 
                 i++;
@@ -541,7 +558,7 @@ contract APWarsWorldManager is AccessControl {
         tokenTransfer.transferFrom(
             wLAND,
             msg.sender,
-            address(worldTreasury),
+            getWorldTreasury(_worldId),
             landPrice
         );
 
@@ -551,6 +568,8 @@ contract APWarsWorldManager is AccessControl {
         uint256 tokenId = landNFT.getLastId();
         setLandTokenId(_worldId, _x, _y, tokenId);
         setFoundationTypeByLand(_worldId, _x, _y, DEFAULT_FOUNDATION_TYPE);
+
+        eventHandler.onBuyLand(address(this), msg.sender, _worldId, _x, _y);
 
         emit NewLand(msg.sender, _worldId, _x, _y, landPrice, tokenId);
     }
@@ -627,6 +646,15 @@ contract APWarsWorldManager is AccessControl {
 
         updateRegionLandPrice(_worldId, _x, _y, _foundationType);
         setFoundationTypeByLand(_worldId, _x, _y, _foundationType);
+
+        eventHandler.onBuildFoundation(
+            address(this),
+            msg.sender,
+            _worldId,
+            _x,
+            _y,
+            _foundationType
+        );
     }
 
     function destroyFoundation(
@@ -680,5 +708,14 @@ contract APWarsWorldManager is AccessControl {
         }
 
         setFoundationTypeByLand(_worldId, _x, _y, DEFAULT_FOUNDATION_TYPE);
+
+        eventHandler.onDestroyFoundation(
+            address(this),
+            msg.sender,
+            _worldId,
+            _x,
+            _y,
+            DEFAULT_FOUNDATION_TYPE
+        );
     }
 }
