@@ -78,7 +78,6 @@ contract('APWarsWorldManager.test', accounts => {
     }
 
     await worldManager.setup(
-      worldMap.address,
       worldNFT.address,
       landNFT.address,
       nftStorage.address,
@@ -92,6 +91,7 @@ contract('APWarsWorldManager.test', accounts => {
       eventHandler.address
     );
 
+    worldManager.setWorldMap(1, worldMap.address);
     worldManager.setWorldTreasury(1, accounts[8]);
 
     await worldManager.setFoundationBuildingInterval(1,
@@ -196,7 +196,6 @@ contract('APWarsWorldManager.test', accounts => {
       await worldManager.buyLand(1, 10, 10, { from: accounts[1] });
       throw {};
     } catch (e) {
-      console.log(e);
       expect(e.reason).to.be.equal("APWarsWorldManager:INVALID_LAND");
     }
 
@@ -286,7 +285,7 @@ contract('APWarsWorldManager.test', accounts => {
     expect(villagesBalance.toString()).to.be.equal('99');
   });
 
-  it.skip('should create a 100x100 map', async () => {
+  it.only('should create a 100x100 map', async () => {
     wGOLDToken = await APWarsBaseToken.new('wGOLD', 'wGOLD');
     worldMap = await APWarsWorldMap.new();
     worldManager = await APWarsWorldManager.new();
@@ -339,9 +338,7 @@ contract('APWarsWorldManager.test', accounts => {
       }
     }
 
-
     await worldManager.setup(
-      worldMap.address,
       worldNFT.address,
       landNFT.address,
       nftStorage.address,
@@ -354,6 +351,9 @@ contract('APWarsWorldManager.test', accounts => {
       collectibles.address,
       eventHandler.address
     );
+
+    worldManager.setWorldMap(1, worldMap.address);
+    worldManager.setWorldTreasury(1, accounts[8]);
 
     await worldManager.setFoundationBuildingInterval(1,
       [

@@ -107,7 +107,7 @@ contract APWarsWorldMap is AccessControl {
         uint256[] calldata _x,
         uint256[] calldata _y,
         uint256[] calldata _types
-    ) public {
+    ) public onlyRole(CONFIGURATOR_ROLE) {
         require(
             _x.length == _y.length && _x.length == _types.length,
             "APWarsWorldManager:INVALID_ARRAY_LENTH"

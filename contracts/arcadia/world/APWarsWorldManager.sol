@@ -21,22 +21,22 @@ contract APWarsWorldManager is AccessControl {
 
     uint256 public constant DEFAULT_FOUNDATION_TYPE = 1;
 
-    bytes public DEFAULT_MESSAGE;
+    bytes private DEFAULT_MESSAGE;
 
-    APWarsWorldMap public worldMap;
-    APWarsBaseNFT public worldNFT;
-    APWarsBaseNFT public landNFT;
-    APWarsBaseNFTStorage public nftStorage;
-    APWarsTokenTransfer public tokenTransfer;
-    APWarsCollectiblesTransfer public collectiblesTransfer;
-    IAPWarsWorldManagerEventHandler eventHandler;
-    IERC20 public wLAND;
-    ERC1155 public collectibles;
-    mapping(uint256 => bool) public foundationsGameItemsMap;
+    APWarsBaseNFT private worldNFT;
+    APWarsBaseNFT private landNFT;
+    APWarsBaseNFTStorage private nftStorage;
+    APWarsTokenTransfer private tokenTransfer;
+    APWarsCollectiblesTransfer private collectiblesTransfer;
+    IAPWarsWorldManagerEventHandler private eventHandler;
+    IERC20 private wLAND;
+    ERC1155 private collectibles;
+    mapping(uint256 => bool) private foundationsGameItemsMap;
     uint256[] public foundationsGameItems;
-    address public deadAddress;
-    uint256 workerGameItemId;
-    mapping(uint256 => uint256) basePrice;
+    address private deadAddress;
+    uint256 private workerGameItemId;
+    mapping(uint256 => uint256) private basePrice;
+    mapping(uint256 => APWarsWorldMap) private worldMap;
 
     struct LandPrice {
         uint256 currentPrice;
@@ -106,7 +106,6 @@ contract APWarsWorldManager is AccessControl {
     }
 
     function setup(
-        APWarsWorldMap _worldMap,
         APWarsBaseNFT _worldNFT,
         APWarsBaseNFT _landNFT,
         APWarsBaseNFTStorage _nftStorage,
@@ -119,7 +118,6 @@ contract APWarsWorldManager is AccessControl {
         ERC1155 _collectibles,
         IAPWarsWorldManagerEventHandler _eventHandler
     ) public onlyRole(CONFIGURATOR_ROLE) {
-        worldMap = _worldMap;
         worldNFT = _worldNFT;
         landNFT = _landNFT;
         nftStorage = _nftStorage;
@@ -160,7 +158,22 @@ contract APWarsWorldManager is AccessControl {
         worldTreasury[_worldId] = _address;
     }
 
-    function getWorldTreasury(uint256 _worldId) public returns (address) {
+    function setWorldMap(uint256 _worldId, APWarsWorldMap _address)
+        public
+        onlyRole(CONFIGURATOR_ROLE)
+    {
+        worldMap[_worldId] = _address;
+    }
+
+    function getWorldMap(uint256 _worldId)
+        public
+        view
+        returns (APWarsWorldMap)
+    {
+        return worldMap[_worldId];
+    }
+
+    function getWorldTreasury(uint256 _worldId) public view returns (address) {
         return worldTreasury[_worldId];
     }
 
@@ -294,7 +307,7 @@ contract APWarsWorldManager is AccessControl {
             getFoundationVarName(_x, _y)
         );
 
-        landType = worldMap.getSpecialPlace(_x, _y);
+        landType = getWorldMap(_worldId).getSpecialPlace(_x, _y);
         owner = getLandOwner(_worldId, _x, _y);
     }
 
@@ -395,7 +408,7 @@ contract APWarsWorldManager is AccessControl {
         uint256 _x,
         uint256 _y
     ) public view returns (uint256) {
-        uint256 region = worldMap.getLandRegion(_x, _y);
+        uint256 region = getWorldMap(_worldId).getLandRegion(_x, _y);
         return getLandPriceByRegion(_worldId, region);
     }
 
@@ -498,7 +511,7 @@ contract APWarsWorldManager is AccessControl {
         uint256 _y,
         uint256 _foundationType
     ) internal {
-        uint256 region = worldMap.getLandRegion(_x, _y);
+        uint256 region = getWorldMap(_worldId).getLandRegion(_x, _y);
         LandPrice storage price = landPrice[_worldId][region];
         uint256 currentPrice = getLandPrice(_worldId, _x, _y);
 
@@ -535,7 +548,7 @@ contract APWarsWorldManager is AccessControl {
             "APWarsWorldManager:INVALID_WORLD"
         );
         require(
-            worldMap.isValidLand(_x, _y),
+            getWorldMap(_worldId).isValidLand(_x, _y),
             "APWarsWorldManager:INVALID_LAND"
         );
         require(
@@ -687,7 +700,7 @@ contract APWarsWorldManager is AccessControl {
         uint256 necessaryWorkers = getNecessaryWorkersByFoundation(
             _worldId,
             foundationType,
-            1
+            DEFAULT_FOUNDATION_TYPE
         );
 
         if (necessaryWorkers > 0) {
