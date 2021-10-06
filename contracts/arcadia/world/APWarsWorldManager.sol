@@ -31,10 +31,11 @@ contract APWarsWorldManager is AccessControl {
     IAPWarsWorldManagerEventHandler private eventHandler;
     IERC20 private wLAND;
     ERC1155 private collectibles;
-    mapping(uint256 => bool) private foundationsGameItemsMap;
-    uint256[] public foundationsGameItems;
+    uint256[] private foundationsGameItems;
     address private deadAddress;
     uint256 private workerGameItemId;
+
+    mapping(uint256 => bool) private foundationsGameItemsMap;
     mapping(uint256 => uint256) private basePrice;
     mapping(uint256 => APWarsWorldMap) private worldMap;
 
@@ -138,6 +139,38 @@ contract APWarsWorldManager is AccessControl {
         }
 
         foundationsGameItems = _foundationsGameItems;
+    }
+
+    function getSetup()
+        public
+        view
+        returns (
+            APWarsBaseNFT,
+            APWarsBaseNFT,
+            APWarsBaseNFTStorage,
+            APWarsTokenTransfer,
+            APWarsCollectiblesTransfer,
+            IAPWarsWorldManagerEventHandler,
+            IERC20,
+            ERC1155,
+            uint256[] memory,
+            address,
+            uint256
+        )
+    {
+        return (
+            worldNFT,
+            landNFT,
+            nftStorage,
+            tokenTransfer,
+            collectiblesTransfer,
+            eventHandler,
+            wLAND,
+            collectibles,
+            foundationsGameItems,
+            deadAddress,
+            workerGameItemId
+        );
     }
 
     function initializeWorldLandPricing(uint256 _worldId, uint256 _basePrice)
