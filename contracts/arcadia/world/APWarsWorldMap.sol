@@ -24,9 +24,6 @@ contract APWarsWorldMap is AccessControl {
     uint256 public maxX;
     uint256 public maxY;
     uint256 public landsPerRegion;
-    uint256[] public specialPlacesX;
-    uint256[] public specialPlacesY;
-    uint256[] public specialPlacesTypes;
     mapping(uint256 => mapping(uint256 => uint256)) specialPlaces;
 
     event NewRegion(address indexed sender, uint256 indexed region);
@@ -35,6 +32,12 @@ contract APWarsWorldMap is AccessControl {
         uint256 indexed region,
         uint256 x,
         uint256 y
+    );
+    event NewSpecialPlaces(
+        address sender,
+        uint256[] x,
+        uint256[] y,
+        uint256[] types
     );
 
     constructor() {
@@ -111,28 +114,19 @@ contract APWarsWorldMap is AccessControl {
             "APWarsWorldManager:INVALID_ARRAY_LENTH"
         );
 
-        for (uint256 i = 0; i < specialPlacesX.length; i++) {
-            specialPlaces[specialPlacesX[i]][specialPlacesY[i]] = 0;
-        }
-
         for (uint256 i = 0; i < _x.length; i++) {
             specialPlaces[_x[i]][_y[i]] = _types[i];
         }
 
-        specialPlacesX = _x;
-        specialPlacesY = _y;
-        specialPlacesTypes = _types;
+        emit NewSpecialPlaces(msg.sender, _x, _y, _types);
     }
 
-    function getSpecialPlaces()
+    function getSpecialPlace(uint256 _x, uint256 _y)
         public
-        returns (
-            uint256[] memory,
-            uint256[] memory,
-            uint256[] memory
-        )
+        view
+        returns (uint256)
     {
-        return (specialPlacesX, specialPlacesY, specialPlacesTypes);
+        return specialPlaces[_x][_y];
     }
 
     function getLandRegion(uint256 _x, uint256 _y)

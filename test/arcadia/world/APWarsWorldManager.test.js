@@ -134,7 +134,19 @@ contract('APWarsWorldManager.test', accounts => {
         20,
         21
       ]);
+    
+    
+    await worldMap.setSpecialPlaces
+    (
+      [2],
+      [2] ,
+      [3]
+    );
 
+    const obj = await worldManager.getRawFoundationTypeByLand(1, 2, 2);
+    const obj2 = await worldManager.getFoundationsByLands(1, 2, 2, 1);
+    expect(obj.landType.toString()).to.be.equal('3');
+    expect(obj2.types[0].toString()).to.be.equal('3');
   });
 
   it('should approve contracts', async () => {
@@ -268,7 +280,7 @@ contract('APWarsWorldManager.test', accounts => {
     expect(villagesBalance.toString()).to.be.equal('99');
   });
 
-  it.skip('should create a 100x100 map', async () => {
+  it.only('should create a 100x100 map', async () => {
     wGOLDToken = await APWarsBaseToken.new('wGOLD', 'wGOLD');
     worldMap = await APWarsWorldMap.new();
     worldManager = await APWarsWorldManager.new();
@@ -283,14 +295,14 @@ contract('APWarsWorldManager.test', accounts => {
     nftStorage = await APWarsBaseNFTStorage.new();
     worldTreasury = await APWarsWorldTreasury.new();
     tokenTransfer = await APWarsTokenTransfer.new();
-      
+    
     await collectibles.mint(accounts[0], 10, 100, '0x0');
-    await collectibles.mint(accounts[0], 20, 100, '0x0');
-    await collectibles.mint(accounts[0], 21, 100, '0x0');
-    await collectibles.mint(accounts[0], 22, 100, '0x0');
-    await collectibles.mint(accounts[0], 23, 100, '0x0');
-    await collectibles.mint(accounts[0], 24, 100, '0x0');
-    await collectibles.mint(accounts[0], 25, 100, '0x0');
+    await collectibles.mint(accounts[0], 62, 100, '0x0');
+    await collectibles.mint(accounts[0], 60, 100, '0x0');
+    await collectibles.mint(accounts[0], 58, 100, '0x0');
+    await collectibles.mint(accounts[0], 61, 100, '0x0');
+    await collectibles.mint(accounts[0], 59, 100, '0x0');
+    await collectibles.mint(accounts[0], 38, 100, '0x0');
 
     await worldNFT.mint(accounts[0]);
 
@@ -327,7 +339,7 @@ contract('APWarsWorldManager.test', accounts => {
       worldNFT.address,
       landNFT.address,
       nftStorage.address,
-      [20, 21, 22, 23, 24, 25],
+      [62, 60, 58, 61, 59, 38],
       10,
       accounts[8],
       tokenTransfer.address,
@@ -395,8 +407,66 @@ contract('APWarsWorldManager.test', accounts => {
       ]
     );
 
+    const FOREST = 1;
+    const STONE = 2;
+    const BIG_MOUNTAIN = 3;
+    const SAND = 4;
+    const MOUNTAINS = 5;
+    const TREES = 6;
+    const RIVER = 7;
+
+    function randomIntFromInterval(min, max) { // min and max included 
+      return Math.floor(Math.random() * (max - min + 1) + min)
+    }
+    
+
+    region = 1;
+    for (let x = 0; x < 10; x++) {
+      for (let y = 0; y < 10; y++) {
+        console.log(`Setting up special places ${region} ${x}/${y}`);
+        const num = (x + y) % 3;
+        
+        switch (num) {
+          case 0:
+            console.log("0")
+            await worldMap.setSpecialPlaces
+            (
+              [0 + (x * 10), 0 + (x * 10), 1 + (x * 10), 2 + (x * 10), 7 + (x * 10), 7 + (x * 10), 7 + (x * 10), 8 + (x * 10), 8 + (x * 10), 9 + (x * 10)],
+              [0 + (y * 10), 1 + (y * 10), 7 + (y * 10), 4 + (y * 10), 2 + (y * 10), 3 + (y * 10), 7 + (y * 10), 3 + (y * 10), 7 + (y * 10), 9 + (y * 10)] ,
+              [FOREST, FOREST, STONE, BIG_MOUNTAIN, SAND, MOUNTAINS, MOUNTAINS, TREES, TREES, RIVER]
+            );
+            break;
+          case 1:
+            console.log("1")
+            await worldMap.setSpecialPlaces
+            (
+              [0 + (x * 10), 1 + (x * 10), 1 + (x * 10), 2 + (x * 10), 5 + (x * 10), 6 + (x * 10), 6 + (x * 10), 8 + (x * 10), 9 + (x * 10), 9 + (x * 10)],
+              [9 + (y * 10), 3 + (y * 10), 9 + (y * 10), 9 + (y * 10), 2 + (y * 10), 2 + (y * 10), 3 + (y * 10), 7 + (y * 10), 3 + (y * 10), 4 + (y * 10)],
+              [BIG_MOUNTAIN, RIVER, FOREST, FOREST, FOREST, FOREST, FOREST, BIG_MOUNTAIN, BIG_MOUNTAIN, TREES]
+            );
+            break;
+          default:
+
+            console.log("default")
+            await worldMap.setSpecialPlaces
+              (
+                [0 + (x * 10), 1 + (x * 10), 1 + (x * 10), 2 + (x * 10), 5 + (x * 10), 6 + (x * 10), 6 + (x * 10), 8 + (x * 10), 9 + (x * 10), 9 + (x * 10)],
+                [9 + (y * 10), 3 + (y * 10), 9 + (y * 10), 9 + (y * 10), 2 + (y * 10), 2 + (y * 10), 3 + (y * 10), 7 + (y * 10), 3 + (y * 10), 4 + (y * 10)],
+                [STONE, RIVER, FOREST, FOREST, RIVER, RIVER, FOREST, BIG_MOUNTAIN, BIG_MOUNTAIN, SAND]
+              );
+            break;
+        }
+        region++;
+      }
+    }
+
     await worldManager.initializeWorldLandPricing(1, web3.utils.toWei('10', 'ether'));
-    await worldManager.setPriceIncrementByFoundationType(1, [0], [web3.utils.toWei('.95', 'ether')]);
+
+    const x = await worldMap.getSpecialPlace(90, 90);
+    const obj2 = await worldManager.getFoundationsByLands(1, 90, 90, 1);
+
+    expect(x.toString()).to.be.equal('1');
+    expect(obj2.types[0].toString()).to.be.equal('1');
 
     console.log("finished");
   });
