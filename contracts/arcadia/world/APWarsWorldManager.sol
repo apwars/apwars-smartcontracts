@@ -676,8 +676,7 @@ contract APWarsWorldManager is AccessControl {
         }
 
         require(
-            collectibles.balanceOf(msg.sender, _foundationType) >=
-                necessaryWorkers,
+            collectibles.balanceOf(msg.sender, _foundationType) >= 1,
             "APWarsWorldManager:INVALID_FOUNDATION_TICKET_BALANCE"
         );
 
