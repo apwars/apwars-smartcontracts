@@ -9,8 +9,8 @@ const APWarsWorldMap = artifacts.require('APWarsWorldMap');
 const APWarsWorldManager = artifacts.require('APWarsWorldManager');
 const APWarsBaseNFT = artifacts.require('APWarsBaseNFT');
 const APWarsBaseNFTStorage = artifacts.require('APWarsBaseNFTStorage');
-const APWarsWorldTreasury = artifacts.require('APWarsWorldTreasury');
 const APWarsTokenTransfer = artifacts.require('APWarsTokenTransfer');
+const APWarsWorldManagerEventHandler = artifacts.require('APWarsWorldManagerEventHandler');
 
 contract('APWarsWorldManager.test', accounts => {
   const UNIT_DEFAULT_SUPPLY = 10000000;
@@ -27,6 +27,7 @@ contract('APWarsWorldManager.test', accounts => {
   let worldNFT = null;
   let nftStorage = null;
   let tokenTransfer = null;
+  let eventHandler = null;
 
   it('should setup', async () => {
     wGOLDToken = await APWarsBaseToken.new('wGOLD', 'wGOLD');
@@ -41,8 +42,8 @@ contract('APWarsWorldManager.test', accounts => {
     landNFT = await APWarsBaseNFT.new('LAND', 'LAND', '');
     worldNFT = await APWarsBaseNFT.new('WORLD', 'WORLD', '');
     nftStorage = await APWarsBaseNFTStorage.new();
-    worldTreasury = await APWarsWorldTreasury.new();
     tokenTransfer = await APWarsTokenTransfer.new();
+    eventHandler = await APWarsWorldManagerEventHandler.new();
       
     await collectibles.mint(accounts[0], 10, 100, '0x0');
     await collectibles.mint(accounts[0], 20, 100, '0x0');
@@ -77,7 +78,6 @@ contract('APWarsWorldManager.test', accounts => {
     }
 
     await worldManager.setup(
-      worldMap.address,
       worldNFT.address,
       landNFT.address,
       nftStorage.address,
@@ -88,8 +88,11 @@ contract('APWarsWorldManager.test', accounts => {
       transfer.address,
       wLANDToken.address,
       collectibles.address,
-      worldTreasury.address
+      eventHandler.address
     );
+
+    worldManager.setWorldMap(1, worldMap.address);
+    worldManager.setWorldTreasury(1, accounts[8]);
 
     await worldManager.setFoundationBuildingInterval(1,
       [
@@ -146,7 +149,9 @@ contract('APWarsWorldManager.test', accounts => {
     const obj = await worldManager.getRawFoundationTypeByLand(1, 2, 2);
     const obj2 = await worldManager.getFoundationsByLands(1, 2, 2, 1);
     expect(obj.landType.toString()).to.be.equal('3');
+    expect(obj.owner.toString()).to.be.equal('0x0000000000000000000000000000000000000000');
     expect(obj2.types[0].toString()).to.be.equal('3');
+    expect(obj2.owners[0].toString()).to.be.equal('0x0000000000000000000000000000000000000000');
   });
 
   it('should approve contracts', async () => {
@@ -191,7 +196,6 @@ contract('APWarsWorldManager.test', accounts => {
       await worldManager.buyLand(1, 10, 10, { from: accounts[1] });
       throw {};
     } catch (e) {
-      console.log(e);
       expect(e.reason).to.be.equal("APWarsWorldManager:INVALID_LAND");
     }
 
@@ -213,6 +217,7 @@ contract('APWarsWorldManager.test', accounts => {
     const foundation1 = await worldManager.getRawFoundationTypeByLand(1, 0, 0);
 
     expect(foundation1[1].toString()).to.be.equal('1');
+    expect(foundation1.owner.toString()).to.be.equal(accounts[1]);
     expect(owner1).to.be.equal(accounts[1]);
     expect(tokenId1.toString()).to.be.equal('1');
     
@@ -293,9 +298,9 @@ contract('APWarsWorldManager.test', accounts => {
     landNFT = await APWarsBaseNFT.new('LAND', 'LAND', '');
     worldNFT = await APWarsBaseNFT.new('WORLD', 'WORLD', '');
     nftStorage = await APWarsBaseNFTStorage.new();
-    worldTreasury = await APWarsWorldTreasury.new();
     tokenTransfer = await APWarsTokenTransfer.new();
-    
+    eventHandler = await APWarsWorldManagerEventHandler.new();
+
     await collectibles.mint(accounts[0], 10, 100, '0x0');
     await collectibles.mint(accounts[0], 62, 100, '0x0');
     await collectibles.mint(accounts[0], 60, 100, '0x0');
@@ -334,12 +339,14 @@ contract('APWarsWorldManager.test', accounts => {
       }
     }
 
+<<<<<<< HEAD
     await Promise.all(setupMapPromise);
 
     console.log("Finish setupMapPromise");
 
+=======
+>>>>>>> bbea84946d5fc7c66e3b1af435e139634a6a3653
     await worldManager.setup(
-      worldMap.address,
       worldNFT.address,
       landNFT.address,
       nftStorage.address,
@@ -350,8 +357,11 @@ contract('APWarsWorldManager.test', accounts => {
       transfer.address,
       wLANDToken.address,
       collectibles.address,
-      worldTreasury.address
+      eventHandler.address
     );
+
+    worldManager.setWorldMap(1, worldMap.address);
+    worldManager.setWorldTreasury(1, accounts[8]);
 
     await worldManager.setFoundationBuildingInterval(1,
       [
