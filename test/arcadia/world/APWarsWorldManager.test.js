@@ -428,6 +428,7 @@ contract('APWarsWorldManager.test', accounts => {
     const MOUNTAINS = 5;
     const TREES = 6;
     const RIVER = 7;
+    const LOCKED = 8;
 
     function randomIntFromInterval(min, max) { // min and max included 
       return Math.floor(Math.random() * (max - min + 1) + min)
@@ -439,7 +440,10 @@ contract('APWarsWorldManager.test', accounts => {
       for (let y = 0; y < 10; y++) {
         console.log(`Setting up special places ${region} ${x}/${y}`);
         const num = (x + y) % 3;
-        
+
+        //[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9],
+        //[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9] ,
+              
         switch (num) {
           case 0:
             console.log("0")
@@ -448,6 +452,17 @@ contract('APWarsWorldManager.test', accounts => {
               [0 + (x * 10), 0 + (x * 10), 1 + (x * 10), 2 + (x * 10), 7 + (x * 10), 7 + (x * 10), 7 + (x * 10), 8 + (x * 10), 8 + (x * 10), 9 + (x * 10)],
               [0 + (y * 10), 1 + (y * 10), 7 + (y * 10), 4 + (y * 10), 2 + (y * 10), 3 + (y * 10), 7 + (y * 10), 3 + (y * 10), 7 + (y * 10), 9 + (y * 10)] ,
               [FOREST, FOREST, STONE, BIG_MOUNTAIN, SAND, MOUNTAINS, MOUNTAINS, TREES, TREES, RIVER]
+            );
+
+            // [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7, 7, 7, 8, 8, 8, 8, 8, 8, 8, 8, 9, 9, 9, 9, 9, 9, 9, 9, 9],
+            // [2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 8, 9, 0, 1, 2, 3, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 4, 5, 6, 8, 9, 0, 1, 2, 4, 5, 6, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8] ,
+              
+
+            await worldMap.setSpecialPlaces
+            (
+              [0 + (x * 10), 0 + (x * 10), 0 + (x * 10), 0 + (x * 10), 0 + (x * 10), 0 + (x * 10), 1 + (x * 10), 1 + (x * 10), 1 + (x * 10), 1 + (x * 10), 1 + (x * 10), 1 + (x * 10), 1 + (x * 10), 2 + (x * 10), 2 + (x * 10), 2 + (x * 10), 2 + (x * 10), 2 + (x * 10), 2 + (x * 10), 2 + (x * 10), 2 + (x * 10), 2 + (x * 10), 3 + (x * 10), 3 + (x * 10), 3 + (x * 10), 3 + (x * 10), 3 + (x * 10), 3 + (x * 10), 3 + (x * 10), 3 + (x * 10), 4 + (x * 10), 4 + (x * 10), 4 + (x * 10), 4 + (x * 10), 4 + (x * 10), 4 + (x * 10), 4 + (x * 10), 4 + (x * 10), 4 + (x * 10), 5 + (x * 10), 5 + (x * 10), 5 + (x * 10), 5 + (x * 10), 5 + (x * 10), 5 + (x * 10), 5 + (x * 10), 5 + (x * 10), 5 + (x * 10), 6 + (x * 10), 6 + (x * 10), 6 + (x * 10), 6 + (x * 10), 6 + (x * 10), 6 + (x * 10), 6 + (x * 10), 6 + (x * 10), 7 + (x * 10), 7 + (x * 10), 7 + (x * 10), 7 + (x * 10), 7 + (x * 10), 7 + (x * 10), 7 + (x * 10), 8 + (x * 10), 8 + (x * 10), 8 + (x * 10), 8 + (x * 10), 8 + (x * 10), 8 + (x * 10), 8 + (x * 10), 8 + (x * 10), 9 + (x * 10), 9 + (x * 10), 9 + (x * 10), 9 + (x * 10), 9 + (x * 10), 9 + (x * 10), 9 + (x * 10), 9 + (x * 10), 9],
+              [2 + (y * 10), 3 + (y * 10), 5 + (y * 10), 6 + (y * 10), 7 + (y * 10), 8 + (y * 10), 0 + (y * 10), 1 + (y * 10), 2 + (y * 10), 4 + (y * 10), 5 + (y * 10), 6 + (y * 10), 8 + (y * 10), 0 + (y * 10), 1 + (y * 10), 2 + (y * 10), 3 + (y * 10), 5 + (y * 10), 6 + (y * 10), 7 + (y * 10), 8 + (y * 10), 9 + (y * 10), 0 + (y * 10), 1 + (y * 10), 3 + (y * 10), 4 + (y * 10), 5 + (y * 10), 6 + (y * 10), 7 + (y * 10), 8 + (y * 10), 0 + (y * 10), 1 + (y * 10), 2 + (y * 10), 3 + (y * 10), 4 + (y * 10), 5 + (y * 10), 7 + (y * 10), 8 + (y * 10), 9 + (y * 10), 0 + (y * 10), 1 + (y * 10), 2 + (y * 10), 4 + (y * 10), 5 + (y * 10), 6 + (y * 10), 7 + (y * 10), 8 + (y * 10), 9 + (y * 10), 0 + (y * 10), 2 + (y * 10), 3 + (y * 10), 4 + (y * 10), 5 + (y * 10), 6 + (y * 10), 8 + (y * 10), 9 + (y * 10), 0 + (y * 10), 1 + (y * 10), 4 + (y * 10), 5 + (y * 10), 6 + (y * 10), 8 + (y * 10), 9 + (y * 10), 0 + (y * 10), 1 + (y * 10), 2 + (y * 10), 4 + (y * 10), 5 + (y * 10), 6 + (y * 10), 8 + (y * 10), 9 + (y * 10), 0 + (y * 10), 1 + (y * 10), 2 + (y * 10), 3 + (y * 10), 4 + (y * 10), 5 + (y * 10), 6 + (y * 10), 7 + (y * 10), 8] ,
+              [LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED]
             );
             break;
           case 1:
@@ -458,6 +473,16 @@ contract('APWarsWorldManager.test', accounts => {
               [9 + (y * 10), 3 + (y * 10), 9 + (y * 10), 9 + (y * 10), 2 + (y * 10), 2 + (y * 10), 3 + (y * 10), 7 + (y * 10), 3 + (y * 10), 4 + (y * 10)],
               [BIG_MOUNTAIN, RIVER, FOREST, FOREST, FOREST, FOREST, FOREST, BIG_MOUNTAIN, BIG_MOUNTAIN, TREES]
             );
+
+            
+            //75
+            await worldMap.setSpecialPlaces
+            (
+              [0 + (x * 10), 0 + (x * 10), 0 + (x * 10), 0 + (x * 10), 0 + (x * 10), 0 + (x * 10), 1 + (x * 10), 1 + (x * 10), 1 + (x * 10), 1 + (x * 10), 1 + (x * 10), 1 + (x * 10), 1 + (x * 10), 2 + (x * 10), 2 + (x * 10), 2 + (x * 10), 2 + (x * 10), 2 + (x * 10), 2 + (x * 10), 2 + (x * 10), 2 + (x * 10), 3 + (x * 10), 3 + (x * 10), 3 + (x * 10), 3 + (x * 10), 3 + (x * 10), 3 + (x * 10), 3 + (x * 10), 3 + (x * 10), 4 + (x * 10), 4 + (x * 10), 4 + (x * 10), 4 + (x * 10), 4 + (x * 10), 4 + (x * 10), 4 + (x * 10), 4 + (x * 10), 4 + (x * 10), 5 + (x * 10), 5 + (x * 10), 5 + (x * 10), 5 + (x * 10), 5 + (x * 10), 5 + (x * 10), 5 + (x * 10), 5 + (x * 10), 6 + (x * 10), 6 + (x * 10), 6 + (x * 10), 6 + (x * 10), 6 + (x * 10), 6 + (x * 10), 6 + (x * 10), 7 + (x * 10), 7 + (x * 10), 7 + (x * 10), 7 + (x * 10), 7 + (x * 10), 7 + (x * 10), 7 + (x * 10), 8 + (x * 10), 8 + (x * 10), 8 + (x * 10), 8 + (x * 10), 8 + (x * 10), 8 + (x * 10), 8 + (x * 10), 8 + (x * 10), 9 + (x * 10), 9 + (x * 10), 9 + (x * 10), 9 + (x * 10), 9 + (x * 10), 9 + (x * 10), 9],
+              [2 + (y * 10), 3 + (y * 10), 5 + (y * 10), 6 + (y * 10), 7 + (y * 10), 8 + (y * 10), 0 + (y * 10), 1 + (y * 10), 2 + (y * 10), 4 + (y * 10), 5 + (y * 10), 6 + (y * 10), 8 + (y * 10), 0 + (y * 10), 1 + (y * 10), 2 + (y * 10), 3 + (y * 10), 5 + (y * 10), 6 + (y * 10), 7 + (y * 10), 8 + (y * 10), 0 + (y * 10), 1 + (y * 10), 3 + (y * 10), 4 + (y * 10), 5 + (y * 10), 6 + (y * 10), 7 + (y * 10), 8 + (y * 10), 0 + (y * 10), 1 + (y * 10), 2 + (y * 10), 3 + (y * 10), 4 + (y * 10), 5 + (y * 10), 7 + (y * 10), 8 + (y * 10), 9 + (y * 10), 0 + (y * 10), 1 + (y * 10), 4 + (y * 10), 5 + (y * 10), 6 + (y * 10), 7 + (y * 10), 8 + (y * 10), 9 + (y * 10), 0 + (y * 10), 3 + (y * 10), 4 + (y * 10), 5 + (y * 10), 6 + (y * 10), 8 + (y * 10), 9 + (y * 10), 0 + (y * 10), 1 + (y * 10), 4 + (y * 10), 5 + (y * 10), 6 + (y * 10), 8 + (y * 10), 9 + (y * 10), 0 + (y * 10), 1 + (y * 10), 2 + (y * 10), 4 + (y * 10), 5 + (y * 10), 6 + (y * 10), 8 + (y * 10), 9 + (y * 10), 0 + (y * 10), 1 + (y * 10), 2 + (y * 10), 5 + (y * 10), 6 + (y * 10), 7 + (y * 10), 8] ,
+              [LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED]
+            );
+            break;
             break;
           default:
 
@@ -467,7 +492,15 @@ contract('APWarsWorldManager.test', accounts => {
                 [0 + (x * 10), 1 + (x * 10), 1 + (x * 10), 2 + (x * 10), 5 + (x * 10), 6 + (x * 10), 6 + (x * 10), 8 + (x * 10), 9 + (x * 10), 9 + (x * 10)],
                 [9 + (y * 10), 3 + (y * 10), 9 + (y * 10), 9 + (y * 10), 2 + (y * 10), 2 + (y * 10), 3 + (y * 10), 7 + (y * 10), 3 + (y * 10), 4 + (y * 10)],
                 [STONE, RIVER, FOREST, FOREST, RIVER, RIVER, FOREST, BIG_MOUNTAIN, BIG_MOUNTAIN, SAND]
-              );
+            );
+            
+            //74
+            await worldMap.setSpecialPlaces
+            (
+              [0 + (x * 10), 0 + (x * 10), 0 + (x * 10), 0 + (x * 10), 0 + (x * 10), 0 + (x * 10), 1 + (x * 10), 1 + (x * 10), 1 + (x * 10), 1 + (x * 10), 1 + (x * 10), 1 + (x * 10), 1 + (x * 10), 2 + (x * 10), 2 + (x * 10), 2 + (x * 10), 2 + (x * 10), 2 + (x * 10), 2 + (x * 10), 2 + (x * 10), 2 + (x * 10), 3 + (x * 10), 3 + (x * 10), 3 + (x * 10), 3 + (x * 10), 3 + (x * 10), 3 + (x * 10), 3 + (x * 10), 3 + (x * 10), 4 + (x * 10), 4 + (x * 10), 4 + (x * 10), 4 + (x * 10), 4 + (x * 10), 4 + (x * 10), 4 + (x * 10), 4 + (x * 10), 4 + (x * 10), 5 + (x * 10), 5 + (x * 10), 5 + (x * 10), 5 + (x * 10), 5 + (x * 10), 5 + (x * 10), 5 + (x * 10), 5 + (x * 10), 6 + (x * 10), 6 + (x * 10), 6 + (x * 10), 6 + (x * 10), 6 + (x * 10), 6 + (x * 10), 7 + (x * 10), 7 + (x * 10), 7 + (x * 10), 7 + (x * 10), 7 + (x * 10), 7 + (x * 10), 7 + (x * 10), 8 + (x * 10), 8 + (x * 10), 8 + (x * 10), 8 + (x * 10), 8 + (x * 10), 8 + (x * 10), 8 + (x * 10), 8 + (x * 10), 9 + (x * 10), 9 + (x * 10), 9 + (x * 10), 9 + (x * 10), 9 + (x * 10), 9 + (x * 10), 9],
+              [2 + (y * 10), 3 + (y * 10), 5 + (y * 10), 6 + (y * 10), 7 + (y * 10), 8 + (y * 10), 0 + (y * 10), 1 + (y * 10), 2 + (y * 10), 4 + (y * 10), 5 + (y * 10), 6 + (y * 10), 8 + (y * 10), 0 + (y * 10), 1 + (y * 10), 2 + (y * 10), 3 + (y * 10), 5 + (y * 10), 6 + (y * 10), 7 + (y * 10), 8 + (y * 10), 0 + (y * 10), 1 + (y * 10), 3 + (y * 10), 4 + (y * 10), 5 + (y * 10), 6 + (y * 10), 7 + (y * 10), 8 + (y * 10), 0 + (y * 10), 1 + (y * 10), 2 + (y * 10), 3 + (y * 10), 4 + (y * 10), 5 + (y * 10), 7 + (y * 10), 8 + (y * 10), 9 + (y * 10), 0 + (y * 10), 1 + (y * 10), 4 + (y * 10), 5 + (y * 10), 6 + (y * 10), 7 + (y * 10), 8 + (y * 10), 9 + (y * 10), 0 + (y * 10), 4 + (y * 10), 5 + (y * 10), 6 + (y * 10), 8 + (y * 10), 9 + (y * 10), 0 + (y * 10), 1 + (y * 10), 4 + (y * 10), 5 + (y * 10), 6 + (y * 10), 8 + (y * 10), 9 + (y * 10), 0 + (y * 10), 1 + (y * 10), 2 + (y * 10), 4 + (y * 10), 5 + (y * 10), 6 + (y * 10), 8 + (y * 10), 9 + (y * 10), 0 + (y * 10), 1 + (y * 10), 2 + (y * 10), 5 + (y * 10), 6 + (y * 10), 7 + (y * 10), 8] ,
+              [LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED, LOCKED]
+            );
             break;
         }
         region++;
