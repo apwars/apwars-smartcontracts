@@ -145,17 +145,17 @@ contract APWarsWorldManager is AccessControl {
         public
         view
         returns (
-            APWarsBaseNFT,
-            APWarsBaseNFT,
-            APWarsBaseNFTStorage,
-            APWarsTokenTransfer,
-            APWarsCollectiblesTransfer,
-            IAPWarsWorldManagerEventHandler,
-            IERC20,
-            ERC1155,
-            uint256[] memory,
-            address,
-            uint256
+            APWarsBaseNFT _worldNFT,
+            APWarsBaseNFT _landNFT,
+            APWarsBaseNFTStorage _nftStorage,
+            APWarsTokenTransfer _tokenTransfer,
+            APWarsCollectiblesTransfer _collectiblesTransfer,
+            IAPWarsWorldManagerEventHandler _eventHandler,
+            IERC20 _wLAND,
+            ERC1155 _collectibles,
+            uint256[] memory _foundationsGameItems,
+            address _deadAddress,
+            uint256 _workerGameItemId
         )
     {
         return (

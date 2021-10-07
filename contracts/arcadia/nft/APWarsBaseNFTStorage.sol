@@ -188,7 +188,7 @@ contract APWarsBaseNFTStorage is AccessControl {
                 : uint256Storage[_nft][_tokenId][_var].oldValue;
     }
 
-    function getSting(
+    function getString(
         address _nft,
         uint256 _tokenId,
         bytes32 _var
