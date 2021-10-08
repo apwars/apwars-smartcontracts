@@ -39,26 +39,12 @@ contract APWarsWorldManager is AccessControl {
     mapping(uint256 => uint256) private basePrice;
     mapping(uint256 => APWarsWorldMap) private worldMap;
 
-    struct LandPrice {
-        uint256 currentPrice;
-        uint256 nextPrice;
-        uint256 nextBlockUpdate;
-    }
-
-    struct LandChangingType {
-        uint256 worldId;
-        uint256 x;
-        uint256 y;
-        uint256 newType;
-        uint256 finishBlock;
-    }
-
     mapping(uint256 => mapping(uint256 => uint256)) public landIncrement;
     mapping(uint256 => mapping(uint256 => mapping(uint256 => uint256)))
         public foundationsBuildingTime;
     mapping(uint256 => mapping(uint256 => mapping(uint256 => uint256)))
         public necessaryWorkersByFoundations;
-    mapping(uint256 => mapping(uint256 => LandPrice)) private landPrice;
+    mapping(uint256 => mapping(uint256 => uint256)) private landPrice;
     mapping(uint256 => uint256) public priceChangeInterval;
     mapping(uint256 => address) private worldTreasury;
 
@@ -78,6 +64,22 @@ contract APWarsWorldManager is AccessControl {
         uint256 tokenId
     );
 
+    event NewFoundation(
+        address indexed sender,
+        uint256 indexed worldId,
+        uint256 x,
+        uint256 y,
+        uint256 foundationType
+    );
+
+    event FoundationDestroyed(
+        address indexed sender,
+        uint256 indexed worldId,
+        uint256 x,
+        uint256 y,
+        uint256 foundationType
+    );
+
     event NewLandPrice(
         address indexed sender,
         uint256 indexed worldId,
@@ -85,8 +87,7 @@ contract APWarsWorldManager is AccessControl {
         uint256 y,
         uint256 foundationType,
         uint256 currentPrice,
-        uint256 newPrice,
-        uint256 targetBlock
+        uint256 newPrice
     );
 
     event NewPriceIncrement(
@@ -424,12 +425,7 @@ contract APWarsWorldManager is AccessControl {
         view
         returns (uint256 currentPrice)
     {
-        LandPrice storage price = landPrice[_worldId][_region];
-        currentPrice = price.currentPrice;
-
-        if (price.nextBlockUpdate <= block.number) {
-            currentPrice = price.nextPrice;
-        }
+        currentPrice = landPrice[_worldId][_region];
 
         if (currentPrice == 0) {
             return basePrice[_worldId];
@@ -508,7 +504,7 @@ contract APWarsWorldManager is AccessControl {
         );
     }
 
-    function setRegionLancePrice(
+    function setRegionLandPrice(
         uint256 _worldId,
         uint256 _region,
         uint256 _price
@@ -518,24 +514,10 @@ contract APWarsWorldManager is AccessControl {
             "APWarsWorldManager:INVALID_OWNER"
         );
 
-        LandPrice storage price = landPrice[_worldId][_region];
+        uint256 currentPrice = landPrice[_worldId][_region];
+        landPrice[_worldId][_region] = _price;
 
-        uint256 currentPrice = price.currentPrice;
-
-        price.currentPrice = price.nextPrice;
-        price.nextPrice = _price;
-        price.nextBlockUpdate = block.number;
-
-        emit NewLandPrice(
-            msg.sender,
-            _worldId,
-            0,
-            0,
-            0,
-            currentPrice,
-            _price,
-            block.number
-        );
+        emit NewLandPrice(msg.sender, _worldId, 0, 0, 0, currentPrice, _price);
     }
 
     function updateRegionLandPrice(
@@ -544,18 +526,10 @@ contract APWarsWorldManager is AccessControl {
         uint256 _y,
         uint256 _foundationType
     ) internal {
-        uint256 region = getWorldMap(_worldId).getLandRegion(_x, _y);
-        LandPrice storage price = landPrice[_worldId][region];
         uint256 currentPrice = getLandPrice(_worldId, _x, _y);
+        uint256 region = getWorldMap(_worldId).getLandRegion(_x, _y);
 
-        if (price.nextBlockUpdate < block.number) {
-            price.nextBlockUpdate = block.number.add(
-                getPriceChangeInterval(_worldId)
-            );
-            price.currentPrice = currentPrice;
-        }
-
-        price.nextPrice = currentPrice.add(
+        landPrice[_worldId][region] = currentPrice.add(
             getPriceIncrementByFoundationType(_worldId, _foundationType)
         );
 
@@ -566,8 +540,7 @@ contract APWarsWorldManager is AccessControl {
             _y,
             _foundationType,
             currentPrice,
-            price.nextPrice,
-            price.nextBlockUpdate
+            landPrice[_worldId][region]
         );
     }
 
@@ -589,15 +562,16 @@ contract APWarsWorldManager is AccessControl {
             "APWarsWorldManager:LAND_IS_OWNED"
         );
 
-        uint256 landPrice = getLandPrice(_worldId, _x, _y);
+        uint256 currentLandPrice = getLandPrice(_worldId, _x, _y);
 
         require(
-            wLAND.allowance(msg.sender, address(tokenTransfer)) >= landPrice,
+            wLAND.allowance(msg.sender, address(tokenTransfer)) >=
+                currentLandPrice,
             "APWarsWorldManager:INVALID_WLAND_ALLOWANCE"
         );
 
         require(
-            wLAND.balanceOf(msg.sender) >= landPrice,
+            wLAND.balanceOf(msg.sender) >= currentLandPrice,
             "APWarsWorldManager:INVALID_WLAND_BALANCE"
         );
 
@@ -605,7 +579,7 @@ contract APWarsWorldManager is AccessControl {
             wLAND,
             msg.sender,
             getWorldTreasury(_worldId),
-            landPrice
+            currentLandPrice
         );
 
         updateRegionLandPrice(_worldId, _x, _y, DEFAULT_FOUNDATION_TYPE);
@@ -617,7 +591,7 @@ contract APWarsWorldManager is AccessControl {
 
         eventHandler.onBuyLand(address(this), msg.sender, _worldId, _x, _y);
 
-        emit NewLand(msg.sender, _worldId, _x, _y, landPrice, tokenId);
+        emit NewLand(msg.sender, _worldId, _x, _y, currentLandPrice, tokenId);
     }
 
     function buildFoundation(
@@ -700,6 +674,8 @@ contract APWarsWorldManager is AccessControl {
             _y,
             _foundationType
         );
+
+        NewFoundation(msg.sender, _worldId, _x, _y, _foundationType);
     }
 
     function destroyFoundation(
@@ -756,6 +732,14 @@ contract APWarsWorldManager is AccessControl {
 
         eventHandler.onDestroyFoundation(
             address(this),
+            msg.sender,
+            _worldId,
+            _x,
+            _y,
+            DEFAULT_FOUNDATION_TYPE
+        );
+
+        FoundationDestroyed(
             msg.sender,
             _worldId,
             _x,
