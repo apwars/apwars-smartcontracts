@@ -64,7 +64,7 @@ const deployContracts = async (accounts) => {
   console.log('landSale', landSale.address);
 }
 
-contract.only('APWarswLANDlandSale buy wLAND', accounts => {
+contract('APWarswLANDlandSale buy wLAND', accounts => {
   it('should deploy the contracts', async () => {
     await deployContracts(accounts);
   });
@@ -107,16 +107,16 @@ contract.only('APWarswLANDlandSale buy wLAND', accounts => {
   it('should test add referral and buy wLAND referral', async () => {
 
     const refAccount5 = web3.utils.keccak256("account5");
-    await landSale.addRef(refAccount5, { from: accounts[5] });
+    await landSale.addRef(refAccount5, accounts[5], { from: accounts[0] });
 
     try {
-      await landSale.addRef(refAccount5, { from: accounts[5] });
+      await landSale.addRef(refAccount5, accounts[5], { from: accounts[0] });
     } catch (error) {
       expect(error.reason).to.be.equal("APWarsLandSale:INVALID_REFERRAL");
     }
 
     let balanceBUSDAccount6 = new BigNumber(await busd.balanceOf(accounts[6], { from: accounts[6] }));
-    let balanceBUSDAccount8 =  new BigNumber(await busd.balanceOf(accounts[8], { from: accounts[8] }));
+    let balanceBUSDAccount8 = new BigNumber(await busd.balanceOf(accounts[8], { from: accounts[8] }));
 
     const amountBuy = 5000;
     const busdAmount = new BigNumber(amountBuy).multipliedBy(PRICE_WLAND);
@@ -126,7 +126,7 @@ contract.only('APWarswLANDlandSale buy wLAND', accounts => {
     const netAmount = busdAmount.minus(refAmount.multipliedBy(2));
 
     await landSale.buywLAND(amountBuy, refAccount5, { from: accounts[6] });
-    
+
     let newBalanceBUSDAccount6 = new BigNumber(await busd.balanceOf(accounts[6], { from: accounts[6] }));
     const balanceReduceAccount6 = balanceBUSDAccount6.minus(netAmount.plus(refAmount)); // PERCENT REF 5%
 
@@ -145,7 +145,7 @@ contract.only('APWarswLANDlandSale buy wLAND', accounts => {
 
     const refAccount5 = web3.utils.keccak256("account5");
     let balanceBUSDAccount6 = new BigNumber(await wLAND.balanceOf(accounts[6], { from: accounts[6] }));
-    let balanceBUSDAccount8 =  new BigNumber(await wLAND.balanceOf(accounts[8], { from: accounts[8] }));
+    let balanceBUSDAccount8 = new BigNumber(await wLAND.balanceOf(accounts[8], { from: accounts[8] }));
 
     const amountBuy = 2;
     const ticketId = 60;
@@ -157,7 +157,7 @@ contract.only('APWarswLANDlandSale buy wLAND', accounts => {
     const netAmount = busdAmount.minus(refAmount.multipliedBy(2));
 
     await landSale.buyTicket(ticketId, amountBuy, refAccount5, { from: accounts[6] });
-    
+
     let newBalanceBUSDAccount6 = new BigNumber(await wLAND.balanceOf(accounts[6], { from: accounts[6] }));
     const balanceReduceAccount6 = balanceBUSDAccount6.minus(netAmount.plus(refAmount)); // PERCENT REF 5%
 
@@ -285,7 +285,6 @@ contract.only('APWarswLANDlandSale buy wLAND', accounts => {
     expect(balanceAccount1).to.be.equal(1);
   });
 
-
   it('should test buy all wLAND', async () => {
     const amountBuyWei = await wLAND.balanceOf(landSale.address);
     const amountBuy = web3.utils.fromWei(amountBuyWei);
@@ -303,5 +302,61 @@ contract.only('APWarswLANDlandSale buy wLAND', accounts => {
     }
   });
 
+  // it('should test withdrawwLAND with amount parameter', async () => {
+  //   const withdrawAmount = 1000;
+  //   let amountwLANDlandSale = web3.utils.fromWei(await wLAND.balanceOf(landSale.address));
+  //   await landSale.withdrawwLAND(web3.utils.toWei(withdrawAmount.toString(), 'ether'), { from: accounts[0] });
+
+  //   const reduceBalance = amountwLANDlandSale - withdrawAmount;
+  //   const newBalance = web3.utils.fromWei(await wLAND.balanceOf(landSale.address));
+
+  //   expect(reduceBalance).to.be.equal(parseFloat(newBalance));
+  // });
+
+
+
 });
+
+contract.only('APWarswLANDlandSale withdraw wLAND', accounts => {
+  it('should deploy the contracts', async () => {
+    await deployContracts(accounts);
+  });
+
+  it('should test withdrawwLAND with amount parameter', async () => {
+    const withdrawAmount = 1000;
+    let amountwLANDlandSale = web3.utils.fromWei(await wLAND.balanceOf(landSale.address));
+    let amountAccount0 = web3.utils.fromWei(await wLAND.balanceOf(accounts[0]));
+
+    let weiAmount = web3.utils.toWei(withdrawAmount.toString(), 'ether');
+    await landSale.withdrawwLAND(weiAmount);
+
+    const reduceBalance = amountwLANDlandSale - withdrawAmount;
+    const addBalance = parseFloat(amountAccount0) + withdrawAmount;
+    const newBalance = web3.utils.fromWei(await wLAND.balanceOf(landSale.address));
+
+    const newBalanceAccount0 = web3.utils.fromWei(await wLAND.balanceOf(accounts[0]));
+
+    expect(reduceBalance).to.be.equal(parseFloat(newBalance));
+    expect(addBalance).to.be.equal(parseFloat(newBalanceAccount0));
+  });
+
+  it('should test withdrawwLAND all amount', async () => {
+    let amountwLANDlandSale = web3.utils.fromWei(await wLAND.balanceOf(landSale.address));
+    let amountAccount0 = web3.utils.fromWei(await wLAND.balanceOf(accounts[0]));
+
+    await landSale.withdrawwLAND();
+
+    const reduceBalance = amountwLANDlandSale - parseFloat(amountwLANDlandSale);
+    const addBalance = parseFloat(amountAccount0) + parseFloat(amountwLANDlandSale);
+    const newBalance = web3.utils.fromWei(await wLAND.balanceOf(landSale.address));
+
+    const newBalanceAccount0 = web3.utils.fromWei(await wLAND.balanceOf(accounts[0]));
+
+    expect(reduceBalance).to.be.equal(parseFloat(newBalance));
+    expect(addBalance).to.be.equal(parseFloat(newBalanceAccount0));
+  });
+
+
+});
+
 

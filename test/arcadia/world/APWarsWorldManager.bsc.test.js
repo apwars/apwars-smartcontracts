@@ -14,7 +14,7 @@ const APWarsWorldManagerEventHandler = artifacts.require('APWarsWorldManagerEven
 
 const contracts = require('../../../data/contracts');
 
-const bscNetworking = "bsctestnet";
+const bscNetworking = "bsc";
 
 
 contract('APWarsWorldManager.test', accounts => {
@@ -32,12 +32,12 @@ contract('APWarsWorldManager.test', accounts => {
   let tokenTransfer = null;
 
   const contractsWorld = {
-    worldManager: '0xDBe11E0663A23e2444e12Ee8677f72039b21890A',
-    landNFT: '0x44997600c174EE0Da0d98A46cb1790d0cDF7641A',
-    worldNFT: '0x33cd4E89B15e90306C8bF7C845672Fe1E4De1688',
-    nftStorage: '0x5C9F952B12a8EafE0d5d07D0B78AB03056f511bF',
-    worldMap: '0x0d5c487b9EA2A634165697fbd07772b76Aca5c1D',
-    eventHandler: '0xc68BAA55c4a68F24c181849dBD6bC84F9d084160',
+    worldManager: '0xfe40EEf0594664334847508901c802058B99215D',
+    landNFT: '0x8ff595DE2e08731F5Fd6faE8b24A4aEE4B7c98A6',
+    worldNFT: '0x0d40F1119672F129D6E8e41A42453d3baD6eA537',
+    nftStorage: '0x46886e61fA6A596ad48Ac11A53288112C8233Dfa',
+    worldMap: '0xF22E30a30065EA5597739D77c2c424e53616e516',
+    eventHandler: '0x6F2735d5AA7E546e6384C80ae5Dd065E7C42910C',
   }
 
   it('should create contracts and mint world', async () => {
@@ -76,7 +76,7 @@ contract('APWarsWorldManager.test', accounts => {
     console.log("finished");
   });
 
-  it('should create a 100x100 map', async () => {
+  it.only('should create a 100x100 map', async () => {
 
     if (contractsWorld.worldMap === "") {
       console.log('worldMap empty')
@@ -170,7 +170,7 @@ contract('APWarsWorldManager.test', accounts => {
         864000,
         864000,
         864000,
-        604800,
+        864000,
         864000,
         864000,
         864000,
@@ -205,7 +205,7 @@ contract('APWarsWorldManager.test', accounts => {
 
   });
 
-  it.only('should config worldMap setSpecialPlaces', async () => {
+  it('should config worldMap setSpecialPlaces', async () => {
 
     if (contractsWorld.worldMap === "") {
       console.log('worldMap empty')

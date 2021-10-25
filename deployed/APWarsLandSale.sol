@@ -1467,7 +1467,7 @@ contract APWarsLandSale is AccessControl, ERC1155Holder {
 
     uint256 private constant ONE_HUNDRED_PERCENT = 10**4;
     uint256 private constant FIVE_PERCENT = 10**3 / 2;
-    uint256 public constant PRICE_WLAND = 15 * 10**17;
+    uint256 private constant PRICE_WLAND = 15 * 10**17;
 
     bytes private DEFAULT_MESSAGE;
 
@@ -1493,7 +1493,7 @@ contract APWarsLandSale is AccessControl, ERC1155Holder {
         uint256 refAmount
     );
     event NewTicket(address indexed sender, uint256 ticketId, uint256 amount);
-    event NewWithdrawwLand(address indexed sender, uint256 amount);
+    event NewWithdrawwLAND(address indexed sender, uint256 amount);
     event NewWithdrawTicket(address indexed sender, uint256 amount);
 
     modifier onlyRole(bytes32 role) {
@@ -1531,9 +1531,9 @@ contract APWarsLandSale is AccessControl, ERC1155Holder {
         }
     }
 
-    function addRef(bytes32 ref) public {
+    function addRef(bytes32 ref, address account) public onlyRole(DEFAULT_ADMIN_ROLE) {
         require(referral[ref] == address(0), "APWarsLandSale:INVALID_REFERRAL");
-        referral[ref] = msg.sender;
+        referral[ref] = account;
     }
 
     function buyTicket(
@@ -1651,22 +1651,20 @@ contract APWarsLandSale is AccessControl, ERC1155Holder {
         emit NewSell(msg.sender, _amount);
     }
 
-    function withdrawwLand() public onlyRole(DEFAULT_ADMIN_ROLE) {
+    function withdrawwLAND() public onlyRole(DEFAULT_ADMIN_ROLE) {
         IERC20 token = IERC20(wLAND);
         uint256 amount = token.balanceOf(address(this));
-        token.transfer(msg.sender, amount);
-
-        emit NewWithdrawwLand(msg.sender, amount);
+        withdrawwLAND(amount);
     }
 
-    function withdrawwLand(uint256 _amount)
+    function withdrawwLAND(uint256 _amount)
         public
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
         IERC20 token = IERC20(wLAND);
         token.transfer(msg.sender, _amount);
 
-        emit NewWithdrawwLand(msg.sender, _amount);
+        emit NewWithdrawwLAND(msg.sender, _amount);
     }
 
     function withdrawTicket(uint256 _ticketId)
@@ -1676,15 +1674,7 @@ contract APWarsLandSale is AccessControl, ERC1155Holder {
         IERC1155 token = IERC1155(collectibles);
         uint256 amount = token.balanceOf(address(this), _ticketId);
 
-        token.safeTransferFrom(
-            address(this),
-            msg.sender,
-            _ticketId,
-            amount,
-            DEFAULT_MESSAGE
-        );
-
-        emit NewWithdrawTicket(msg.sender, amount);
+        withdrawTicket(_ticketId, amount);
     }
 
     function withdrawTicket(uint256 _ticketId, uint256 _amount)

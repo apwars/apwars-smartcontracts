@@ -8,11 +8,14 @@ module.exports = {
   wGOLD: '0x7ab6eedd9443e0e98e5ea93667ca5b250b8dda51',
   wCOURAGE: '0x5F51A3ce7f2233777328866F477E86a91CA9DdeC',
   feeAddress: '0x1f551309b66c16899d514b9c508786622829fc63',
-  devAddress: '0x63ada67b95de4fa6fedcbd5435cf40bdeeb55fb6',
+  devAddress: '0x63ada67b95de4fa6fedcbd5435cf40bdeeb55fb6', // 0x49ec7671e7ed7aa7e676b2aecbeee0256b442603
   APWarsMarketNFTSwapEscrow: '0x8FCC46678541C07341b62A23A0efDE7A237D3A61',
   APWarsNFTTransporter: '0x31c6bba549586ca05f1ed5cdd845381b15179053',
   APWarsCombinator: '0x4311C6e36FaAD6B3Cd5bf4A73fc273A02b32Ec46',
   APWarsCombinatorManager: '0xb0b94d8689ff562c81727a166508865ca1540330',
+  wLAND: '0x2C6107c27A15D2C7F397D88D76257Ea42c12f89F',
+  APWarsCollectiblesTransfer: "0x778c9fBD752D507235Fe2e13b359D329276C928c",
+  APWarsTokenTransfer: "0xd6adBAff5CD8ca7f702244106a30c90797274469",
 
   units: [
     {
