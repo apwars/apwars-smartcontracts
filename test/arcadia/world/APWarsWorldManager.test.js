@@ -417,14 +417,22 @@ contract('APWarsWorldManager.test', accounts => {
     );
 
     let region = 1;
+    let setupMapPromise = [];
     for (let x = 0; x < 10; x++) {
       for (let y = 0; y < 10; y++) {
         console.log(`Setting up the region ${region} ${x}/${y}`);
-        await worldMap.setupMap(region, x, y);
+        setupMapPromise.push(worldMap.setupMap(region, x, y));
         region++;
       }
     }
 
+<<<<<<< HEAD
+    await Promise.all(setupMapPromise);
+
+    console.log("Finish setupMapPromise");
+
+=======
+>>>>>>> bbea84946d5fc7c66e3b1af435e139634a6a3653
     await worldManager.setup(
       worldNFT.address,
       landNFT.address,

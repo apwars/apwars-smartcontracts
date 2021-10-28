@@ -39,12 +39,12 @@ module.exports = {
 
     bsc: {
       provider: () => new HDWalletProvider(mnemonic56, rpcUrl56),
-      gasPrice: '7000000000', 
+      gasPrice: '5000000000', 
       network_id: 56,       // Ropsten's id
       gas: 5500000,  
       confirmations: 1,    
       timeoutBlocks: 200,  // # of blocks before a deployment times out  (minimum/default: 50)
-      skipDryRun: true     // Skip dry run before migrations? (default: false for public nets )
+      skipDryRun: false     // Skip dry run before migrations? (default: false for public nets )
     },
 
     bsctestnet: {
@@ -60,7 +60,7 @@ module.exports = {
 
   // Set default mocha options here, use special reporters etc.
   mocha: {
-    // timeout: 100000
+    timeout: 100000000
   },
 
   compilers: {
