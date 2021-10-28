@@ -6,11 +6,16 @@ const APWarsCollectiblesTransferMock = artifacts.require('APWarsCollectiblesTran
 
 const APWarsLandToken = artifacts.require('APWarsLandToken');
 const APWarsWorldMap = artifacts.require('APWarsWorldMap');
+const APWarsLandMap = artifacts.require('APWarsLandMap');
 const APWarsWorldManager = artifacts.require('APWarsWorldManager');
 const APWarsBaseNFT = artifacts.require('APWarsBaseNFT');
 const APWarsBaseNFTStorage = artifacts.require('APWarsBaseNFTStorage');
 const APWarsTokenTransfer = artifacts.require('APWarsTokenTransfer');
 const APWarsWorldManagerEventHandler = artifacts.require('APWarsWorldManagerEventHandler');
+
+const APWarsTreasureHunt = artifacts.require('APWarsTreasureHunt');
+const APWarsTreasureHuntEventHandler = artifacts.require('APWarsTreasureHuntEventHandler');
+const APWarsTreasureHuntSetup = artifacts.require('APWarsTreasureHuntSetup');
 
 contract('APWarsWorldManager.test', accounts => {
   const UNIT_DEFAULT_SUPPLY = 10000000;
@@ -19,7 +24,11 @@ contract('APWarsWorldManager.test', accounts => {
   let wLANDToken = null;
   let collectibles = null;
   let transfer = null;
-  let transferMock = null;
+  let collectiblesTransfer = null;
+
+  let treasureHunt;
+  let treasureHuntEventHandler;
+  let treasureHuntSetup;
 
   let worldManager = null;
   let worldMap = null;
@@ -36,7 +45,7 @@ contract('APWarsWorldManager.test', accounts => {
     wLANDToken = await APWarsLandToken.new('wLAND', 'wLAND');
     burnManager = await APWarsBurnManager.new();
     transfer = await APWarsCollectiblesTransfer.new();
-    transferMock = await APWarsCollectiblesTransferMock.new();
+    collectiblesTransfer = await APWarsCollectiblesTransfer.new();
     collectibles = await APWarsCollectibles.new(burnManager.address, "URI");
 
     landNFT = await APWarsBaseNFT.new('LAND', 'LAND', '');
@@ -152,6 +161,56 @@ contract('APWarsWorldManager.test', accounts => {
     expect(obj.owner.toString()).to.be.equal('0x0000000000000000000000000000000000000000');
     expect(obj2.types[0].toString()).to.be.equal('3');
     expect(obj2.owners[0].toString()).to.be.equal('0x0000000000000000000000000000000000000000');
+  });
+
+  it('should setup trasure hunt', async () => {
+    const blockNumber = await web3.eth.getBlockNumber();
+    treasureHunt = await APWarsTreasureHunt.new();
+    treasureHuntEventHandler = await APWarsTreasureHuntEventHandler.new();
+    treasureHuntSetup = await APWarsTreasureHuntSetup.new();
+
+    await tokenTransfer.grantRole(await tokenTransfer.TRANSFER_ROLE(), treasureHuntSetup.address);
+    await transfer.grantRole(await tokenTransfer.TRANSFER_ROLE(), treasureHuntSetup.address);
+
+    await collectibles.mint(accounts[0], 100, 1000000, '0x0');
+
+    await collectibles.safeTransferFrom(
+        accounts[0],
+        accounts[1],
+        100,
+        100000,
+        '0x0'
+    );
+
+    await collectibles.safeTransferFrom(
+      accounts[0],
+      treasureHuntSetup.address,
+      100,
+      1000,
+      '0x0'
+  );
+
+    await treasureHuntSetup.setup(
+      wLANDToken.address,
+      collectibles.address,
+      tokenTransfer.address,
+      transfer.address,
+      accounts[9],
+      worldManager.address,
+      5000,
+      5000,
+      100,
+      1000,
+      web3.utils.toWei('0.1', 'ether'),
+      10
+    );
+    
+    await treasureHunt.setup(treasureHuntEventHandler.address);
+    await treasureHunt.addTreasureHunt(
+      1,
+      parseInt(blockNumber.toString()) + 10,
+      treasureHuntSetup.address
+    );
   });
 
   it('should approve contracts', async () => {
@@ -285,6 +344,34 @@ contract('APWarsWorldManager.test', accounts => {
     expect(villagesBalance.toString()).to.be.equal('99');
   });
 
+  it('should start a new treasure hunt', async () => {
+    await treasureHunt.setAllowedLands(1, [0], [0]);
+
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    let huntSettings = await treasureHunt.getHuntByIndex(0);
+    expect(huntSettings.winner).to.be.equal('0x0000000000000000000000000000000000000000');
+    expect(huntSettings.selectedX.toString()).to.be.equal('0');
+    expect(huntSettings.selectedY.toString()).to.be.equal('0');
+    expect(huntSettings.selectedInnerX.toString()).to.be.equal('0');
+    expect(huntSettings.selectedInnerY.toString()).to.be.equal('0');
+    
+    for (let i = 0; i < 10; i++) {
+      for (let j = 0; j < 10; j++) {
+        await treasureHunt.join(0, 0, 0, i, j, { from: accounts[1] });
+        await sleep(1000);
+      }
+    }
+    
+    await treasureHunt.distributeReward(0);
+
+    huntSettings = await treasureHunt.getHuntByIndex(0);
+    expect(huntSettings.winner).to.be.equal(accounts[1]);
+    expect(huntSettings.isClosed).to.be.equal(true);
+  });
+
   it.skip('should create a 100x100 map', async () => {
     wGOLDToken = await APWarsBaseToken.new('wGOLD', 'wGOLD');
     worldMap = await APWarsWorldMap.new();
@@ -401,7 +488,7 @@ contract('APWarsWorldManager.test', accounts => {
     
     await worldManager.setPriceIncrementByFoundationType(
       1,
-      [1, 20, 21, 22, 23, 24, 25,],
+      [1, 62, 60, 58, 61, 59, 38],
       [
         web3.utils.toWei('0.95', 'ether'),
         web3.utils.toWei('1.75', 'ether'),
@@ -506,6 +593,474 @@ contract('APWarsWorldManager.test', accounts => {
 
     expect(x.toString()).to.be.equal('1');
     expect(obj2.types[0].toString()).to.be.equal('1');
+
+    console.log("finished");
+  });
+
+  it.skip('should create a land map 10x10', async () => {
+    landMap = await APWarsLandMap.new();
+
+    console.log(`landMap: ${landMap.address}`);
+    
+    const WOOD_SOURCE_1 = 100001;
+    const WOOD_SOURCE_2 = 100002;
+    const WOOD_SOURCE_3 = 100003;
+    const WOOD_SOURCE_4 = 100004;
+    const STONE_SOURCE_1 = 200001;
+    const STONE_SOURCE_2 = 200002;
+    const STONE_SOURCE_3 = 200003;
+    const STONE_SOURCE_4 = 200004;
+    const CLAY_SOURCE_1 = 300001;
+    const CLAY_SOURCE_2 = 300002;
+    const CLAY_SOURCE_3 = 300003;
+    const CLAY_SOURCE_4 = 300004;
+    const WATER_SOURCE_4 = 400001;
+
+    const LAND = 0;
+    const FOREST = 1;
+    const STONE = 2;
+    const BIG_MOUNTAIN = 3;
+    const SAND = 4;
+    const MOUNTAINS = 5;
+    const TREES = 6;
+    const RIVER = 7;
+    const LOCKED = 8;
+    
+
+    await landMap.setMaxResourcesByType(
+      [
+        WOOD_SOURCE_1,
+        WOOD_SOURCE_2,
+        WOOD_SOURCE_3,
+        WOOD_SOURCE_4,
+        STONE_SOURCE_1,
+        STONE_SOURCE_2,
+        STONE_SOURCE_3,
+        STONE_SOURCE_4,
+        CLAY_SOURCE_1,
+        CLAY_SOURCE_2,
+        CLAY_SOURCE_3,
+        CLAY_SOURCE_4,
+        WATER_SOURCE_4
+      ],
+      [
+        WOOD_SOURCE_1,
+        WOOD_SOURCE_2,
+        WOOD_SOURCE_3,
+        WOOD_SOURCE_4,
+        STONE_SOURCE_1,
+        STONE_SOURCE_2,
+        STONE_SOURCE_3,
+        STONE_SOURCE_4,
+        CLAY_SOURCE_1,
+        CLAY_SOURCE_2,
+        CLAY_SOURCE_3,
+        CLAY_SOURCE_4,
+        WATER_SOURCE_4
+      ]
+    );
+
+    const WOOD_SOURCE_1_amount = await landMap.getMaxResourcesByType(WOOD_SOURCE_1);
+    const WATER_SOURCE_4_amount = await landMap.getMaxResourcesByType(WATER_SOURCE_4);
+    expect(WOOD_SOURCE_1_amount.toString()).to.be.equal(WOOD_SOURCE_1.toString());
+    expect(WATER_SOURCE_4_amount.toString()).to.be.equal(WATER_SOURCE_4.toString());
+
+    await landMap.setSpecialPlaces
+      (
+        LAND,
+        1,
+        [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+          2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+          3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
+          4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+          5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
+          6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
+          7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+          8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
+          9, 9, 9, 9, 9, 9, 9, 9, 9, 9
+        ],
+        [
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+        ],
+        [
+          WOOD_SOURCE_1, CLAY_SOURCE_2, CLAY_SOURCE_1, WOOD_SOURCE_3, CLAY_SOURCE_3, STONE_SOURCE_2, CLAY_SOURCE_3, WOOD_SOURCE_2, CLAY_SOURCE_3, STONE_SOURCE_3,
+          STONE_SOURCE_2, WOOD_SOURCE_1, STONE_SOURCE_1, STONE_SOURCE_2, STONE_SOURCE_3, STONE_SOURCE_1, STONE_SOURCE_3, CLAY_SOURCE_2, CLAY_SOURCE_2, CLAY_SOURCE_4,
+          STONE_SOURCE_2, CLAY_SOURCE_2, STONE_SOURCE_1, CLAY_SOURCE_2, WOOD_SOURCE_1, WOOD_SOURCE_3, STONE_SOURCE_3, WOOD_SOURCE_2, WOOD_SOURCE_4, STONE_SOURCE_1,
+          CLAY_SOURCE_1, CLAY_SOURCE_3, WOOD_SOURCE_2, CLAY_SOURCE_3, CLAY_SOURCE_1, STONE_SOURCE_2, CLAY_SOURCE_1, STONE_SOURCE_4, WOOD_SOURCE_3, CLAY_SOURCE_4,
+          WOOD_SOURCE_3, CLAY_SOURCE_3, WOOD_SOURCE_1, CLAY_SOURCE_3, WOOD_SOURCE_3, CLAY_SOURCE_1, STONE_SOURCE_3, STONE_SOURCE_1, CLAY_SOURCE_1, CLAY_SOURCE_4,
+          CLAY_SOURCE_2, WOOD_SOURCE_2, CLAY_SOURCE_1, WOOD_SOURCE_3, WATER_SOURCE_4, WATER_SOURCE_4, CLAY_SOURCE_3, WOOD_SOURCE_4, WOOD_SOURCE_4, STONE_SOURCE_3,
+          WOOD_SOURCE_2, CLAY_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WATER_SOURCE_4, WATER_SOURCE_4, WOOD_SOURCE_2, STONE_SOURCE_4, WOOD_SOURCE_3, STONE_SOURCE_4,
+          WOOD_SOURCE_1, STONE_SOURCE_1, CLAY_SOURCE_3, WOOD_SOURCE_3, STONE_SOURCE_2, STONE_SOURCE_1, WOOD_SOURCE_3, STONE_SOURCE_2, STONE_SOURCE_3, CLAY_SOURCE_4,
+          CLAY_SOURCE_2, WOOD_SOURCE_3, STONE_SOURCE_1, WOOD_SOURCE_1, CLAY_SOURCE_1, STONE_SOURCE_1, CLAY_SOURCE_2, WOOD_SOURCE_1, STONE_SOURCE_3, STONE_SOURCE_3,
+          STONE_SOURCE_1, WOOD_SOURCE_2, CLAY_SOURCE_1, WOOD_SOURCE_1, CLAY_SOURCE_2, CLAY_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_4, STONE_SOURCE_2, WOOD_SOURCE_2,
+        ],
+    );
+
+    await landMap.setSpecialPlaces
+      (
+        LAND,
+        2,
+        [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+          2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+          3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
+          4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+          5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
+          6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
+          7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+          8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
+          9, 9, 9, 9, 9, 9, 9, 9, 9, 9
+        ],
+        [
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+        ],
+        [
+          CLAY_SOURCE_1, STONE_SOURCE_1, CLAY_SOURCE_2, WOOD_SOURCE_2, STONE_SOURCE_4, CLAY_SOURCE_1, WOOD_SOURCE_3, STONE_SOURCE_2, STONE_SOURCE_1, WOOD_SOURCE_2,
+          CLAY_SOURCE_2, WOOD_SOURCE_1, WOOD_SOURCE_2, STONE_SOURCE_1, CLAY_SOURCE_3, CLAY_SOURCE_2, WOOD_SOURCE_3, WOOD_SOURCE_3, CLAY_SOURCE_3, CLAY_SOURCE_4,
+          STONE_SOURCE_3, WOOD_SOURCE_1, CLAY_SOURCE_1, WOOD_SOURCE_1, STONE_SOURCE_1, CLAY_SOURCE_3, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, CLAY_SOURCE_2,
+          CLAY_SOURCE_3, STONE_SOURCE_3, STONE_SOURCE_1, CLAY_SOURCE_2, WOOD_SOURCE_2, STONE_SOURCE_2, STONE_SOURCE_4, STONE_SOURCE_1, STONE_SOURCE_2, CLAY_SOURCE_2,
+          WOOD_SOURCE_1, STONE_SOURCE_3, CLAY_SOURCE_1, STONE_SOURCE_2, WOOD_SOURCE_3, STONE_SOURCE_1, STONE_SOURCE_3, STONE_SOURCE_1, STONE_SOURCE_4, WOOD_SOURCE_2,
+          WOOD_SOURCE_1, WOOD_SOURCE_1, CLAY_SOURCE_1, WOOD_SOURCE_1, STONE_SOURCE_2, CLAY_SOURCE_3, WOOD_SOURCE_1, STONE_SOURCE_2, CLAY_SOURCE_3, CLAY_SOURCE_4,
+          CLAY_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_2, STONE_SOURCE_2, CLAY_SOURCE_3, WOOD_SOURCE_2, CLAY_SOURCE_1, WOOD_SOURCE_3, STONE_SOURCE_2, STONE_SOURCE_3,
+          CLAY_SOURCE_3, WOOD_SOURCE_3, CLAY_SOURCE_2, CLAY_SOURCE_1, WOOD_SOURCE_3, STONE_SOURCE_1, CLAY_SOURCE_2, WOOD_SOURCE_3, STONE_SOURCE_4, STONE_SOURCE_3,
+          STONE_SOURCE_1, STONE_SOURCE_2, CLAY_SOURCE_3, WOOD_SOURCE_1, WOOD_SOURCE_1, CLAY_SOURCE_2, WOOD_SOURCE_3, STONE_SOURCE_3, WOOD_SOURCE_2, CLAY_SOURCE_4,
+          CLAY_SOURCE_3, WOOD_SOURCE_2, CLAY_SOURCE_1, WOOD_SOURCE_1, STONE_SOURCE_2, WOOD_SOURCE_3, CLAY_SOURCE_2, WOOD_SOURCE_2, STONE_SOURCE_4, CLAY_SOURCE_1,
+        ],
+    );
+
+    await landMap.setSpecialPlaces
+      (
+        LAND,
+        3,
+        [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+          2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+          3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
+          4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+          5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
+          6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
+          7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+          8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
+          9, 9, 9, 9, 9, 9, 9, 9, 9, 9
+        ],
+        [
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+        ],
+        [
+          CLAY_SOURCE_1, STONE_SOURCE_1, CLAY_SOURCE_2, WOOD_SOURCE_2, STONE_SOURCE_4, CLAY_SOURCE_1, WOOD_SOURCE_3, STONE_SOURCE_2, STONE_SOURCE_1, WOOD_SOURCE_2,
+          CLAY_SOURCE_2, WOOD_SOURCE_1, WOOD_SOURCE_2, STONE_SOURCE_1, CLAY_SOURCE_3, CLAY_SOURCE_2, WOOD_SOURCE_3, WOOD_SOURCE_3, CLAY_SOURCE_3, CLAY_SOURCE_4,
+          STONE_SOURCE_3, STONE_SOURCE_3, CLAY_SOURCE_1, STONE_SOURCE_2, WOOD_SOURCE_3, STONE_SOURCE_1, STONE_SOURCE_3, STONE_SOURCE_1, STONE_SOURCE_4, WOOD_SOURCE_2,
+          CLAY_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_2, STONE_SOURCE_2, CLAY_SOURCE_3, WOOD_SOURCE_2, CLAY_SOURCE_1, WOOD_SOURCE_3, STONE_SOURCE_2, STONE_SOURCE_3,
+          WOOD_SOURCE_1, WOOD_SOURCE_1, CLAY_SOURCE_1, WOOD_SOURCE_1, STONE_SOURCE_2, CLAY_SOURCE_3, WOOD_SOURCE_1, STONE_SOURCE_2, CLAY_SOURCE_3, CLAY_SOURCE_4,
+          CLAY_SOURCE_3, WOOD_SOURCE_3, STONE_SOURCE_1, CLAY_SOURCE_1, WOOD_SOURCE_3, STONE_SOURCE_1, CLAY_SOURCE_2, WOOD_SOURCE_3, STONE_SOURCE_4, STONE_SOURCE_3,
+          CLAY_SOURCE_3, STONE_SOURCE_3, STONE_SOURCE_1, CLAY_SOURCE_2, WOOD_SOURCE_2, STONE_SOURCE_2, STONE_SOURCE_4, STONE_SOURCE_1, STONE_SOURCE_2, CLAY_SOURCE_2,
+          STONE_SOURCE_3, WOOD_SOURCE_1, CLAY_SOURCE_1, STONE_SOURCE_3, STONE_SOURCE_1, CLAY_SOURCE_3, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, CLAY_SOURCE_2,
+          CLAY_SOURCE_2, STONE_SOURCE_2, CLAY_SOURCE_3, WOOD_SOURCE_1, STONE_SOURCE_3, CLAY_SOURCE_2, WOOD_SOURCE_3, STONE_SOURCE_3, WOOD_SOURCE_2, CLAY_SOURCE_4,
+          CLAY_SOURCE_3, WOOD_SOURCE_2, CLAY_SOURCE_1, WOOD_SOURCE_1, STONE_SOURCE_2, WOOD_SOURCE_3, CLAY_SOURCE_2, WOOD_SOURCE_2, STONE_SOURCE_4, CLAY_SOURCE_1,
+        ],
+    );
+
+    await landMap.setSpecialPlaces
+      (
+        LAND,
+        4,
+        [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+          2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+          3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
+          4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+          5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
+          6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
+          7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+          8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
+          9, 9, 9, 9, 9, 9, 9, 9, 9, 9
+        ],
+        [
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+        ],
+        [
+          CLAY_SOURCE_1, CLAY_SOURCE_3, WOOD_SOURCE_2, CLAY_SOURCE_3, CLAY_SOURCE_1, STONE_SOURCE_2, CLAY_SOURCE_1, STONE_SOURCE_4, WOOD_SOURCE_3, CLAY_SOURCE_4,
+          WOOD_SOURCE_2, CLAY_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, CLAY_SOURCE_3, STONE_SOURCE_3, WOOD_SOURCE_2, STONE_SOURCE_4, WOOD_SOURCE_3, STONE_SOURCE_4,
+          WOOD_SOURCE_1, CLAY_SOURCE_2, CLAY_SOURCE_1, WOOD_SOURCE_3, CLAY_SOURCE_3, STONE_SOURCE_2, CLAY_SOURCE_3, WOOD_SOURCE_2, CLAY_SOURCE_3, STONE_SOURCE_3,
+          STONE_SOURCE_2, WOOD_SOURCE_1, STONE_SOURCE_1, STONE_SOURCE_2, STONE_SOURCE_3, STONE_SOURCE_1, STONE_SOURCE_3, CLAY_SOURCE_2, CLAY_SOURCE_2, CLAY_SOURCE_4,
+          STONE_SOURCE_2, CLAY_SOURCE_2, STONE_SOURCE_1, CLAY_SOURCE_2, WOOD_SOURCE_1, WOOD_SOURCE_3, STONE_SOURCE_3, WOOD_SOURCE_2, WOOD_SOURCE_4, STONE_SOURCE_1,
+          WOOD_SOURCE_1, STONE_SOURCE_1, CLAY_SOURCE_3, WOOD_SOURCE_3, STONE_SOURCE_2, STONE_SOURCE_1, WOOD_SOURCE_3, STONE_SOURCE_2, STONE_SOURCE_3, CLAY_SOURCE_4,
+          WOOD_SOURCE_3, CLAY_SOURCE_3, WOOD_SOURCE_1, CLAY_SOURCE_3, WOOD_SOURCE_3, CLAY_SOURCE_1, STONE_SOURCE_3, STONE_SOURCE_1, CLAY_SOURCE_1, CLAY_SOURCE_4,
+          CLAY_SOURCE_2, WOOD_SOURCE_2, CLAY_SOURCE_1, WOOD_SOURCE_3, STONE_SOURCE_2, WOOD_SOURCE_2, CLAY_SOURCE_3, WOOD_SOURCE_4, WOOD_SOURCE_4, STONE_SOURCE_3,
+          CLAY_SOURCE_2, WOOD_SOURCE_3, STONE_SOURCE_1, WOOD_SOURCE_1, CLAY_SOURCE_1, STONE_SOURCE_1, CLAY_SOURCE_2, WOOD_SOURCE_1, STONE_SOURCE_3, STONE_SOURCE_3,
+          STONE_SOURCE_1, WOOD_SOURCE_2, CLAY_SOURCE_1, WOOD_SOURCE_1, CLAY_SOURCE_2, CLAY_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_4, STONE_SOURCE_2, WOOD_SOURCE_2,
+        ],
+    );
+
+    await landMap.setSpecialPlaces
+      (
+        FOREST,
+        1,
+        [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+          2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+          3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
+          4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+          5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
+          6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
+          7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+          8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
+          9, 9, 9, 9, 9, 9, 9, 9, 9, 9
+        ],
+        [
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+        ],
+        [
+          WOOD_SOURCE_1, WOOD_SOURCE_2, WOOD_SOURCE_3, WOOD_SOURCE_3, WOOD_SOURCE_1, WOOD_SOURCE_4, WOOD_SOURCE_4, WOOD_SOURCE_2, WOOD_SOURCE_3, WOOD_SOURCE_1,
+          WOOD_SOURCE_3, WOOD_SOURCE_2, WOOD_SOURCE_3, WOOD_SOURCE_2, WOOD_SOURCE_3, WOOD_SOURCE_2, WOOD_SOURCE_4, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_2,
+          WOOD_SOURCE_1, WOOD_SOURCE_3, WOOD_SOURCE_1, WOOD_SOURCE_4, WOOD_SOURCE_3, WOOD_SOURCE_2, WOOD_SOURCE_4, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_2,
+          WOOD_SOURCE_3, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_4, WOOD_SOURCE_1, WOOD_SOURCE_2, WOOD_SOURCE_3, WOOD_SOURCE_1,
+          WOOD_SOURCE_1, WOOD_SOURCE_3, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_4, WOOD_SOURCE_2, WOOD_SOURCE_4, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_4,
+          WOOD_SOURCE_3, WOOD_SOURCE_2, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_4, WOOD_SOURCE_4, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_2, WOOD_SOURCE_3,
+          WOOD_SOURCE_3, WOOD_SOURCE_3, WOOD_SOURCE_4, WOOD_SOURCE_3, WOOD_SOURCE_3, WOOD_SOURCE_2, WOOD_SOURCE_4, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_4,
+          WOOD_SOURCE_1, WOOD_SOURCE_4, WOOD_SOURCE_1, WOOD_SOURCE_4, WOOD_SOURCE_1, WOOD_SOURCE_3, WOOD_SOURCE_2, WOOD_SOURCE_1, WOOD_SOURCE_2, WOOD_SOURCE_2,
+          WOOD_SOURCE_3, WOOD_SOURCE_2, WOOD_SOURCE_4, WOOD_SOURCE_2, WOOD_SOURCE_3, WOOD_SOURCE_3, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_1, WOOD_SOURCE_3,
+          WOOD_SOURCE_1, WOOD_SOURCE_4, WOOD_SOURCE_3, WOOD_SOURCE_3, WOOD_SOURCE_1, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_1, WOOD_SOURCE_4, WOOD_SOURCE_3
+        ],
+    );
+
+    await landMap.setSpecialPlaces
+      (
+        FOREST,
+        2,
+        [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+          2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+          3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
+          4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+          5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
+          6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
+          7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+          8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
+          9, 9, 9, 9, 9, 9, 9, 9, 9, 9
+        ],
+        [
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+        ],
+        [
+          WOOD_SOURCE_3, WOOD_SOURCE_3, WOOD_SOURCE_4, WOOD_SOURCE_3, WOOD_SOURCE_3, WOOD_SOURCE_2, WOOD_SOURCE_4, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_4,
+          WOOD_SOURCE_1, WOOD_SOURCE_3, WOOD_SOURCE_1, WOOD_SOURCE_4, WOOD_SOURCE_3, WOOD_SOURCE_2, WOOD_SOURCE_4, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_2,
+          WOOD_SOURCE_1, WOOD_SOURCE_3, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_4, WOOD_SOURCE_2, WOOD_SOURCE_4, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_4,
+          WOOD_SOURCE_1, WOOD_SOURCE_2, WOOD_SOURCE_3, WOOD_SOURCE_3, WOOD_SOURCE_1, WOOD_SOURCE_4, WOOD_SOURCE_4, WOOD_SOURCE_2, WOOD_SOURCE_3, WOOD_SOURCE_1,
+          WOOD_SOURCE_3, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_4, WOOD_SOURCE_1, WOOD_SOURCE_2, WOOD_SOURCE_3, WOOD_SOURCE_1,
+          WOOD_SOURCE_3, WOOD_SOURCE_2, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_4, WOOD_SOURCE_4, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_2, WOOD_SOURCE_3,
+          WOOD_SOURCE_3, WOOD_SOURCE_2, WOOD_SOURCE_3, WOOD_SOURCE_2, WOOD_SOURCE_3, WOOD_SOURCE_2, WOOD_SOURCE_4, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_2,
+          WOOD_SOURCE_3, WOOD_SOURCE_2, WOOD_SOURCE_4, WOOD_SOURCE_2, WOOD_SOURCE_3, WOOD_SOURCE_3, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_1, WOOD_SOURCE_3,
+          WOOD_SOURCE_1, WOOD_SOURCE_4, WOOD_SOURCE_1, WOOD_SOURCE_4, WOOD_SOURCE_1, WOOD_SOURCE_3, WOOD_SOURCE_2, WOOD_SOURCE_1, WOOD_SOURCE_2, WOOD_SOURCE_2,
+          WOOD_SOURCE_1, WOOD_SOURCE_4, WOOD_SOURCE_3, WOOD_SOURCE_3, WOOD_SOURCE_1, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_1, WOOD_SOURCE_4, WOOD_SOURCE_3
+        ],
+    );
+
+    await landMap.setSpecialPlaces
+      (
+        FOREST,
+        3,
+        [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+          2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+          3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
+          4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+          5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
+          6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
+          7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+          8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
+          9, 9, 9, 9, 9, 9, 9, 9, 9, 9
+        ],
+        [
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+        ],
+        [
+          WOOD_SOURCE_3, WOOD_SOURCE_3, WOOD_SOURCE_4, WOOD_SOURCE_3, WOOD_SOURCE_3, WOOD_SOURCE_2, WOOD_SOURCE_4, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_4,
+          WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_3, WOOD_SOURCE_4, WOOD_SOURCE_3, WOOD_SOURCE_2, WOOD_SOURCE_4, WOOD_SOURCE_3, WOOD_SOURCE_1, WOOD_SOURCE_2,
+          WOOD_SOURCE_1, WOOD_SOURCE_3, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_4, WOOD_SOURCE_2, WOOD_SOURCE_4, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_4,
+          WOOD_SOURCE_1, WOOD_SOURCE_2, WOOD_SOURCE_3, WOOD_SOURCE_3, WOOD_SOURCE_1, WOOD_SOURCE_4, WOOD_SOURCE_4, WOOD_SOURCE_2, WOOD_SOURCE_3, WOOD_SOURCE_1,
+          WOOD_SOURCE_3, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_4, WOOD_SOURCE_1, WOOD_SOURCE_2, WOOD_SOURCE_3, WOOD_SOURCE_3,
+          WOOD_SOURCE_3, WOOD_SOURCE_2, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_4, WOOD_SOURCE_4, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_2, WOOD_SOURCE_3,
+          WOOD_SOURCE_3, WOOD_SOURCE_2, WOOD_SOURCE_3, WOOD_SOURCE_2, WOOD_SOURCE_1, WOOD_SOURCE_2, WOOD_SOURCE_4, WOOD_SOURCE_1, WOOD_SOURCE_3, WOOD_SOURCE_2,
+          WOOD_SOURCE_3, WOOD_SOURCE_2, WOOD_SOURCE_4, WOOD_SOURCE_2, WOOD_SOURCE_3, WOOD_SOURCE_1, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_1, WOOD_SOURCE_3,
+          WOOD_SOURCE_1, WOOD_SOURCE_4, WOOD_SOURCE_3, WOOD_SOURCE_4, WOOD_SOURCE_1, WOOD_SOURCE_3, WOOD_SOURCE_2, WOOD_SOURCE_1, WOOD_SOURCE_2, WOOD_SOURCE_2,
+          WOOD_SOURCE_1, WOOD_SOURCE_4, WOOD_SOURCE_3, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_1, WOOD_SOURCE_4, WOOD_SOURCE_3
+        ],
+    );
+
+    await landMap.setSpecialPlaces
+      (
+        FOREST,
+        4,
+        [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+          2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+          3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
+          4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+          5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
+          6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
+          7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+          8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
+          9, 9, 9, 9, 9, 9, 9, 9, 9, 9
+        ],
+        [
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+        ],
+        [
+          WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1,
+          WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1,
+          WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1,
+          WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1,
+          WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1,
+          WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1,
+          WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1,
+          WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1,
+          WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1,
+          WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1
+        ],
+    );
+
+    await landMap.setSpecialPlaces
+      (
+        FOREST,
+        5,
+        [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+          2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+          3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
+          4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+          5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
+          6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
+          7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+          8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
+          9, 9, 9, 9, 9, 9, 9, 9, 9, 9
+        ],
+        [
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+        ],
+        [
+          WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2,
+          WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2,
+          WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2,
+          WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2,
+          WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2,
+          WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2,
+          WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2,
+          WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2,
+          WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2,
+          WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2
+        ],
+    );
+
+    const map = await landMap.getLandAreas(LAND, 4, 10, 10);
+    const newMap = map.map(x => parseInt(x.toString()));
+
+    expect(newMap).to.deep.equal([
+      CLAY_SOURCE_1, CLAY_SOURCE_3, WOOD_SOURCE_2, CLAY_SOURCE_3, CLAY_SOURCE_1, STONE_SOURCE_2, CLAY_SOURCE_1, STONE_SOURCE_4, WOOD_SOURCE_3, CLAY_SOURCE_4,
+      WOOD_SOURCE_2, CLAY_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, CLAY_SOURCE_3, STONE_SOURCE_3, WOOD_SOURCE_2, STONE_SOURCE_4, WOOD_SOURCE_3, STONE_SOURCE_4,
+      WOOD_SOURCE_1, CLAY_SOURCE_2, CLAY_SOURCE_1, WOOD_SOURCE_3, CLAY_SOURCE_3, STONE_SOURCE_2, CLAY_SOURCE_3, WOOD_SOURCE_2, CLAY_SOURCE_3, STONE_SOURCE_3,
+      STONE_SOURCE_2, WOOD_SOURCE_1, STONE_SOURCE_1, STONE_SOURCE_2, STONE_SOURCE_3, STONE_SOURCE_1, STONE_SOURCE_3, CLAY_SOURCE_2, CLAY_SOURCE_2, CLAY_SOURCE_4,
+      STONE_SOURCE_2, CLAY_SOURCE_2, STONE_SOURCE_1, CLAY_SOURCE_2, WOOD_SOURCE_1, WOOD_SOURCE_3, STONE_SOURCE_3, WOOD_SOURCE_2, WOOD_SOURCE_4, STONE_SOURCE_1,
+      WOOD_SOURCE_1, STONE_SOURCE_1, CLAY_SOURCE_3, WOOD_SOURCE_3, STONE_SOURCE_2, STONE_SOURCE_1, WOOD_SOURCE_3, STONE_SOURCE_2, STONE_SOURCE_3, CLAY_SOURCE_4,
+      WOOD_SOURCE_3, CLAY_SOURCE_3, WOOD_SOURCE_1, CLAY_SOURCE_3, WOOD_SOURCE_3, CLAY_SOURCE_1, STONE_SOURCE_3, STONE_SOURCE_1, CLAY_SOURCE_1, CLAY_SOURCE_4,
+      CLAY_SOURCE_2, WOOD_SOURCE_2, CLAY_SOURCE_1, WOOD_SOURCE_3, STONE_SOURCE_2, WOOD_SOURCE_2, CLAY_SOURCE_3, WOOD_SOURCE_4, WOOD_SOURCE_4, STONE_SOURCE_3,
+      CLAY_SOURCE_2, WOOD_SOURCE_3, STONE_SOURCE_1, WOOD_SOURCE_1, CLAY_SOURCE_1, STONE_SOURCE_1, CLAY_SOURCE_2, WOOD_SOURCE_1, STONE_SOURCE_3, STONE_SOURCE_3,
+      STONE_SOURCE_1, WOOD_SOURCE_2, CLAY_SOURCE_1, WOOD_SOURCE_1, CLAY_SOURCE_2, CLAY_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_4, STONE_SOURCE_2, WOOD_SOURCE_2,
+    ]);
+
+    const mapId = await landMap.getLandMap(LAND, 1, 0, 0);
+    console.log(mapId);
 
     console.log("finished");
   });
