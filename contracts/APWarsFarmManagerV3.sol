@@ -218,7 +218,7 @@ contract APWarsFarmManagerV3 is Ownable, ReentrancyGuard {
                 address(msg.sender),
                 address(this),
                 _amount
-            );
+            ); 
             uint16 depositFeeBP =
                 pool.burnManager.getBurnRate(
                     address(this),
