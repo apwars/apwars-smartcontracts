@@ -172,6 +172,8 @@ contract('APWarsWorldManager.test', accounts => {
     await tokenTransfer.grantRole(await tokenTransfer.TRANSFER_ROLE(), treasureHuntSetup.address);
     await transfer.grantRole(await tokenTransfer.TRANSFER_ROLE(), treasureHuntSetup.address);
 
+    await treasureHuntSetup.grantRole(await treasureHuntSetup.TREASURE_HUNT_ROLE(), treasureHunt.address);
+
     await collectibles.mint(accounts[0], 100, 1000000, '0x0');
 
     await collectibles.safeTransferFrom(
@@ -209,7 +211,8 @@ contract('APWarsWorldManager.test', accounts => {
     await treasureHunt.addTreasureHunt(
       1,
       parseInt(blockNumber.toString()) + 10,
-      treasureHuntSetup.address
+      treasureHuntSetup.address,
+      200
     );
   });
 
@@ -367,12 +370,18 @@ contract('APWarsWorldManager.test', accounts => {
     
     await treasureHunt.distributeReward(0);
 
+    const hunters = await treasureHunt.getHunters(0, 0, 0);
+
+    for (let i = 0; i < 100; i++) {
+      expect(hunters[i]).to.be.equal(accounts[1]);
+    }
+
     huntSettings = await treasureHunt.getHuntByIndex(0);
     expect(huntSettings.winner).to.be.equal(accounts[1]);
     expect(huntSettings.isClosed).to.be.equal(true);
   });
 
-  it.skip('should create a 100x100 map', async () => {
+  it.only('should create a 100x100 map', async () => {
     wGOLDToken = await APWarsBaseToken.new('wGOLD', 'wGOLD');
     worldMap = await APWarsWorldMap.new();
     worldManager = await APWarsWorldManager.new();
@@ -388,7 +397,7 @@ contract('APWarsWorldManager.test', accounts => {
     tokenTransfer = await APWarsTokenTransfer.new();
     eventHandler = await APWarsWorldManagerEventHandler.new();
 
-    await collectibles.mint(accounts[0], 10, 100, '0x0');
+    await collectibles.mint(accounts[0], 10, 100000000, '0x0');
     await collectibles.mint(accounts[0], 62, 100, '0x0');
     await collectibles.mint(accounts[0], 60, 100, '0x0');
     await collectibles.mint(accounts[0], 58, 100, '0x0');
@@ -409,6 +418,41 @@ contract('APWarsWorldManager.test', accounts => {
     await wLANDToken.approve(tokenTransfer.address, web3.utils.toWei('1000000', 'ether'));
     await collectibles.setApprovalForAll(transfer.address, true);
 
+    const blockNumber = await web3.eth.getBlockNumber();
+    treasureHunt = await APWarsTreasureHunt.new();
+    treasureHuntEventHandler = await APWarsTreasureHuntEventHandler.new();
+    treasureHuntSetup = await APWarsTreasureHuntSetup.new();
+
+    await tokenTransfer.grantRole(await tokenTransfer.TRANSFER_ROLE(), treasureHuntSetup.address);
+    await transfer.grantRole(await tokenTransfer.TRANSFER_ROLE(), treasureHuntSetup.address);
+
+    await treasureHuntSetup.grantRole(await treasureHuntSetup.TREASURE_HUNT_ROLE(), treasureHunt.address);
+
+    await treasureHuntSetup.setup(
+      wLANDToken.address,
+      collectibles.address,
+      tokenTransfer.address,
+      transfer.address,
+      accounts[9],
+      worldManager.address,
+      5000,
+      5000,
+      10,
+      1000,
+      web3.utils.toWei('0.1', 'ether'),
+      10
+    );
+
+    console.log(`treasureHunt: ${treasureHunt.address}`);
+    
+    await treasureHunt.setup(treasureHuntEventHandler.address);
+    await treasureHunt.addTreasureHunt(
+      1,
+      parseInt(blockNumber.toString()) + 1000,
+      treasureHuntSetup.address,
+      10
+    );
+
     await worldMap.setup(
       nftStorage.address,
       100,
@@ -421,18 +465,11 @@ contract('APWarsWorldManager.test', accounts => {
     for (let x = 0; x < 10; x++) {
       for (let y = 0; y < 10; y++) {
         console.log(`Setting up the region ${region} ${x}/${y}`);
-        setupMapPromise.push(worldMap.setupMap(region, x, y));
+        await worldMap.setupMap(region, x, y);
         region++;
       }
     }
 
-<<<<<<< HEAD
-    await Promise.all(setupMapPromise);
-
-    console.log("Finish setupMapPromise");
-
-=======
->>>>>>> bbea84946d5fc7c66e3b1af435e139634a6a3653
     await worldManager.setup(
       worldNFT.address,
       landNFT.address,
@@ -516,11 +553,6 @@ contract('APWarsWorldManager.test', accounts => {
     const TREES = 6;
     const RIVER = 7;
     const LOCKED = 8;
-
-    function randomIntFromInterval(min, max) { // min and max included 
-      return Math.floor(Math.random() * (max - min + 1) + min)
-    }
-    
 
     region = 1;
     for (let x = 0; x < 10; x++) {
@@ -673,7 +705,7 @@ contract('APWarsWorldManager.test', accounts => {
     expect(WOOD_SOURCE_1_amount.toString()).to.be.equal(WOOD_SOURCE_1.toString());
     expect(WATER_SOURCE_4_amount.toString()).to.be.equal(WATER_SOURCE_4.toString());
 
-    await landMap.setSpecialPlaces
+    await landMap.setLandAreas
       (
         LAND,
         1,
@@ -715,7 +747,7 @@ contract('APWarsWorldManager.test', accounts => {
         ],
     );
 
-    await landMap.setSpecialPlaces
+    await landMap.setLandAreas
       (
         LAND,
         2,
@@ -757,7 +789,7 @@ contract('APWarsWorldManager.test', accounts => {
         ],
     );
 
-    await landMap.setSpecialPlaces
+    await landMap.setLandAreas
       (
         LAND,
         3,
@@ -799,7 +831,7 @@ contract('APWarsWorldManager.test', accounts => {
         ],
     );
 
-    await landMap.setSpecialPlaces
+    await landMap.setLandAreas
       (
         LAND,
         4,
@@ -841,7 +873,7 @@ contract('APWarsWorldManager.test', accounts => {
         ],
     );
 
-    await landMap.setSpecialPlaces
+    await landMap.setLandAreas
       (
         FOREST,
         1,
@@ -883,7 +915,7 @@ contract('APWarsWorldManager.test', accounts => {
         ],
     );
 
-    await landMap.setSpecialPlaces
+    await landMap.setLandAreas
       (
         FOREST,
         2,
@@ -925,7 +957,7 @@ contract('APWarsWorldManager.test', accounts => {
         ],
     );
 
-    await landMap.setSpecialPlaces
+    await landMap.setLandAreas
       (
         FOREST,
         3,
@@ -967,7 +999,7 @@ contract('APWarsWorldManager.test', accounts => {
         ],
     );
 
-    await landMap.setSpecialPlaces
+    await landMap.setLandAreas
       (
         FOREST,
         4,
@@ -1009,7 +1041,7 @@ contract('APWarsWorldManager.test', accounts => {
         ],
     );
 
-    await landMap.setSpecialPlaces
+    await landMap.setLandAreas
       (
         FOREST,
         5,

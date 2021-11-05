@@ -16,6 +16,8 @@ contract APWarsTreasureHuntSetup is AccessControl, ERC1155Holder {
 
     uint256 private constant ONE_HUNDRED_PERCENT = 10**4;
     bytes32 public constant CONFIGURATOR_ROLE = keccak256("CONFIGURATOR_ROLE");
+    bytes32 public constant TREASURE_HUNT_ROLE =
+        keccak256("TREASURE_HUNT_ROLE");
 
     IERC20 private token;
     uint256 private tokenFeeAmount;
@@ -75,7 +77,10 @@ contract APWarsTreasureHuntSetup is AccessControl, ERC1155Holder {
         gameItemFeeAmount = _gameItemFeeAmount;
     }
 
-    function closeReward(uint256 _huntId, address _to) public {
+    function closeReward(uint256 _huntId, address _to)
+        public
+        onlyRole(TREASURE_HUNT_ROLE)
+    {
         require(!closed[_huntId], "APWarsTreasureHuntSetup:ALREADY_CLOSED");
 
         closed[_huntId] = true;
@@ -96,7 +101,30 @@ contract APWarsTreasureHuntSetup is AccessControl, ERC1155Holder {
         uint256 _worldId,
         uint256 _x,
         uint256 _y
-    ) public {
+    ) public onlyRole(TREASURE_HUNT_ROLE) {
+        require(
+            token.allowance(_sender, address(tokenTransfer)) >= tokenFeeAmount,
+            "APWarsTreasureHuntSetup:INVALID_WLAND_ALLOWANCE"
+        );
+
+        require(
+            token.balanceOf(_sender) >= tokenFeeAmount,
+            "APWarsTreasureHuntSetup:INVALID_WLAND_BALANCE"
+        );
+
+        require(
+            collectibles.isApprovedForAll(
+                _sender,
+                address(collectiblesTransfer)
+            ),
+            "APWarsTreasureHuntSetup:INVALID_COLLECTIBLES_ALLOWANCE"
+        );
+
+        require(
+            collectibles.balanceOf(_sender, gameItemId) >= gameItemFeeAmount,
+            "APWarsWorldManager:INVALID_WORKERS_BALANCE"
+        );
+
         address landOwner = worldManager.getLandOwner(_worldId, _x, _y);
         uint256 ownerTokenAmount = tokenFeeAmount.mul(ownerFeePercentage).div(
             ONE_HUNDRED_PERCENT

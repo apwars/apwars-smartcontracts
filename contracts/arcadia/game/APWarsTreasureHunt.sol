@@ -28,14 +28,15 @@ contract APWarsTreasureHunt is AccessControl {
         uint256 selectedInnerX;
         uint256 selectedInnerY;
         bool isClosed;
+        uint256 walletLimit;
     }
 
     struct UserTreasureHunt {
-        uint256 treasureHuntId;
         uint256 x;
         uint256 y;
         uint256 innerX;
         uint256 innerY;
+        bool isValid;
     }
 
     mapping(uint256 => Land[]) private allowedLands;
@@ -105,10 +106,30 @@ contract APWarsTreasureHunt is AccessControl {
         return isLandAllowed[_worldId][_x][_y];
     }
 
+    function getHunters(
+        uint256 _huntId,
+        uint256 _x,
+        uint256 _y
+    ) public view returns (address[] memory addresses) {
+        addresses = new address[](100);
+
+        uint256 index = 0;
+        for (uint256 i = 0; i < 10; i++) {
+            for (uint256 j = 0; j < 10; j++) {
+                addresses[index] = hunters[huntSettings[_huntId].worldId][_x][
+                    _y
+                ][i][j];
+
+                index++;
+            }
+        }
+    }
+
     function addTreasureHunt(
         uint256 _worldId,
         uint256 _deadline,
-        APWarsTreasureHuntSetup _setup
+        APWarsTreasureHuntSetup _setup,
+        uint256 _walletLimit
     ) public onlyRole(CONFIGURATOR_ROLE) {
         huntSettings.push(
             TreasureHuntSettings(
@@ -120,9 +141,28 @@ contract APWarsTreasureHunt is AccessControl {
                 0,
                 0,
                 0,
-                false
+                false,
+                _walletLimit
             )
         );
+    }
+
+    function updateTreasureHunt(
+        uint256 _huntId,
+        uint256 _worldId,
+        uint256 _deadline,
+        APWarsTreasureHuntSetup _setup,
+        uint256 _walletLimit
+    ) public onlyRole(CONFIGURATOR_ROLE) {
+        require(
+            !huntSettings[_huntId].isClosed,
+            "APWarsTreasureHunt:ALREADY_CLOSED"
+        );
+
+        huntSettings[_huntId].worldId = _worldId;
+        huntSettings[_huntId].deadline = _deadline;
+        huntSettings[_huntId].setup = _setup;
+        huntSettings[_huntId].walletLimit = _walletLimit;
     }
 
     function setAllowedLands(
@@ -194,6 +234,11 @@ contract APWarsTreasureHunt is AccessControl {
             !huntSettings[_huntId].isClosed,
             "APWarsTreasureHunt:ALREADY_CLOSED"
         );
+        require(
+            huntSettings[_huntId].walletLimit >
+                userTreasureHunt[_huntId][msg.sender].length,
+            "APWarsTreasureHunt:WALLET_AMOUNT_EXCEEDED"
+        );
 
         huntSettings[_huntId].setup.chargeFee(
             msg.sender,
@@ -203,8 +248,8 @@ contract APWarsTreasureHunt is AccessControl {
         );
         hunters[huntSettings[_huntId].worldId][_x][_y][_innerX][_innerY] = msg
             .sender;
-        userTreasureHunt[huntSettings[_huntId].worldId][msg.sender].push(
-            UserTreasureHunt(_huntId, _x, _y, _innerX, _innerY)
+        userTreasureHunt[_huntId][msg.sender].push(
+            UserTreasureHunt(_x, _y, _innerX, _innerY, true)
         );
 
         randomSource = keccak256(
@@ -249,7 +294,8 @@ contract APWarsTreasureHunt is AccessControl {
             uint256 selectedY,
             uint256 selectedInnerX,
             uint256 selectedInnerY,
-            bool isClosed
+            bool isClosed,
+            uint256 walletLimit
         )
     {
         worldId = huntSettings[_huntId].worldId;
@@ -260,37 +306,37 @@ contract APWarsTreasureHunt is AccessControl {
         selectedY = huntSettings[_huntId].selectedY;
         selectedInnerX = huntSettings[_huntId].selectedInnerX;
         isClosed = huntSettings[_huntId].isClosed;
+        walletLimit = huntSettings[_huntId].walletLimit;
     }
 
-    function getHuntsLengthByPlayer(uint256 _worldId, address _player)
+    function getHuntsLengthByPlayer(uint256 _huntId, address _player)
         public
         view
         returns (uint256)
     {
-        return userTreasureHunt[_worldId][_player].length;
+        return userTreasureHunt[_huntId][_player].length;
     }
 
-    function getUserHuntByIndex(
-        uint256 _worldId,
+    function getPlayerHuntByIndex(
+        uint256 _huntId,
         address _player,
         uint256 _id
     )
         public
         view
         returns (
-            uint256 treasureHuntId,
             uint256 x,
             uint256 y,
             uint256 innerX,
-            uint256 innerY
+            uint256 innerY,
+            bool isValid
         )
     {
-        treasureHuntId = userTreasureHunt[_worldId][_player][_id]
-            .treasureHuntId;
-        x = userTreasureHunt[_worldId][_player][_id].x;
-        y = userTreasureHunt[_worldId][_player][_id].y;
-        innerX = userTreasureHunt[_worldId][_player][_id].innerX;
-        innerY = userTreasureHunt[_worldId][_player][_id].innerY;
+        x = userTreasureHunt[_huntId][_player][_id].x;
+        y = userTreasureHunt[_huntId][_player][_id].y;
+        innerX = userTreasureHunt[_huntId][_player][_id].innerX;
+        innerY = userTreasureHunt[_huntId][_player][_id].innerY;
+        isValid = userTreasureHunt[_huntId][_player][_id].isValid;
     }
 
     function distributeReward(uint256 _huntId) public {
