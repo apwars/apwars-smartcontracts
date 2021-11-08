@@ -16,6 +16,7 @@ module.exports = {
   wLAND: '0x3301078Bf06c2B5632170d4A4742372cEcb2748e',
   APWarsCollectiblesTransfer: "0x2f5690Fa681ba67840eBd723F014f376b14C0779",
   APWarsTokenTransfer: "0x2A6eaAADac4B671F3D6643272564520EaC037997",
+  worldManager: "0xD55eDCe573d50593088c0b9f7263E0870975089a",
 
   units: [
     {
