@@ -381,7 +381,7 @@ contract('APWarsWorldManager.test', accounts => {
     expect(huntSettings.isClosed).to.be.equal(true);
   });
 
-  it.only('should create a 100x100 map', async () => {
+  it.skip('should create a 100x100 map', async () => {
     wGOLDToken = await APWarsBaseToken.new('wGOLD', 'wGOLD');
     worldMap = await APWarsWorldMap.new();
     worldManager = await APWarsWorldManager.new();
