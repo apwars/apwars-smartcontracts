@@ -305,6 +305,7 @@ contract APWarsTreasureHunt is AccessControl {
         selectedX = huntSettings[_huntId].selectedX;
         selectedY = huntSettings[_huntId].selectedY;
         selectedInnerX = huntSettings[_huntId].selectedInnerX;
+        selectedInnerY = huntSettings[_huntId].selectedInnerY;
         isClosed = huntSettings[_huntId].isClosed;
         walletLimit = huntSettings[_huntId].walletLimit;
     }

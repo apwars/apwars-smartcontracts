@@ -443,7 +443,7 @@ contract('APWarsWorldManager.test', accounts => {
       10
     );
 
-    console.log(`treasureHunt: ${treasureHunt.address}`);
+    console.log(`TreasureHunt: ${treasureHunt.address}`);
     
     await treasureHunt.setup(treasureHuntEventHandler.address);
     await treasureHunt.addTreasureHunt(
