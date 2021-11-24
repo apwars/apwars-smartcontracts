@@ -1,0 +1,462 @@
+const APWarsLandMap = artifacts.require('APWarsLandMap');
+const contracts = require('../data/contracts');
+
+module.exports = async (deployer, network, accounts) => {
+  if (process.env.SKIP_MIGRATION === 'true') {
+    return;
+  }
+
+  const getContracts = contracts(network);
+
+  var landMap = await APWarsLandMap.new();
+
+  console.log(`landMap: ${landMap.address}`);
+
+  const WOOD_SOURCE_1 = 100001;
+  const WOOD_SOURCE_2 = 100002;
+  const WOOD_SOURCE_3 = 100003;
+  const WOOD_SOURCE_4 = 100004;
+  const STONE_SOURCE_1 = 200001;
+  const STONE_SOURCE_2 = 200002;
+  const STONE_SOURCE_3 = 200003;
+  const STONE_SOURCE_4 = 200004;
+  const CLAY_SOURCE_1 = 300001;
+  const CLAY_SOURCE_2 = 300002;
+  const CLAY_SOURCE_3 = 300003;
+  const CLAY_SOURCE_4 = 300004;
+  const WATER_SOURCE_4 = 400001;
+
+  const LAND = 0;
+  const FOREST = 1;
+  const STONE = 2;
+  const BIG_MOUNTAIN = 3;
+  const SAND = 4;
+  const MOUNTAINS = 5;
+  const TREES = 6;
+  const RIVER = 7;
+  const LOCKED = 8;
+
+
+  await landMap.setMaxResourcesByType(
+    [
+      WOOD_SOURCE_1,
+      WOOD_SOURCE_2,
+      WOOD_SOURCE_3,
+      WOOD_SOURCE_4,
+      STONE_SOURCE_1,
+      STONE_SOURCE_2,
+      STONE_SOURCE_3,
+      STONE_SOURCE_4,
+      CLAY_SOURCE_1,
+      CLAY_SOURCE_2,
+      CLAY_SOURCE_3,
+      CLAY_SOURCE_4,
+      WATER_SOURCE_4
+    ],
+    [
+      WOOD_SOURCE_1,
+      WOOD_SOURCE_2,
+      WOOD_SOURCE_3,
+      WOOD_SOURCE_4,
+      STONE_SOURCE_1,
+      STONE_SOURCE_2,
+      STONE_SOURCE_3,
+      STONE_SOURCE_4,
+      CLAY_SOURCE_1,
+      CLAY_SOURCE_2,
+      CLAY_SOURCE_3,
+      CLAY_SOURCE_4,
+      WATER_SOURCE_4
+    ]
+  );
+
+  const WOOD_SOURCE_1_amount = await landMap.getMaxResourcesByType(WOOD_SOURCE_1);
+  const WATER_SOURCE_4_amount = await landMap.getMaxResourcesByType(WATER_SOURCE_4);
+
+
+  await landMap.setLandAreas
+    (
+      LAND,
+      1,
+      [
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+        3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
+        4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+        5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
+        6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
+        7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+        8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9
+      ],
+      [
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+      ],
+      [
+        WOOD_SOURCE_1, CLAY_SOURCE_2, CLAY_SOURCE_1, WOOD_SOURCE_3, CLAY_SOURCE_3, STONE_SOURCE_2, CLAY_SOURCE_3, WOOD_SOURCE_2, CLAY_SOURCE_3, STONE_SOURCE_3,
+        STONE_SOURCE_2, WOOD_SOURCE_1, STONE_SOURCE_1, STONE_SOURCE_2, STONE_SOURCE_3, STONE_SOURCE_1, STONE_SOURCE_3, CLAY_SOURCE_2, CLAY_SOURCE_2, CLAY_SOURCE_4,
+        STONE_SOURCE_2, CLAY_SOURCE_2, STONE_SOURCE_1, CLAY_SOURCE_2, WOOD_SOURCE_1, WOOD_SOURCE_3, STONE_SOURCE_3, WOOD_SOURCE_2, WOOD_SOURCE_4, STONE_SOURCE_1,
+        CLAY_SOURCE_1, CLAY_SOURCE_3, WOOD_SOURCE_2, CLAY_SOURCE_3, CLAY_SOURCE_1, STONE_SOURCE_2, CLAY_SOURCE_1, STONE_SOURCE_4, WOOD_SOURCE_3, CLAY_SOURCE_4,
+        WOOD_SOURCE_3, CLAY_SOURCE_3, WOOD_SOURCE_1, CLAY_SOURCE_3, WOOD_SOURCE_3, CLAY_SOURCE_1, STONE_SOURCE_3, STONE_SOURCE_1, CLAY_SOURCE_1, CLAY_SOURCE_4,
+        CLAY_SOURCE_2, WOOD_SOURCE_2, CLAY_SOURCE_1, WOOD_SOURCE_3, WATER_SOURCE_4, WATER_SOURCE_4, CLAY_SOURCE_3, WOOD_SOURCE_4, WOOD_SOURCE_4, STONE_SOURCE_3,
+        WOOD_SOURCE_2, CLAY_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WATER_SOURCE_4, WATER_SOURCE_4, WOOD_SOURCE_2, STONE_SOURCE_4, WOOD_SOURCE_3, STONE_SOURCE_4,
+        WOOD_SOURCE_1, STONE_SOURCE_1, CLAY_SOURCE_3, WOOD_SOURCE_3, STONE_SOURCE_2, STONE_SOURCE_1, WOOD_SOURCE_3, STONE_SOURCE_2, STONE_SOURCE_3, CLAY_SOURCE_4,
+        CLAY_SOURCE_2, WOOD_SOURCE_3, STONE_SOURCE_1, WOOD_SOURCE_1, CLAY_SOURCE_1, STONE_SOURCE_1, CLAY_SOURCE_2, WOOD_SOURCE_1, STONE_SOURCE_3, STONE_SOURCE_3,
+        STONE_SOURCE_1, WOOD_SOURCE_2, CLAY_SOURCE_1, WOOD_SOURCE_1, CLAY_SOURCE_2, CLAY_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_4, STONE_SOURCE_2, WOOD_SOURCE_2,
+      ],
+    );
+
+  await landMap.setLandAreas
+    (
+      LAND,
+      2,
+      [
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+        3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
+        4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+        5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
+        6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
+        7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+        8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9
+      ],
+      [
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+      ],
+      [
+        CLAY_SOURCE_1, STONE_SOURCE_1, CLAY_SOURCE_2, WOOD_SOURCE_2, STONE_SOURCE_4, CLAY_SOURCE_1, WOOD_SOURCE_3, STONE_SOURCE_2, STONE_SOURCE_1, WOOD_SOURCE_2,
+        CLAY_SOURCE_2, WOOD_SOURCE_1, WOOD_SOURCE_2, STONE_SOURCE_1, CLAY_SOURCE_3, CLAY_SOURCE_2, WOOD_SOURCE_3, WOOD_SOURCE_3, CLAY_SOURCE_3, CLAY_SOURCE_4,
+        STONE_SOURCE_3, WOOD_SOURCE_1, CLAY_SOURCE_1, WOOD_SOURCE_1, STONE_SOURCE_1, CLAY_SOURCE_3, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, CLAY_SOURCE_2,
+        CLAY_SOURCE_3, STONE_SOURCE_3, STONE_SOURCE_1, CLAY_SOURCE_2, WOOD_SOURCE_2, STONE_SOURCE_2, STONE_SOURCE_4, STONE_SOURCE_1, STONE_SOURCE_2, CLAY_SOURCE_2,
+        WOOD_SOURCE_1, STONE_SOURCE_3, CLAY_SOURCE_1, STONE_SOURCE_2, WOOD_SOURCE_3, STONE_SOURCE_1, STONE_SOURCE_3, STONE_SOURCE_1, STONE_SOURCE_4, WOOD_SOURCE_2,
+        WOOD_SOURCE_1, WOOD_SOURCE_1, CLAY_SOURCE_1, WOOD_SOURCE_1, STONE_SOURCE_2, CLAY_SOURCE_3, WOOD_SOURCE_1, STONE_SOURCE_2, CLAY_SOURCE_3, CLAY_SOURCE_4,
+        CLAY_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_2, STONE_SOURCE_2, CLAY_SOURCE_3, WOOD_SOURCE_2, CLAY_SOURCE_1, WOOD_SOURCE_3, STONE_SOURCE_2, STONE_SOURCE_3,
+        CLAY_SOURCE_3, WOOD_SOURCE_3, CLAY_SOURCE_2, CLAY_SOURCE_1, WOOD_SOURCE_3, STONE_SOURCE_1, CLAY_SOURCE_2, WOOD_SOURCE_3, STONE_SOURCE_4, STONE_SOURCE_3,
+        STONE_SOURCE_1, STONE_SOURCE_2, CLAY_SOURCE_3, WOOD_SOURCE_1, WOOD_SOURCE_1, CLAY_SOURCE_2, WOOD_SOURCE_3, STONE_SOURCE_3, WOOD_SOURCE_2, CLAY_SOURCE_4,
+        CLAY_SOURCE_3, WOOD_SOURCE_2, CLAY_SOURCE_1, WOOD_SOURCE_1, STONE_SOURCE_2, WOOD_SOURCE_3, CLAY_SOURCE_2, WOOD_SOURCE_2, STONE_SOURCE_4, CLAY_SOURCE_1,
+      ],
+    );
+
+  await landMap.setLandAreas
+    (
+      LAND,
+      3,
+      [
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+        3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
+        4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+        5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
+        6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
+        7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+        8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9
+      ],
+      [
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+      ],
+      [
+        CLAY_SOURCE_1, STONE_SOURCE_1, CLAY_SOURCE_2, WOOD_SOURCE_2, STONE_SOURCE_4, CLAY_SOURCE_1, WOOD_SOURCE_3, STONE_SOURCE_2, STONE_SOURCE_1, WOOD_SOURCE_2,
+        CLAY_SOURCE_2, WOOD_SOURCE_1, WOOD_SOURCE_2, STONE_SOURCE_1, CLAY_SOURCE_3, CLAY_SOURCE_2, WOOD_SOURCE_3, WOOD_SOURCE_3, CLAY_SOURCE_3, CLAY_SOURCE_4,
+        STONE_SOURCE_3, STONE_SOURCE_3, CLAY_SOURCE_1, STONE_SOURCE_2, WOOD_SOURCE_3, STONE_SOURCE_1, STONE_SOURCE_3, STONE_SOURCE_1, STONE_SOURCE_4, WOOD_SOURCE_2,
+        CLAY_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_2, STONE_SOURCE_2, CLAY_SOURCE_3, WOOD_SOURCE_2, CLAY_SOURCE_1, WOOD_SOURCE_3, STONE_SOURCE_2, STONE_SOURCE_3,
+        WOOD_SOURCE_1, WOOD_SOURCE_1, CLAY_SOURCE_1, WOOD_SOURCE_1, STONE_SOURCE_2, CLAY_SOURCE_3, WOOD_SOURCE_1, STONE_SOURCE_2, CLAY_SOURCE_3, CLAY_SOURCE_4,
+        CLAY_SOURCE_3, WOOD_SOURCE_3, STONE_SOURCE_1, CLAY_SOURCE_1, WOOD_SOURCE_3, STONE_SOURCE_1, CLAY_SOURCE_2, WOOD_SOURCE_3, STONE_SOURCE_4, STONE_SOURCE_3,
+        CLAY_SOURCE_3, STONE_SOURCE_3, STONE_SOURCE_1, CLAY_SOURCE_2, WOOD_SOURCE_2, STONE_SOURCE_2, STONE_SOURCE_4, STONE_SOURCE_1, STONE_SOURCE_2, CLAY_SOURCE_2,
+        STONE_SOURCE_3, WOOD_SOURCE_1, CLAY_SOURCE_1, STONE_SOURCE_3, STONE_SOURCE_1, CLAY_SOURCE_3, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, CLAY_SOURCE_2,
+        CLAY_SOURCE_2, STONE_SOURCE_2, CLAY_SOURCE_3, WOOD_SOURCE_1, STONE_SOURCE_3, CLAY_SOURCE_2, WOOD_SOURCE_3, STONE_SOURCE_3, WOOD_SOURCE_2, CLAY_SOURCE_4,
+        CLAY_SOURCE_3, WOOD_SOURCE_2, CLAY_SOURCE_1, WOOD_SOURCE_1, STONE_SOURCE_2, WOOD_SOURCE_3, CLAY_SOURCE_2, WOOD_SOURCE_2, STONE_SOURCE_4, CLAY_SOURCE_1,
+      ],
+    );
+
+  await landMap.setLandAreas
+    (
+      LAND,
+      4,
+      [
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+        3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
+        4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+        5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
+        6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
+        7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+        8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9
+      ],
+      [
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+      ],
+      [
+        CLAY_SOURCE_1, CLAY_SOURCE_3, WOOD_SOURCE_2, CLAY_SOURCE_3, CLAY_SOURCE_1, STONE_SOURCE_2, CLAY_SOURCE_1, STONE_SOURCE_4, WOOD_SOURCE_3, CLAY_SOURCE_4,
+        WOOD_SOURCE_2, CLAY_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, CLAY_SOURCE_3, STONE_SOURCE_3, WOOD_SOURCE_2, STONE_SOURCE_4, WOOD_SOURCE_3, STONE_SOURCE_4,
+        WOOD_SOURCE_1, CLAY_SOURCE_2, CLAY_SOURCE_1, WOOD_SOURCE_3, CLAY_SOURCE_3, STONE_SOURCE_2, CLAY_SOURCE_3, WOOD_SOURCE_2, CLAY_SOURCE_3, STONE_SOURCE_3,
+        STONE_SOURCE_2, WOOD_SOURCE_1, STONE_SOURCE_1, STONE_SOURCE_2, STONE_SOURCE_3, STONE_SOURCE_1, STONE_SOURCE_3, CLAY_SOURCE_2, CLAY_SOURCE_2, CLAY_SOURCE_4,
+        STONE_SOURCE_2, CLAY_SOURCE_2, STONE_SOURCE_1, CLAY_SOURCE_2, WOOD_SOURCE_1, WOOD_SOURCE_3, STONE_SOURCE_3, WOOD_SOURCE_2, WOOD_SOURCE_4, STONE_SOURCE_1,
+        WOOD_SOURCE_1, STONE_SOURCE_1, CLAY_SOURCE_3, WOOD_SOURCE_3, STONE_SOURCE_2, STONE_SOURCE_1, WOOD_SOURCE_3, STONE_SOURCE_2, STONE_SOURCE_3, CLAY_SOURCE_4,
+        WOOD_SOURCE_3, CLAY_SOURCE_3, WOOD_SOURCE_1, CLAY_SOURCE_3, WOOD_SOURCE_3, CLAY_SOURCE_1, STONE_SOURCE_3, STONE_SOURCE_1, CLAY_SOURCE_1, CLAY_SOURCE_4,
+        CLAY_SOURCE_2, WOOD_SOURCE_2, CLAY_SOURCE_1, WOOD_SOURCE_3, STONE_SOURCE_2, WOOD_SOURCE_2, CLAY_SOURCE_3, WOOD_SOURCE_4, WOOD_SOURCE_4, STONE_SOURCE_3,
+        CLAY_SOURCE_2, WOOD_SOURCE_3, STONE_SOURCE_1, WOOD_SOURCE_1, CLAY_SOURCE_1, STONE_SOURCE_1, CLAY_SOURCE_2, WOOD_SOURCE_1, STONE_SOURCE_3, STONE_SOURCE_3,
+        STONE_SOURCE_1, WOOD_SOURCE_2, CLAY_SOURCE_1, WOOD_SOURCE_1, CLAY_SOURCE_2, CLAY_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_4, STONE_SOURCE_2, WOOD_SOURCE_2,
+      ],
+    );
+
+  // await landMap.setLandAreas
+  //   (
+  //     FOREST,
+  //     1,
+  //     [
+  //       0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  //       1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+  //       2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+  //       3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
+  //       4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+  //       5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
+  //       6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
+  //       7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+  //       8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
+  //       9, 9, 9, 9, 9, 9, 9, 9, 9, 9
+  //     ],
+  //     [
+  //       0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+  //       0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+  //       0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+  //       0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+  //       0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+  //       0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+  //       0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+  //       0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+  //       0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+  //       0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+  //     ],
+  //     [
+  //       WOOD_SOURCE_1, WOOD_SOURCE_2, WOOD_SOURCE_3, WOOD_SOURCE_3, WOOD_SOURCE_1, WOOD_SOURCE_4, WOOD_SOURCE_4, WOOD_SOURCE_2, WOOD_SOURCE_3, WOOD_SOURCE_1,
+  //       WOOD_SOURCE_3, WOOD_SOURCE_2, WOOD_SOURCE_3, WOOD_SOURCE_2, WOOD_SOURCE_3, WOOD_SOURCE_2, WOOD_SOURCE_4, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_2,
+  //       WOOD_SOURCE_1, WOOD_SOURCE_3, WOOD_SOURCE_1, WOOD_SOURCE_4, WOOD_SOURCE_3, WOOD_SOURCE_2, WOOD_SOURCE_4, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_2,
+  //       WOOD_SOURCE_3, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_4, WOOD_SOURCE_1, WOOD_SOURCE_2, WOOD_SOURCE_3, WOOD_SOURCE_1,
+  //       WOOD_SOURCE_1, WOOD_SOURCE_3, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_4, WOOD_SOURCE_2, WOOD_SOURCE_4, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_4,
+  //       WOOD_SOURCE_3, WOOD_SOURCE_2, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_4, WOOD_SOURCE_4, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_2, WOOD_SOURCE_3,
+  //       WOOD_SOURCE_3, WOOD_SOURCE_3, WOOD_SOURCE_4, WOOD_SOURCE_3, WOOD_SOURCE_3, WOOD_SOURCE_2, WOOD_SOURCE_4, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_4,
+  //       WOOD_SOURCE_1, WOOD_SOURCE_4, WOOD_SOURCE_1, WOOD_SOURCE_4, WOOD_SOURCE_1, WOOD_SOURCE_3, WOOD_SOURCE_2, WOOD_SOURCE_1, WOOD_SOURCE_2, WOOD_SOURCE_2,
+  //       WOOD_SOURCE_3, WOOD_SOURCE_2, WOOD_SOURCE_4, WOOD_SOURCE_2, WOOD_SOURCE_3, WOOD_SOURCE_3, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_1, WOOD_SOURCE_3,
+  //       WOOD_SOURCE_1, WOOD_SOURCE_4, WOOD_SOURCE_3, WOOD_SOURCE_3, WOOD_SOURCE_1, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_1, WOOD_SOURCE_4, WOOD_SOURCE_3
+  //     ],
+  //   );
+
+  // await landMap.setLandAreas
+  //   (
+  //     FOREST,
+  //     2,
+  //     [
+  //       0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  //       1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+  //       2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+  //       3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
+  //       4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+  //       5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
+  //       6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
+  //       7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+  //       8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
+  //       9, 9, 9, 9, 9, 9, 9, 9, 9, 9
+  //     ],
+  //     [
+  //       0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+  //       0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+  //       0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+  //       0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+  //       0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+  //       0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+  //       0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+  //       0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+  //       0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+  //       0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+  //     ],
+  //     [
+  //       WOOD_SOURCE_3, WOOD_SOURCE_3, WOOD_SOURCE_4, WOOD_SOURCE_3, WOOD_SOURCE_3, WOOD_SOURCE_2, WOOD_SOURCE_4, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_4,
+  //       WOOD_SOURCE_1, WOOD_SOURCE_3, WOOD_SOURCE_1, WOOD_SOURCE_4, WOOD_SOURCE_3, WOOD_SOURCE_2, WOOD_SOURCE_4, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_2,
+  //       WOOD_SOURCE_1, WOOD_SOURCE_3, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_4, WOOD_SOURCE_2, WOOD_SOURCE_4, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_4,
+  //       WOOD_SOURCE_1, WOOD_SOURCE_2, WOOD_SOURCE_3, WOOD_SOURCE_3, WOOD_SOURCE_1, WOOD_SOURCE_4, WOOD_SOURCE_4, WOOD_SOURCE_2, WOOD_SOURCE_3, WOOD_SOURCE_1,
+  //       WOOD_SOURCE_3, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_4, WOOD_SOURCE_1, WOOD_SOURCE_2, WOOD_SOURCE_3, WOOD_SOURCE_1,
+  //       WOOD_SOURCE_3, WOOD_SOURCE_2, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_4, WOOD_SOURCE_4, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_2, WOOD_SOURCE_3,
+  //       WOOD_SOURCE_3, WOOD_SOURCE_2, WOOD_SOURCE_3, WOOD_SOURCE_2, WOOD_SOURCE_3, WOOD_SOURCE_2, WOOD_SOURCE_4, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_2,
+  //       WOOD_SOURCE_3, WOOD_SOURCE_2, WOOD_SOURCE_4, WOOD_SOURCE_2, WOOD_SOURCE_3, WOOD_SOURCE_3, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_1, WOOD_SOURCE_3,
+  //       WOOD_SOURCE_1, WOOD_SOURCE_4, WOOD_SOURCE_1, WOOD_SOURCE_4, WOOD_SOURCE_1, WOOD_SOURCE_3, WOOD_SOURCE_2, WOOD_SOURCE_1, WOOD_SOURCE_2, WOOD_SOURCE_2,
+  //       WOOD_SOURCE_1, WOOD_SOURCE_4, WOOD_SOURCE_3, WOOD_SOURCE_3, WOOD_SOURCE_1, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_1, WOOD_SOURCE_4, WOOD_SOURCE_3
+  //     ],
+  //   );
+
+  // await landMap.setLandAreas
+  //   (
+  //     FOREST,
+  //     3,
+  //     [
+  //       0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  //       1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+  //       2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+  //       3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
+  //       4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+  //       5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
+  //       6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
+  //       7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+  //       8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
+  //       9, 9, 9, 9, 9, 9, 9, 9, 9, 9
+  //     ],
+  //     [
+  //       0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+  //       0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+  //       0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+  //       0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+  //       0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+  //       0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+  //       0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+  //       0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+  //       0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+  //       0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+  //     ],
+  //     [
+  //       WOOD_SOURCE_3, WOOD_SOURCE_3, WOOD_SOURCE_4, WOOD_SOURCE_3, WOOD_SOURCE_3, WOOD_SOURCE_2, WOOD_SOURCE_4, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_4,
+  //       WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_3, WOOD_SOURCE_4, WOOD_SOURCE_3, WOOD_SOURCE_2, WOOD_SOURCE_4, WOOD_SOURCE_3, WOOD_SOURCE_1, WOOD_SOURCE_2,
+  //       WOOD_SOURCE_1, WOOD_SOURCE_3, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_4, WOOD_SOURCE_2, WOOD_SOURCE_4, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_4,
+  //       WOOD_SOURCE_1, WOOD_SOURCE_2, WOOD_SOURCE_3, WOOD_SOURCE_3, WOOD_SOURCE_1, WOOD_SOURCE_4, WOOD_SOURCE_4, WOOD_SOURCE_2, WOOD_SOURCE_3, WOOD_SOURCE_1,
+  //       WOOD_SOURCE_3, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_4, WOOD_SOURCE_1, WOOD_SOURCE_2, WOOD_SOURCE_3, WOOD_SOURCE_3,
+  //       WOOD_SOURCE_3, WOOD_SOURCE_2, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_4, WOOD_SOURCE_4, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_2, WOOD_SOURCE_3,
+  //       WOOD_SOURCE_3, WOOD_SOURCE_2, WOOD_SOURCE_3, WOOD_SOURCE_2, WOOD_SOURCE_1, WOOD_SOURCE_2, WOOD_SOURCE_4, WOOD_SOURCE_1, WOOD_SOURCE_3, WOOD_SOURCE_2,
+  //       WOOD_SOURCE_3, WOOD_SOURCE_2, WOOD_SOURCE_4, WOOD_SOURCE_2, WOOD_SOURCE_3, WOOD_SOURCE_1, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_1, WOOD_SOURCE_3,
+  //       WOOD_SOURCE_1, WOOD_SOURCE_4, WOOD_SOURCE_3, WOOD_SOURCE_4, WOOD_SOURCE_1, WOOD_SOURCE_3, WOOD_SOURCE_2, WOOD_SOURCE_1, WOOD_SOURCE_2, WOOD_SOURCE_2,
+  //       WOOD_SOURCE_1, WOOD_SOURCE_4, WOOD_SOURCE_3, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_1, WOOD_SOURCE_4, WOOD_SOURCE_3
+  //     ],
+  //   );
+
+  // await landMap.setLandAreas
+  //   (
+  //     FOREST,
+  //     4,
+  //     [
+  //       0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  //       1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+  //       2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+  //       3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
+  //       4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+  //       5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
+  //       6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
+  //       7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+  //       8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
+  //       9, 9, 9, 9, 9, 9, 9, 9, 9, 9
+  //     ],
+  //     [
+  //       0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+  //       0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+  //       0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+  //       0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+  //       0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+  //       0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+  //       0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+  //       0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+  //       0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+  //       0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+  //     ],
+  //     [
+  //       WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1,
+  //       WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1,
+  //       WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1,
+  //       WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1,
+  //       WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1,
+  //       WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1,
+  //       WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1,
+  //       WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1,
+  //       WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1,
+  //       WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1, WOOD_SOURCE_1
+  //     ],
+  //   );
+
+  // await landMap.setLandAreas
+  //   (
+  //     FOREST,
+  //     5,
+  //     [
+  //       0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  //       1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+  //       2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+  //       3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
+  //       4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+  //       5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
+  //       6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
+  //       7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+  //       8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
+  //       9, 9, 9, 9, 9, 9, 9, 9, 9, 9
+  //     ],
+  //     [
+  //       0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+  //       0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+  //       0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+  //       0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+  //       0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+  //       0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+  //       0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+  //       0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+  //       0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+  //       0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+  //     ],
+  //     [
+  //       WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2,
+  //       WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2,
+  //       WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2,
+  //       WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2,
+  //       WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2,
+  //       WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2,
+  //       WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2,
+  //       WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2,
+  //       WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2,
+  //       WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2, WOOD_SOURCE_2
+  //     ],
+  //   );
+
+  // const map = await landMap.getLandAreas(LAND, 4, 10, 10);
+  // const newMap = map.map(x => parseInt(x.toString()));
+
+  const mapId = await landMap.getLandMap(LAND, 1, 0, 0);
+  console.log(mapId.toString());
+
+  console.log("finished");
+};
