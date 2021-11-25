@@ -246,7 +246,7 @@ contract APWarsTreasureHunt is AccessControl {
             _x,
             _y
         );
-        hunters[huntSettings[_huntId].worldId][_x][_y][_innerX][_innerY] = msg
+        hunters[_huntId][_x][_y][_innerX][_innerY] = msg
             .sender;
         userTreasureHunt[_huntId][msg.sender].push(
             UserTreasureHunt(_x, _y, _innerX, _innerY, true)
@@ -384,7 +384,7 @@ contract APWarsTreasureHunt is AccessControl {
         huntSettings[_huntId].selectedInnerX = randomXSpot;
         huntSettings[_huntId].selectedInnerY = randomYSpot;
 
-        address winner = hunters[huntSettings[_huntId].worldId][
+        address winner = hunters[_huntId][
             huntSettings[_huntId].selectedX
         ][huntSettings[_huntId].selectedY][
             huntSettings[_huntId].selectedInnerX

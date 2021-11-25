@@ -4432,7 +4432,6 @@ contract APWarsTreasureHuntSetup is AccessControl, ERC1155Holder {
     uint256 private tokenFeeOwnerFeePercentage;
     uint256 private gameItemFeeAmount;
     uint256 private gameItemFeeOwnerFeePercentage;
-    uint256 private ownerFeePercentage;
     ERC1155 private collectibles;
     uint256 private gameItemId;
     uint256 private rewardAmount;
@@ -4534,11 +4533,11 @@ contract APWarsTreasureHuntSetup is AccessControl, ERC1155Holder {
         );
 
         address landOwner = worldManager.getLandOwner(_worldId, _x, _y);
-        uint256 ownerTokenAmount = tokenFeeAmount.mul(ownerFeePercentage).div(
-            ONE_HUNDRED_PERCENT
-        );
+        uint256 ownerTokenAmount = tokenFeeAmount
+            .mul(tokenFeeOwnerFeePercentage)
+            .div(ONE_HUNDRED_PERCENT);
         uint256 ownerGameItemAmount = gameItemFeeAmount
-            .mul(ownerFeePercentage)
+            .mul(gameItemFeeOwnerFeePercentage)
             .div(ONE_HUNDRED_PERCENT);
         uint256 devAmount = tokenFeeAmount.sub(ownerTokenAmount);
         uint256 devGameItemAmount = gameItemFeeAmount.sub(ownerGameItemAmount);
