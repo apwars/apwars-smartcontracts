@@ -4432,7 +4432,6 @@ contract APWarsTreasureHuntSetup is AccessControl, ERC1155Holder {
     uint256 private tokenFeeOwnerFeePercentage;
     uint256 private gameItemFeeAmount;
     uint256 private gameItemFeeOwnerFeePercentage;
-    uint256 private ownerFeePercentage;
     ERC1155 private collectibles;
     uint256 private gameItemId;
     uint256 private rewardAmount;
@@ -4534,11 +4533,11 @@ contract APWarsTreasureHuntSetup is AccessControl, ERC1155Holder {
         );
 
         address landOwner = worldManager.getLandOwner(_worldId, _x, _y);
-        uint256 ownerTokenAmount = tokenFeeAmount.mul(ownerFeePercentage).div(
-            ONE_HUNDRED_PERCENT
-        );
+        uint256 ownerTokenAmount = tokenFeeAmount
+            .mul(tokenFeeOwnerFeePercentage)
+            .div(ONE_HUNDRED_PERCENT);
         uint256 ownerGameItemAmount = gameItemFeeAmount
-            .mul(ownerFeePercentage)
+            .mul(gameItemFeeOwnerFeePercentage)
             .div(ONE_HUNDRED_PERCENT);
         uint256 devAmount = tokenFeeAmount.sub(ownerTokenAmount);
         uint256 devGameItemAmount = gameItemFeeAmount.sub(ownerGameItemAmount);
@@ -4716,7 +4715,7 @@ contract APWarsTreasureHunt is AccessControl {
         uint256 index = 0;
         for (uint256 i = 0; i < 10; i++) {
             for (uint256 j = 0; j < 10; j++) {
-                addresses[index] = hunters[huntSettings[_huntId].worldId][_x][
+                addresses[index] = hunters[_huntId][_x][
                     _y
                 ][i][j];
 
@@ -4826,7 +4825,7 @@ contract APWarsTreasureHunt is AccessControl {
             "APWarsTreasureHunt:INVALID_LAND"
         );
         require(
-            hunters[huntSettings[_huntId].worldId][_x][_y][_innerX][_innerY] ==
+            hunters[_huntId][_x][_y][_innerX][_innerY] ==
                 address(0),
             "APWarsTreasureHunt:ALREADY_HUNTING"
         );
@@ -4846,7 +4845,7 @@ contract APWarsTreasureHunt is AccessControl {
             _x,
             _y
         );
-        hunters[huntSettings[_huntId].worldId][_x][_y][_innerX][_innerY] = msg
+        hunters[_huntId][_x][_y][_innerX][_innerY] = msg
             .sender;
         userTreasureHunt[_huntId][msg.sender].push(
             UserTreasureHunt(_x, _y, _innerX, _innerY, true)
@@ -4984,7 +4983,7 @@ contract APWarsTreasureHunt is AccessControl {
         huntSettings[_huntId].selectedInnerX = randomXSpot;
         huntSettings[_huntId].selectedInnerY = randomYSpot;
 
-        address winner = hunters[huntSettings[_huntId].worldId][
+        address winner = hunters[_huntId][
             huntSettings[_huntId].selectedX
         ][huntSettings[_huntId].selectedY][
             huntSettings[_huntId].selectedInnerX

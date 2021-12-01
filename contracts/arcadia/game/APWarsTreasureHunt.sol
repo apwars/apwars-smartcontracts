@@ -116,7 +116,7 @@ contract APWarsTreasureHunt is AccessControl {
         uint256 index = 0;
         for (uint256 i = 0; i < 10; i++) {
             for (uint256 j = 0; j < 10; j++) {
-                addresses[index] = hunters[huntSettings[_huntId].worldId][_x][
+                addresses[index] = hunters[_huntId][_x][
                     _y
                 ][i][j];
 
@@ -226,7 +226,7 @@ contract APWarsTreasureHunt is AccessControl {
             "APWarsTreasureHunt:INVALID_LAND"
         );
         require(
-            hunters[huntSettings[_huntId].worldId][_x][_y][_innerX][_innerY] ==
+            hunters[_huntId][_x][_y][_innerX][_innerY] ==
                 address(0),
             "APWarsTreasureHunt:ALREADY_HUNTING"
         );
